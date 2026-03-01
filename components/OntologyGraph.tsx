@@ -14,7 +14,6 @@ import {
   MOCK_SKILLS,
   ATOMIC_ONTOLOGY_LIBRARY,
   getRequirementsByProcessNode,
-  isSimulationNode,
   getSimulationConfig,
   SIMULATION_NODES
 } from '../constants';
@@ -115,14 +114,14 @@ const OntologyGraph: React.FC = () => {
     // 更新动态场景的业务语义数据
     const scenario = DYNAMIC_SCENARIOS.find(s => s.id === activeScenarioId);
     if (scenario) {
-      // 更新场景的分子结构
+      // 更新场景的分子结构 - 只包含推演节点和数据节点
       const molecularStructure = ontologyData.nodes
-        .filter(n => n.group >= 2 && n.group <= 4)
+        .filter(n => n.group === 'simulation' || n.group === 'data')
         .map(n => ({
           id: n.id,
           name: n.label,
           description: n.description || '',
-          level: n.group as 2 | 3 | 4,
+          level: n.group === 'simulation' ? 2 : 3, // 推演节点=2, 数据节点=3
           parentId: ontologyData.links.find((l: any) => l.target === n.id)?.source,
           atomRefs: n.atomRefs || [],
           children: ontologyData.links
@@ -148,12 +147,12 @@ const OntologyGraph: React.FC = () => {
         industry: '锂电池制造',
         domain: '生产制造',
         molecularStructure: ontologyData.nodes
-          .filter(n => n.group >= 2 && n.group <= 4)
+          .filter(n => n.group === 'simulation' || n.group === 'data')
           .map(n => ({
             id: n.id,
             name: n.label,
             description: n.description || '',
-            level: n.group as 2 | 3 | 4,
+            level: n.group === 'simulation' ? 2 : 3,
             parentId: ontologyData.links.find((l: any) => l.target === n.id)?.source,
             atomRefs: n.atomRefs || [],
             children: ontologyData.links
@@ -187,13 +186,40 @@ const OntologyGraph: React.FC = () => {
   // 获取当前场景的图谱数据
   const graphData = getScenarioOntologyData(activeScenarioId) || { nodes: [], links: [] };
 
+  // 判断节点是否为推演节点（根据节点名称中的关键词判断）
+  const isSimulationNodeByName = (nodeLabel: string | undefined) => {
+    if (!nodeLabel || typeof nodeLabel !== 'string') return false;
+    const simulationKeywords = [
+      '推演', '评估', '预测', '分析', '决策', '模拟', '优化', '规划',
+      '推荐', '诊断', '预警', '测算', '选型', '可行性', '盈亏',
+      '风险', '策略', '情景', '平衡', '计算', '判定', '评价',
+      '方案', '建议', '调研', '比选'
+    ];
+    return simulationKeywords.some(keyword => nodeLabel.includes(keyword));
+  };
+
   // 节点点击处理
   const handleNodeClick = (node: OntologyNode) => {
-    // 检查是否为推演分析节点
-    const simConfig = getSimulationConfig(node.id);
-    if (simConfig) {
+    // 根据节点名称判断是否为推演节点，不依赖存储的type字段
+    if (isSimulationNodeByName(node.label)) {
       setSimulationNode(node);
-      setSimulationConfig(simConfig);
+      // 尝试获取配置，如果没有则使用默认配置
+      const simConfig = getSimulationConfig(node.id);
+      if (simConfig) {
+        setSimulationConfig(simConfig);
+      } else {
+        // 创建默认推演配置
+        setSimulationConfig({
+          nodeId: node.id,
+          nodeName: node.label,
+          scenarioId: activeScenarioId,
+          category: 'production_scheduling',
+          description: `${node.label}的推演分析`,
+          inputParams: [],
+          outputMetrics: ['recommendation', 'confidence'],
+          supportedSkills: []
+        });
+      }
       setShowSimulationModal(true);
     } else {
       setSelectedNode(node);
@@ -214,13 +240,10 @@ const OntologyGraph: React.FC = () => {
     svg.transition().duration(500).call(zoomBehaviorRef.current.transform, d3.zoomIdentity);
   };
 
-  // 军队/科研严谨风格配色
-  const levelColors: Record<number, { fill: string; stroke: string; border: string }> = {
-    1: { fill: '#1e3a5f', stroke: '#2c5282', border: '#4a6fa5' }, // L1 场景 - 藏青
-    2: { fill: '#22543d', stroke: '#276749', border: '#38a169' }, // L2 系统 - 军绿
-    3: { fill: '#744210', stroke: '#975a16', border: '#d69e2e' }, // L3 工艺 - 土黄
-    4: { fill: '#742a2a', stroke: '#9b2c2c', border: '#e53e3e' }, // L4 参数 - 深红
-    5: { fill: '#2d3748', stroke: '#4a5568', border: '#718096' }, // L5 技能 - 深灰
+  // 节点类型配色：推演节点(紫色系) 和 数据节点(蓝色系) - 严格两种颜色
+  const levelColors: Record<string, { fill: string; stroke: string; border: string; glow: string }> = {
+    simulation: { fill: '#7c3aed', stroke: '#8b5cf6', border: '#a78bfa', glow: 'rgba(124, 58, 237, 0.2)' }, // 推演节点 - 紫色
+    data: { fill: '#2563eb', stroke: '#3b82f6', border: '#60a5fa', glow: 'rgba(37, 99, 235, 0.2)' },       // 数据节点 - 蓝色
   };
 
   // D3 严谨军事风格渲染
@@ -270,18 +293,22 @@ const OntologyGraph: React.FC = () => {
       .attr('height', height * 3)
       .attr('x', -width)
       .attr('y', -height)
-      .attr('fill', 'url(#grid-mil)');
+      .attr('fill', 'url(#grid-mil)')
+      .style('pointer-events', 'none');
 
-    // 节点大小配置 - 更加规范
-    const nodeRadius = (group: number) => {
-      switch (group) {
-        case 1: return 32; // L1 场景
-        case 2: return 26; // L2 系统
-        case 3: return 22; // L3 工艺
-        case 4: return 18; // L4 参数
-        case 5: return 16; // L5 技能
-        default: return 20;
+    // 节点大小配置：推演节点较大，数据节点较小
+    const getNodeType = (label: string) => isSimulationNodeByName(label) ? 'simulation' : 'data';
+    const nodeRadius = (label: string) => {
+      const type = getNodeType(label);
+      switch (type) {
+        case 'simulation': return 28; // 推演节点
+        case 'data': return 18;       // 数据节点
+        default: return 22;
       }
+    };
+    const getNodeColor = (label: string) => {
+      const type = getNodeType(label);
+      return levelColors[type];
     };
 
     // 准备数据
@@ -291,13 +318,15 @@ const OntologyGraph: React.FC = () => {
     // 力导向模拟 - 更加稳定的布局
     const simulation = d3.forceSimulation(nodes as any)
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance((d: any) => {
-        const sourceLevel = d.source.group || 3;
-        const targetLevel = d.target.group || 3;
-        return 100 + Math.abs(sourceLevel - targetLevel) * 50;
+        const sourceType = isSimulationNodeByName(d.source.label) ? 'simulation' : 'data';
+        const targetType = isSimulationNodeByName(d.target.label) ? 'simulation' : 'data';
+        // 推演节点与数据节点间距稍大，数据节点之间更紧凑
+        return sourceType === 'simulation' && targetType === 'simulation' ? 120 :
+               sourceType === 'data' && targetType === 'data' ? 80 : 100;
       }))
       .force('charge', d3.forceManyBody().strength(-400))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius((d: any) => nodeRadius(d.group) + 15));
+      .force('collision', d3.forceCollide().radius((d: any) => nodeRadius(d.label) + 15));
 
     // 绘制连线 - 直线，军事风格
     const linkSelection = g.selectAll('line.link')
@@ -318,46 +347,42 @@ const OntologyGraph: React.FC = () => {
     // 节点外边框
     nodeGroups.append('circle')
       .attr('class', 'node-border')
-      .attr('r', (d: any) => nodeRadius(d.group) + 3)
+      .attr('r', (d: any) => nodeRadius(d.label) + 3)
       .attr('fill', 'none')
-      .attr('stroke', (d: any) => levelColors[d.group]?.border || '#4a5568')
+      .attr('stroke', (d: any) => getNodeColor(d.label)?.border || '#4a5568')
       .attr('stroke-width', 2);
 
     // 节点主体 - 实心填充
     nodeGroups.append('circle')
       .attr('class', 'node-circle')
-      .attr('r', (d: any) => nodeRadius(d.group))
-      .attr('fill', (d: any) => levelColors[d.group]?.fill || '#2d3748')
-      .attr('stroke', (d: any) => levelColors[d.group]?.stroke || '#4a5568')
+      .attr('r', (d: any) => nodeRadius(d.label))
+      .attr('fill', (d: any) => getNodeColor(d.label)?.fill || '#2d3748')
+      .attr('stroke', (d: any) => getNodeColor(d.label)?.stroke || '#4a5568')
       .attr('stroke-width', 1);
 
-    // 数据就绪度指示 - 内部小圆点
+    // 数据就绪度指示 - 统一白色圆点
     nodeGroups.append('circle')
       .attr('class', 'readiness-dot')
-      .attr('cx', (d: any) => nodeRadius(d.group) * 0.6)
-      .attr('cy', (d: any) => -nodeRadius(d.group) * 0.6)
+      .attr('cx', (d: any) => nodeRadius(d.label) * 0.6)
+      .attr('cy', (d: any) => -nodeRadius(d.label) * 0.6)
       .attr('r', 4)
-      .attr('fill', (d: any) => {
-        const readiness = d.data_readiness || 0;
-        if (readiness >= 85) return '#48bb78';
-        if (readiness >= 60) return '#ed8936';
-        return '#f56565';
-      })
+      .attr('fill', '#fff')
       .attr('stroke', '#fff')
       .attr('stroke-width', 1);
 
-    // 推演节点标记 - 外圈紫色光环效果
+    // 推演节点标记 - 外圈紫色光环效果（使用配置颜色）
     nodeGroups.each(function(d: any) {
-      if (isSimulationNode(d.id)) {
+      if (isSimulationNodeByName(d.label)) {
         const g = d3.select(this);
-        const radius = nodeRadius(d.group);
+        const radius = nodeRadius(d.label);
+        const colors = getNodeColor(d.label) || levelColors.simulation;
 
-        // 外发光效果 - 使用渐变填充
+        // 外发光效果 - 使用统一紫色
         g.append('circle')
           .attr('class', 'simulation-glow')
           .attr('r', radius + 12)
-          .attr('fill', 'rgba(99, 102, 241, 0.15)')
-          .attr('stroke', '#6366f1')
+          .attr('fill', colors.glow)
+          .attr('stroke', colors.fill)
           .attr('stroke-width', 2)
           .attr('stroke-dasharray', '5,3');
 
@@ -366,7 +391,7 @@ const OntologyGraph: React.FC = () => {
           .attr('class', 'simulation-ring-middle')
           .attr('r', radius + 6)
           .attr('fill', 'none')
-          .attr('stroke', '#818cf8')
+          .attr('stroke', colors.stroke)
           .attr('stroke-width', 1.5)
           .attr('opacity', 0.8);
 
@@ -378,7 +403,7 @@ const OntologyGraph: React.FC = () => {
           .attr('width', 36)
           .attr('height', 14)
           .attr('rx', 7)
-          .attr('fill', '#6366f1')
+          .attr('fill', colors.fill)
           .attr('stroke', '#fff')
           .attr('stroke-width', 1);
 
@@ -397,7 +422,7 @@ const OntologyGraph: React.FC = () => {
     nodeGroups.append('text')
       .attr('class', 'node-label')
       .attr('text-anchor', 'middle')
-      .attr('dy', (d: any) => nodeRadius(d.group) + 18)
+      .attr('dy', (d: any) => nodeRadius(d.label) + 18)
       .attr('font-size', '10px')
       .attr('font-family', 'monospace')
       .attr('font-weight', '600')
@@ -409,13 +434,13 @@ const OntologyGraph: React.FC = () => {
     nodeGroups.append('text')
       .attr('class', 'node-level')
       .attr('text-anchor', 'middle')
-      .attr('x', (d: any) => nodeRadius(d.group) * 0.7)
-      .attr('y', (d: any) => -nodeRadius(d.group) * 0.7)
+      .attr('x', (d: any) => nodeRadius(d.label) * 0.7)
+      .attr('y', (d: any) => -nodeRadius(d.label) * 0.7)
       .attr('font-size', '8px')
       .attr('font-family', 'monospace')
       .attr('font-weight', 'bold')
       .attr('fill', '#fff')
-      .text((d: any) => `L${d.group}`);
+      .text((d: any) => isSimulationNodeByName(d.label) ? 'S' : 'D');
 
     // 交互事件 - 简洁的hover效果
     nodeGroups
@@ -429,16 +454,16 @@ const OntologyGraph: React.FC = () => {
           .attr('stroke-width', 3);
         d3.select(this).select('.node-circle')
           .transition().duration(150)
-          .attr('r', nodeRadius(d.group) + 2);
+          .attr('r', nodeRadius(d.label) + 2);
       })
       .on('mouseout', function(event: any, d: any) {
         d3.select(this).select('.node-border')
           .transition().duration(150)
-          .attr('stroke', levelColors[d.group]?.border || '#4a5568')
+          .attr('stroke', getNodeColor(d.label)?.border || '#4a5568')
           .attr('stroke-width', 2);
         d3.select(this).select('.node-circle')
           .transition().duration(150)
-          .attr('r', nodeRadius(d.group));
+          .attr('r', nodeRadius(d.label));
       });
 
     // 力导向更新 - 直线连接
@@ -471,8 +496,8 @@ const OntologyGraph: React.FC = () => {
     <div className="h-full flex flex-col space-y-4">
       <div className="flex justify-between items-center">
         <div>
-            <h2 className="text-2xl font-bold text-slate-900">业务流程图谱 (5级下钻)</h2>
-            <p className="text-slate-500 text-sm">全景展示制造场景、子系统、工艺、参数及技能的量化关联。</p>
+            <h2 className="text-2xl font-bold text-slate-900">业务流程图谱</h2>
+            <p className="text-slate-500 text-sm">全景展示推演节点与数据节点的量化关联。</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -484,13 +509,10 @@ const OntologyGraph: React.FC = () => {
           </button>
           <div className="flex gap-4 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm items-center">
             <span className="flex items-center text-xs text-slate-600 mr-2 border-r border-slate-200 pr-4">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>L1 场景
-                <span className="w-2 h-2 rounded-full bg-blue-500 mx-1 ml-2"></span>L2 系统
-                <span className="w-2 h-2 rounded-full bg-sky-500 mx-1 ml-2"></span>L3 工艺
-                <span className="w-2 h-2 rounded-full bg-teal-500 mx-1 ml-2"></span>L4 参数
-                <span className="w-2 h-2 rounded-full bg-green-500 mx-1 ml-2"></span>L5 技能
+                <span className="w-3 h-3 rounded-full bg-purple-500 mr-1"></span>推演节点
+                <span className="w-3 h-3 rounded-full bg-blue-500 mx-1 ml-3"></span>数据节点
             </span>
-            
+
             <div className="flex items-center text-xs font-medium space-x-3">
                 <span className="text-slate-400">数据完备度:</span>
                 <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-red-500 mr-1"></span>&lt;60% (差)</span>
@@ -660,11 +682,20 @@ const OntologyGraph: React.FC = () => {
       )}
 
       {/* 推演分析弹窗 */}
-      {showSimulationModal && simulationNode && simulationConfig && (
+      {showSimulationModal && simulationNode && (
         <SimulationModal
           isOpen={showSimulationModal}
           node={simulationNode}
-          config={simulationConfig}
+          config={simulationConfig || {
+            nodeId: simulationNode.id,
+            nodeName: simulationNode.label,
+            scenarioId: activeScenarioId,
+            category: 'production_scheduling',
+            description: `${simulationNode.label}的推演分析`,
+            inputParams: [],
+            outputMetrics: ['recommendation', 'confidence'],
+            supportedSkills: []
+          }}
           allNodes={getScenarioOntologyData(activeScenarioId)?.nodes || []}
           allLinks={getScenarioOntologyData(activeScenarioId)?.links || []}
           onClose={() => {
@@ -940,24 +971,33 @@ interface NodeDetailPanelProps {
 }
 
 const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClose }) => {
-  const getLevelName = (group?: number) => {
-    switch (group) {
-      case 1: return 'L1 场景';
-      case 2: return 'L2 子系统';
-      case 3: return 'L3 工艺过程';
-      case 4: return 'L4 参数';
-      case 5: return 'L5 技能';
-      default: return '未知层级';
+  // 根据节点名称判断类型
+  const isSimNode = (label: string) => {
+    const simulationKeywords = [
+      '推演', '评估', '预测', '分析', '决策', '模拟', '优化', '规划',
+      '推荐', '诊断', '预警', '测算', '选型', '可行性', '盈亏',
+      '风险', '策略', '情景', '平衡', '计算', '判定', '评价',
+      '方案', '建议', '调研', '比选'
+    ];
+    return simulationKeywords.some(keyword => label.includes(keyword));
+  };
+
+  const getNodeType = (label: string) => isSimNode(label) ? 'simulation' : 'data';
+
+  const getLevelName = (label: string) => {
+    const type = getNodeType(label);
+    switch (type) {
+      case 'simulation': return '推演节点';
+      case 'data': return '数据节点';
+      default: return '未知类型';
     }
   };
 
-  const getLevelColor = (group?: number) => {
-    switch (group) {
-      case 1: return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-      case 2: return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 3: return 'bg-sky-100 text-sky-700 border-sky-200';
-      case 4: return 'bg-teal-100 text-teal-700 border-teal-200';
-      case 5: return 'bg-green-100 text-green-700 border-green-200';
+  const getLevelColor = (label: string) => {
+    const type = getNodeType(label);
+    switch (type) {
+      case 'simulation': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'data': return 'bg-blue-100 text-blue-700 border-blue-200';
       default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
@@ -1057,8 +1097,8 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
       {/* Header */}
       <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getLevelColor(node.group)}`}>
-            {getLevelName(node.group)}
+          <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getLevelColor(node.label)}`}>
+            {getLevelName(node.label)}
           </span>
           <span className="text-xs text-slate-500">数据完备度: {node.data_readiness || 0}%</span>
         </div>

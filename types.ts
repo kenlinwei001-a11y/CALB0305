@@ -258,8 +258,8 @@ export interface RelatedNode {
 export interface OntologyNode {
   id: string;
   label: string;
-  type: 'concept' | 'skill';
-  group?: number; // 1=Scenario, 2=Sub-system, 3=Process, 4=Parameter, 5=Skill
+  type: 'simulation' | 'data';
+  group?: 'simulation' | 'data';
   data_readiness?: number; // 0-100 Data Quality/Availability Score
   // 节点详细信息
   owner?: string; // 负责人
@@ -369,7 +369,7 @@ export interface ProcessNodeMapping {
  */
 export interface DependencyNode {
   id: string;
-  type: 'process' | 'semantic' | 'skill' | 'atom';
+  type: 'simulation' | 'data';
   name: string;
 }
 

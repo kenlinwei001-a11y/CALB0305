@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   X, Box, FileText, Upload, FileUp, CheckCircle, Zap,
   MessageCircle, ChevronRight, Loader2, Lightbulb, Database,
   Maximize2, Minimize2, Plus, Search
 } from 'lucide-react';
-import type { OntologyNode, SimulationNodeConfig } from '../types';
-import { MOCK_SKILLS } from '../constants';
+import type { OntologyNode, OntologyLink, SimulationNodeConfig } from '../types';
+import { MOCK_SKILLS, isSimulationNode, getSimulationConfig } from '../constants';
 
 interface SimulationModalProps {
   isOpen: boolean;
@@ -61,7 +61,44 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   const [solutionAdditionalNodes, setSolutionAdditionalNodes] = useState<Record<string, string[]>>({});
   const [showNodeSelector, setShowNodeSelector] = useState(false);
   const [selectedNodesForSolution, setSelectedNodesForSolution] = useState<string[]>([]);
+  const [childSimulationResults, setChildSimulationResults] = useState<Record<string, Solution[]>>({});
+  const [activeChildSimulation, setActiveChildSimulation] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 获取当前推演节点的下级推演节点
+  const childSimulationNodes = useMemo(() => {
+    if (!allNodes.length || !allLinks.length) return [];
+
+    // 通过连接关系找到下级节点（当前节点是source的链接）
+    const childNodeIds = allLinks
+      .filter(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+        return sourceId === node.id;
+      })
+      .map(link => typeof link.target === 'string' ? link.target : (link.target as any).id);
+
+    // 过滤出也是推演节点的下级节点
+    const childSims = allNodes.filter(n =>
+      childNodeIds.includes(n.id) &&
+      isSimulationNode(n.id)
+    );
+
+    return childSims;
+  }, [allNodes, allLinks, node.id]);
+
+  // 获取所有下级节点（用于数据引用）
+  const allChildNodes = useMemo(() => {
+    if (!allNodes.length || !allLinks.length) return [];
+
+    const childNodeIds = allLinks
+      .filter(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+        return sourceId === node.id;
+      })
+      .map(link => typeof link.target === 'string' ? link.target : (link.target as any).id);
+
+    return allNodes.filter(n => childNodeIds.includes(n.id));
+  }, [allNodes, allLinks, node.id]);
 
   // 初始化参数数据状态
   useEffect(() => {
@@ -83,15 +120,33 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   // 初始化欢迎消息
   useEffect(() => {
     if (messages.length === 0) {
-      const requiredParams = config?.inputParams?.filter(p => p.required) || [];
+      const childSimNodes = childSimulationNodes.map(n => `• ${n.label} (推演节点)`).join('\n');
+      const childBizNodes = allChildNodes
+        .filter(n => !isSimulationNode(n.id))
+        .slice(0, 5)
+        .map(n => `• ${n.label}`)
+        .join('\n');
+
+      let content = `欢迎使用"${node?.label}"推演分析！\n\n`;
+
+      if (childSimulationNodes.length > 0) {
+        content += `该推演需要以下下级推演节点的结果：\n${childSimNodes}\n\n`;
+      }
+
+      if (allChildNodes.length > childSimulationNodes.length) {
+        content += `关联的业务节点：\n${childBizNodes}${allChildNodes.length > 5 ? '\n...' : ''}\n\n`;
+      }
+
+      content += `请先点击左侧的关联节点导入数据或推演结果，然后选择需要的技能，最后通过对话框与我交互。`;
+
       setMessages([{
         id: 'welcome',
         role: 'ai',
-        content: `欢迎使用"${node?.label}"推演分析！\n\n该推演需要以下数据：\n${requiredParams.map(p => `• ${p.name}${p.unit ? ` (${p.unit})` : ''}`).join('\n')}\n\n请先选择左侧的数据项导入或输入数据，然后选择需要的技能，最后通过对话框与我交互。`,
+        content,
         timestamp: new Date()
       }]);
     }
-  }, [node, config]);
+  }, [node, config, childSimulationNodes, allChildNodes]);
 
   if (!isOpen || !node || !config) return null;
 
@@ -277,30 +332,86 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
     );
   };
 
-  // 获取节点层级名称
-  const getNodeLevelName = (group?: number) => {
+  // 导入下级推演节点的结果
+  const importChildSimulationResults = (childNodeId: string) => {
+    const childResults = childSimulationResults[childNodeId];
+    if (!childResults || childResults.length === 0) {
+      // 模拟生成下级推演结果
+      const mockChildSolutions: Solution[] = [
+        {
+          id: `child_${childNodeId}_1`,
+          name: '子级保守方案',
+          description: '基于下级推演节点的保守分析结果',
+          metrics: { '子级指标1': 80, '子级指标2': 75 },
+          confidence: 0.85,
+          riskLevel: 'low'
+        },
+        {
+          id: `child_${childNodeId}_2`,
+          name: '子级平衡方案',
+          description: '基于下级推演节点的平衡分析结果',
+          metrics: { '子级指标1': 90, '子级指标2': 85 },
+          confidence: 0.78,
+          riskLevel: 'medium'
+        }
+      ];
+      setChildSimulationResults(prev => ({ ...prev, [childNodeId]: mockChildSolutions }));
+
+      // 添加系统消息
+      const childNode = allNodes.find(n => n.id === childNodeId);
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'ai',
+        content: `📥 已导入下级推演节点「${childNode?.label || childNodeId}」的分析结果：\n\n• 子级保守方案：置信度 85%，风险等级 低\n• 子级平衡方案：置信度 78%，风险等级 中\n\n这些结果将作为当前推演的数据参考。`,
+        timestamp: new Date()
+      }]);
+    }
+    setActiveChildSimulation(childNodeId);
+  };
+
+  // 将下级推演结果应用到当前方案
+  const applyChildResultToSolution = (childSolution: Solution) => {
+    if (!selectedSolution) return;
+
+    setSolutions(prev => prev.map(sol => {
+      if (sol.id === selectedSolution) {
+        return {
+          ...sol,
+          confidence: Math.min(sol.confidence + 0.05, 0.95),
+          description: sol.description + `\n\n【已集成下级推演结果】\n引用方案：${childSolution.name}\n参考置信度：${(childSolution.confidence * 100).toFixed(0)}%`
+        };
+      }
+      return sol;
+    }));
+
+    setSolutionMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'ai',
+      content: `✅ 已将下级推演结果「${childSolution.name}」集成到当前方案「${solutions.find(s => s.id === selectedSolution)?.name}」。\n\n方案置信度已更新。`,
+      timestamp: new Date(),
+      solutionId: selectedSolution
+    }]);
+  };
+
+  // 获取节点类型名称
+  const getNodeLevelName = (group?: 'simulation' | 'data') => {
     switch (group) {
-      case 1: return 'L1 场景';
-      case 2: return 'L2 子系统';
-      case 3: return 'L3 工艺';
-      case 4: return 'L4 参数';
-      case 5: return 'L5 技能';
+      case 'simulation': return '推演节点';
+      case 'data': return '数据节点';
       default: return '节点';
     }
   };
 
-  // 获取节点层级颜色
-  const getNodeLevelColor = (group?: number) => {
+  // 获取节点类型徽章颜色
+  const getNodeLevelBadgeColor = (group?: 'simulation' | 'data') => {
     switch (group) {
-      case 1: return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-      case 2: return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 3: return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 4: return 'bg-red-100 text-red-700 border-red-200';
-      case 5: return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-slate-100 text-slate-700';
+      case 'simulation': return 'bg-purple-100 text-purple-700';
+      case 'data': return 'bg-blue-100 text-blue-700';
+      default: return 'bg-slate-100 text-slate-600';
     }
   };
 
+  // 获取节点层级颜色
   // 打开方案咨询对话框
   const openSolutionChat = (solutionId: string) => {
     setSelectedSolution(solutionId);
@@ -349,7 +460,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: `已收到您的推演需求。我已分析了${config.inputParams.length}个数据项，准备基于您选择的${selectedSkills.length}个技能进行推演分析。`,
+        content: `已收到您的推演需求。我已分析了${allChildNodes.length}个关联节点，准备基于您选择的${selectedSkills.length}个技能进行推演分析。`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiMessage]);
@@ -371,20 +482,87 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
     const completionMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'ai',
-      content: `推演分析完成！基于${Object.values(paramDataStatus).filter(s => s.hasData).length}个数据项和${selectedSkills.length}个技能，生成了${mockSolutions.length}个备选方案。`,
+      content: `推演分析完成！基于${Object.keys(uploadedFiles).length}个节点数据和${Object.keys(childSimulationResults).length}个推演结果，生成了${mockSolutions.length}个备选方案。`,
       timestamp: new Date()
     };
     setMessages(prev => [...prev, completionMessage]);
   };
 
-  // 根据推演类别生成不同的方案
+  // 根据推演类别和关联节点生成不同的方案
   const generateSolutionsByCategory = (category: string): Solution[] => {
+    // 获取决策维度节点（非推演类型的子节点）
+    const decisionNodes = allChildNodes.filter(n => !isSimulationNode(n.id));
+
+    // 根据决策维度生成方案描述
+    const generateDecisionDescription = (nodeLabels: string[], choices: string[]): string => {
+      if (nodeLabels.length === 0) return '基于综合分析生成的方案';
+
+      // 选取前3个关键决策维度
+      const keyDecisions = nodeLabels.slice(0, 3);
+      const keyChoices = choices.slice(0, 3);
+
+      const decisionText = keyDecisions.map((label, i) => {
+        const choice = keyChoices[i] || '综合评估';
+        return `${label}:${choice}`;
+      }).join(' + ');
+
+      return decisionText;
+    };
+
+    // 决策选项模板
+    const decisionOptions: Record<string, string[]> = {
+      '是否使用现有产线': ['使用现有产线', '新建产线'],
+      '是否需要新增产能': ['利用现有产能', '新增产能'],
+      '扩建还是新建': ['扩建方案', '新建方案'],
+      '新建地址选择': ['原址扩建', '异地新建'],
+      '技术路线升级': ['技术升级', '保持现有'],
+      '是否分阶段投建': ['一次性投建', '分阶段投建'],
+      '是否与客户共建': ['与客户共建', '独立建设'],
+      '政府政策支持': ['充分利用政策', '市场化运作']
+    };
+
     switch (category) {
       case 'investment_decision':
         return [
-          { id: 'sol_1', name: '保守投资方案', description: '控制风险，稳健投资，适合市场不确定性高的情况', metrics: { '预期收益': 850, '投资回报率': 12.5, '风险指数': 25, '战略匹配度': 75 }, confidence: 0.88, cost: 1200, timeline: '24个月', riskLevel: 'low' },
-          { id: 'sol_2', name: '平衡投资方案', description: '在风险与收益间取得平衡，推荐采用', metrics: { '预期收益': 1200, '投资回报率': 18.2, '风险指数': 45, '战略匹配度': 85 }, confidence: 0.75, cost: 1500, timeline: '18个月', riskLevel: 'medium' },
-          { id: 'sol_3', name: '积极投资方案', description: '把握市场机遇，最大化战略价值', metrics: { '预期收益': 1800, '投资回报率': 25.8, '风险指数': 72, '战略匹配度': 95 }, confidence: 0.62, cost: 2200, timeline: '12个月', riskLevel: 'high' }
+          {
+            id: 'sol_1',
+            name: '保守投资方案',
+            description: generateDecisionDescription(
+              decisionNodes.map(n => n.label),
+              ['使用现有产线', '利用现有产能', '扩建方案', '技术升级', '独立建设']
+            ),
+            metrics: { '预期收益': 850, '投资回报率': 12.5, '风险指数': 25, '战略匹配度': 75 },
+            confidence: 0.88,
+            cost: 1200,
+            timeline: '24个月',
+            riskLevel: 'low'
+          },
+          {
+            id: 'sol_2',
+            name: '平衡投资方案',
+            description: generateDecisionDescription(
+              decisionNodes.map(n => n.label),
+              ['新建产线', '新增产能', '分阶段投建', '与客户共建', '充分利用政策']
+            ),
+            metrics: { '预期收益': 1200, '投资回报率': 18.2, '风险指数': 45, '战略匹配度': 85 },
+            confidence: 0.75,
+            cost: 1500,
+            timeline: '18个月',
+            riskLevel: 'medium'
+          },
+          {
+            id: 'sol_3',
+            name: '积极投资方案',
+            description: generateDecisionDescription(
+              decisionNodes.map(n => n.label),
+              ['异地新建', '新增产能', '一次性投建', '技术升级', '独立建设']
+            ),
+            metrics: { '预期收益': 1800, '投资回报率': 25.8, '风险指数': 72, '战略匹配度': 95 },
+            confidence: 0.62,
+            cost: 2200,
+            timeline: '12个月',
+            riskLevel: 'high'
+          }
         ];
       case 'capacity_planning':
         return [
@@ -425,21 +603,6 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
     }
   };
 
-  const getDataTypeLabel = (type: string) => {
-    switch (type) {
-      case 'number': return '数值';
-      case 'string': return '文本';
-      case 'boolean': return '布尔';
-      case 'date': return '日期';
-      case 'file': return '文件';
-      default: return type;
-    }
-  };
-
-  const selectedParam = config.inputParams.find(p => p.id === selectedParamId);
-  const requiredParams = config.inputParams.filter(p => p.required);
-  const optionalParams = config.inputParams.filter(p => !p.required);
-
   return (
     <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${isMaximized ? '' : 'p-4'}`}>
       <div className={`bg-white rounded-xl shadow-2xl w-full overflow-hidden flex flex-col ${isMaximized ? 'fixed inset-0 rounded-none' : 'max-w-7xl max-h-[90vh]'}`}>
@@ -453,7 +616,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
               <h2 className="text-lg font-bold text-white">推演分析</h2>
               <p className="text-sm text-indigo-100">{node.label} - {config.description}</p>
               <p className="text-xs text-indigo-200 mt-0.5">
-                需要数据项: {requiredParams.length} 个必填, {optionalParams.length} 个可选
+                关联节点: {allChildNodes.length} 个 | 下级推演节点: {childSimulationNodes.length} 个
               </p>
             </div>
           </div>
@@ -490,7 +653,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
               {tab.label}
               {tab.id === 'analysis' && (
                 <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">
-                  {Object.values(paramDataStatus).filter(s => s.hasData).length}/{config.inputParams.length}
+                  {Object.keys(uploadedFiles).length}/{allChildNodes.length}
                 </span>
               )}
             </button>
@@ -501,124 +664,191 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
         <div className="flex-1 overflow-hidden">
           {activeTab === 'analysis' && (
             <div className="h-full flex">
-              {/* Left Panel: Data Parameters List */}
+              {/* Left Panel: Data Nodes (Child Nodes from Graph) */}
               <div className="w-72 border-r border-slate-200 bg-slate-50 flex flex-col">
                 <div className="p-4 border-b border-slate-200">
                   <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <Database size={16} />数据需求项
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">点击选择并导入数据</p>
+                  <p className="text-xs text-slate-500 mt-1">点击关联节点导入数据</p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                  {/* Required Params */}
-                  {requiredParams.length > 0 && (
+                  {/* 下级推演节点 */}
+                  {childSimulationNodes.length > 0 && (
                     <div className="mb-3">
-                      <p className="text-[10px] text-slate-400 uppercase mb-2">必填项</p>
-                      {requiredParams.map(param => {
-                        const status = paramDataStatus[param.id];
-                        const isSelected = selectedParamId === param.id;
+                      <p className="text-[10px] text-purple-600 uppercase mb-2 font-medium">下级推演节点</p>
+                      {childSimulationNodes.map(childNode => {
+                        const hasResults = childSimulationResults[childNode.id]?.length > 0;
+                        const isSelected = selectedParamId === childNode.id;
                         return (
                           <div
-                            key={param.id}
-                            onClick={() => setSelectedParamId(param.id)}
+                            key={childNode.id}
+                            onClick={() => setSelectedParamId(childNode.id)}
                             className={`p-3 rounded-lg border-2 cursor-pointer transition-all mb-2 ${
-                              isSelected ? 'border-indigo-500 bg-indigo-50' : status?.hasData ? 'border-green-300 bg-green-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                              isSelected ? 'border-purple-500 bg-purple-50' : hasResults ? 'border-green-300 bg-green-50' : 'border-purple-200 bg-white hover:border-purple-300'
                             }`}
                           >
                             <div className="flex items-start justify-between mb-1">
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-100 text-red-700">必填</span>
-                              {status?.hasData && <CheckCircle size={14} className="text-green-600" />}
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700">推演</span>
+                              {hasResults && <CheckCircle size={14} className="text-green-600" />}
                             </div>
-                            <h4 className="text-sm font-medium text-slate-900 truncate">{param.name}</h4>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{getDataTypeLabel(param.dataType)}{param.unit ? ` · ${param.unit}` : ''}</p>
-                            {status?.importedFiles.length > 0 && (
-                              <p className="text-[10px] text-indigo-600 mt-1">{status.importedFiles.length} 个文件</p>
+                            <h4 className="text-sm font-medium text-slate-900 truncate">{childNode.label}</h4>
+                            <p className="text-[10px] text-slate-500 mt-0.5">{getNodeLevelName(childNode.group)}</p>
+                            {hasResults && (
+                              <p className="text-[10px] text-green-600 mt-1">已导入 {childSimulationResults[childNode.id].length} 个方案</p>
                             )}
                           </div>
                         );
                       })}
                     </div>
                   )}
-                  {/* Optional Params */}
-                  {optionalParams.length > 0 && (
+                  {/* 关联业务节点 */}
+                  {allChildNodes.filter(n => !isSimulationNode(n.id)).length > 0 && (
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase mb-2">可选项</p>
-                      {optionalParams.map(param => {
-                        const status = paramDataStatus[param.id];
-                        const isSelected = selectedParamId === param.id;
-                        return (
-                          <div
-                            key={param.id}
-                            onClick={() => setSelectedParamId(param.id)}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all mb-2 ${
-                              isSelected ? 'border-indigo-500 bg-indigo-50' : status?.hasData ? 'border-green-300 bg-green-50' : 'border-slate-200 bg-white hover:border-slate-300'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between mb-1">
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-slate-100 text-slate-600">可选</span>
-                              {status?.hasData && <CheckCircle size={14} className="text-green-600" />}
+                      <p className="text-[10px] text-slate-400 uppercase mb-2">关联业务节点</p>
+                      {allChildNodes
+                        .filter(n => !isSimulationNode(n.id))
+                        .map(childNode => {
+                          const isSelected = selectedParamId === childNode.id;
+                          return (
+                            <div
+                              key={childNode.id}
+                              onClick={() => setSelectedParamId(childNode.id)}
+                              className={`p-3 rounded-lg border-2 cursor-pointer transition-all mb-2 ${
+                                isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <span className={`px-1.5 py-0.5 text-[10px] rounded ${getNodeLevelBadgeColor(childNode.group)}`}>
+                                  {getNodeLevelName(childNode.group)}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-medium text-slate-900 truncate">{childNode.label}</h4>
+                              {childNode.responsibility && (
+                                <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{childNode.responsibility}</p>
+                              )}
                             </div>
-                            <h4 className="text-sm font-medium text-slate-900 truncate">{param.name}</h4>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{getDataTypeLabel(param.dataType)}{param.unit ? ` · ${param.unit}` : ''}</p>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                    </div>
+                  )}
+                  {/* 无关联节点提示 */}
+                  {allChildNodes.length === 0 && (
+                    <div className="text-center py-8 text-slate-400">
+                      <Box size={32} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-xs">该推演节点暂无<br/>直接关联的下级节点</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Middle Panel: Selected Param Data Input */}
+              {/* Middle Panel: Selected Node Data Input */}
               <div className="w-80 border-r border-slate-200 bg-white flex flex-col">
-                {selectedParam ? (
-                  <>
-                    <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-                      <span className={`px-2 py-0.5 text-xs rounded ${selectedParam.required ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
-                        {selectedParam.required ? '必填' : '可选'}
-                      </span>
-                      <h3 className="font-semibold text-slate-900 mt-2">{selectedParam.name}</h3>
-                      <p className="text-xs text-slate-500 mt-1">{selectedParam.description}</p>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                      {/* Param Info */}
-                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                        <h4 className="text-xs font-semibold text-slate-700 mb-2">数据项信息</h4>
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex justify-between"><span className="text-slate-500">数据类型:</span><span className="text-slate-700">{getDataTypeLabel(selectedParam.dataType)}</span></div>
-                          {selectedParam.unit && <div className="flex justify-between"><span className="text-slate-500">单位:</span><span className="text-slate-700">{selectedParam.unit}</span></div>}
-                          {selectedParam.defaultValue !== undefined && <div className="flex justify-between"><span className="text-slate-500">默认值:</span><span className="text-slate-700">{String(selectedParam.defaultValue)}</span></div>}
-                        </div>
-                      </div>
+                {selectedParamId ? (
+                  (() => {
+                    const selectedNode = allNodes.find(n => n.id === selectedParamId);
+                    const isSimNode = selectedNode ? isSimulationNode(selectedNode.id) : false;
+                    const hasResults = selectedNode ? childSimulationResults[selectedNode.id]?.length > 0 : false;
 
-                      {/* File Import */}
-                      <div className="bg-white rounded-lg p-3 border border-indigo-200">
-                        <h4 className="text-xs font-semibold text-indigo-700 mb-2 flex items-center gap-2"><Upload size={14} />文件导入</h4>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-indigo-300 rounded-lg p-3 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
-                          <input ref={fileInputRef} type="file" multiple onChange={(e) => handleParamFileUpload(selectedParam.id, e)} className="hidden" accept=".csv,.json,.xml,.xlsx,.xls" />
-                          <Upload size={20} className="text-indigo-400 mx-auto mb-1" />
-                          <p className="text-xs text-indigo-600">点击上传数据文件</p>
+                    return (
+                      <>
+                        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                          {isSimNode ? (
+                            <span className="px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-700">推演节点</span>
+                          ) : (
+                            <span className={`px-2 py-0.5 text-xs rounded ${getNodeLevelBadgeColor(selectedNode?.group)}`}>
+                              {getNodeLevelName(selectedNode?.group)}
+                            </span>
+                          )}
+                          <h3 className="font-semibold text-slate-900 mt-2">{selectedNode?.label}</h3>
+                          <p className="text-xs text-slate-500 mt-1">{selectedNode?.responsibility || '暂无描述'}</p>
                         </div>
-                        {uploadedFiles[selectedParam.id]?.length > 0 && (
-                          <div className="mt-3 space-y-1.5">
-                            {uploadedFiles[selectedParam.id].map((file, idx) => (
-                              <div key={idx} className="flex items-center justify-between bg-indigo-50 p-2 rounded text-xs">
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                  <FileUp size={12} className="text-indigo-500 flex-shrink-0" />
-                                  <span className="truncate">{file.name}</span>
-                                </div>
-                                <button onClick={() => removeParamFile(selectedParam.id, idx)} className="p-1 hover:bg-red-50 rounded text-red-500"><X size={12} /></button>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                          {/* Node Info */}
+                          <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                            <h4 className="text-xs font-semibold text-slate-700 mb-2">节点信息</h4>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-slate-500">节点ID:</span>
+                                <span className="text-slate-700 font-mono">{selectedNode?.id}</span>
                               </div>
-                            ))}
+                              {selectedNode?.owner && (
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">负责人:</span>
+                                  <span className="text-slate-700">{selectedNode.owner}</span>
+                                </div>
+                              )}
+                              {selectedNode?.dataSource && (
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">数据源:</span>
+                                  <span className="text-slate-700">{selectedNode.dataSource}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
+
+                          {/* 推演节点：导入推演结果 */}
+                          {isSimNode && (
+                            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                              <h4 className="text-xs font-semibold text-purple-700 mb-2 flex items-center gap-2">
+                                <Database size={14} />推演结果
+                              </h4>
+                              {hasResults ? (
+                                <div className="space-y-2">
+                                  <p className="text-xs text-slate-600">已导入 {childSimulationResults[selectedNode!.id].length} 个方案：</p>
+                                  {childSimulationResults[selectedNode!.id].map((sol, idx) => (
+                                    <div key={idx} className="bg-white p-2 rounded border border-purple-200">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-xs font-medium text-slate-700">{sol.name}</span>
+                                        <span className="text-[10px] text-slate-500">{(sol.confidence * 100).toFixed(0)}%</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => selectedNode && importChildSimulationResults(selectedNode.id)}
+                                  className="w-full py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded text-xs font-medium transition-colors"
+                                >
+                                  导入推演结果
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* File Import */}
+                          <div className="bg-white rounded-lg p-3 border border-indigo-200">
+                            <h4 className="text-xs font-semibold text-indigo-700 mb-2 flex items-center gap-2">
+                              <Upload size={14} />文件导入
+                            </h4>
+                            <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-indigo-300 rounded-lg p-3 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
+                              <input ref={fileInputRef} type="file" multiple onChange={(e) => handleParamFileUpload(selectedParamId, e)} className="hidden" accept=".csv,.json,.xml,.xlsx,.xls" />
+                              <Upload size={20} className="text-indigo-400 mx-auto mb-1" />
+                              <p className="text-xs text-indigo-600">点击上传数据文件</p>
+                            </div>
+                            {uploadedFiles[selectedParamId]?.length > 0 && (
+                              <div className="mt-3 space-y-1.5">
+                                {uploadedFiles[selectedParamId].map((file, idx) => (
+                                  <div key={idx} className="flex items-center justify-between bg-indigo-50 p-2 rounded text-xs">
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                      <FileUp size={12} className="text-indigo-500 flex-shrink-0" />
+                                      <span className="truncate">{file.name}</span>
+                                    </div>
+                                    <button onClick={() => removeParamFile(selectedParamId, idx)} className="p-1 hover:bg-red-50 rounded text-red-500"><X size={12} /></button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()
                 ) : (
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center text-slate-400">
                       <Database size={48} className="mx-auto mb-2" />
-                      <p className="text-sm">点击左侧数据项<br/>查看详情并输入数据</p>
+                      <p className="text-sm">点击左侧关联节点<br/>查看详情并导入数据</p>
                     </div>
                   </div>
                 )}
@@ -675,6 +905,119 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                   )}
                 </div>
 
+                {/* 下级推演节点 */}
+                {childSimulationNodes.length > 0 && (
+                  <div className="border-b border-slate-200 bg-gradient-to-r from-purple-50 to-blue-50">
+                    <button
+                      onClick={() => setActiveChildSimulation(activeChildSimulation ? null : childSimulationNodes[0]?.id)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Database size={16} className="text-purple-600" />
+                        <span className="text-sm font-medium text-slate-700">下级推演节点</span>
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">
+                          {childSimulationNodes.length}个
+                        </span>
+                        {Object.keys(childSimulationResults).length > 0 && (
+                          <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                            已导入{Object.keys(childSimulationResults).length}个
+                          </span>
+                        )}
+                      </div>
+                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${activeChildSimulation ? 'rotate-90' : ''}`} />
+                    </button>
+
+                    {activeChildSimulation && (
+                      <div className="px-4 pb-4 border-t border-purple-100">
+                        <p className="text-xs text-slate-500 mt-3 mb-2">点击导入下级推演节点的分析结果，可作为当前推演的输入数据</p>
+                        <div className="space-y-2">
+                          {childSimulationNodes.map(childNode => {
+                            const hasResults = childSimulationResults[childNode.id]?.length > 0;
+                            return (
+                              <div
+                                key={childNode.id}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                  hasResults ? 'border-green-300 bg-green-50' : 'border-purple-200 bg-white hover:border-purple-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                    <span className="text-sm font-medium text-slate-900">{childNode.label}</span>
+                                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700">推演节点</span>
+                                  </div>
+                                  <button
+                                    onClick={() => importChildSimulationResults(childNode.id)}
+                                    disabled={hasResults}
+                                    className={`px-3 py-1 rounded text-xs transition-colors ${
+                                      hasResults
+                                        ? 'bg-green-100 text-green-700 cursor-default'
+                                        : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                                    }`}
+                                  >
+                                    {hasResults ? '已导入' : '导入结果'}
+                                  </button>
+                                </div>
+
+                                {/* 显示已导入的结果 */}
+                                {hasResults && (
+                                  <div className="mt-2 pl-4 border-l-2 border-green-200">
+                                    <p className="text-[10px] text-slate-500 mb-1">可引用的方案（点击应用到当前方案）：</p>
+                                    <div className="space-y-1">
+                                      {childSimulationResults[childNode.id].map((childSol, idx) => (
+                                        <button
+                                          key={idx}
+                                          onClick={() => applyChildResultToSolution(childSol)}
+                                          className="w-full text-left px-2 py-1 bg-white rounded border border-green-200 hover:border-green-400 text-xs transition-colors"
+                                        >
+                                          <span className="font-medium text-slate-700">{childSol.name}</span>
+                                          <span className="text-slate-500 ml-2">置信度 {(childSol.confidence * 100).toFixed(0)}%</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 关联下级节点（数据支持） */}
+                {allChildNodes.length > childSimulationNodes.length && (
+                  <div className="border-b border-slate-200 bg-slate-50">
+                    <div className="px-4 py-2 flex items-center gap-2">
+                      <Box size={14} className="text-slate-500" />
+                      <span className="text-xs text-slate-600">关联下级节点</span>
+                      <span className="px-1.5 py-0.5 bg-slate-200 text-slate-600 text-[10px] rounded">
+                        {allChildNodes.length - childSimulationNodes.length}个
+                      </span>
+                    </div>
+                    <div className="px-4 pb-3">
+                      <p className="text-[10px] text-slate-400 mb-2">以下节点与当前推演节点关联，可提供数据支持</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {allChildNodes
+                          .filter(n => !isSimulationNode(n.id))
+                          .map(childNode => (
+                            <div
+                              key={childNode.id}
+                              className="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-600 flex items-center gap-1"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                childNode.group === 'simulation' ? 'bg-purple-400' :
+                                childNode.group === 'data' ? 'bg-blue-400' : 'bg-slate-400'
+                              }`} />
+                              {childNode.label}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -698,8 +1041,12 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                 <div className="p-4 border-t border-slate-200 bg-white space-y-3">
                   <div className="flex items-center gap-4 text-xs">
                     <span className="flex items-center gap-1 text-slate-600">
-                      <div className={`w-2 h-2 rounded-full ${Object.values(paramDataStatus).filter(s => s.hasData).length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
-                      已导入数据: {Object.values(paramDataStatus).filter(s => s.hasData).length}项
+                      <div className={`w-2 h-2 rounded-full ${Object.keys(uploadedFiles).length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                      已导入节点数据: {Object.keys(uploadedFiles).length}/{allChildNodes.length}
+                    </span>
+                    <span className="flex items-center gap-1 text-slate-600">
+                      <div className={`w-2 h-2 rounded-full ${Object.keys(childSimulationResults).length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                      已导入推演结果: {Object.keys(childSimulationResults).length}/{childSimulationNodes.length}
                     </span>
                     <span className="flex items-center gap-1 text-slate-600">
                       <div className={`w-2 h-2 rounded-full ${selectedSkills.length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
@@ -939,11 +1286,9 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                                 return (
                                   <div key={nodeId} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded text-xs">
                                     <span className={`w-2 h-2 rounded-full ${
-                                      nodeItem.group === 1 ? 'bg-indigo-500' :
-                                      nodeItem.group === 2 ? 'bg-blue-500' :
-                                      nodeItem.group === 3 ? 'bg-amber-500' :
-                                      nodeItem.group === 4 ? 'bg-red-500' :
-                                      'bg-green-500'
+                                      nodeItem.group === 'simulation' ? 'bg-purple-500' :
+                                      nodeItem.group === 'data' ? 'bg-blue-500' :
+                                      'bg-slate-500'
                                     }`} />
                                     <span className="text-slate-700">{nodeItem.label}</span>
                                   </div>

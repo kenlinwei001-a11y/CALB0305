@@ -109,15 +109,15 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
     const errs: string[] = [];
     if (!scenarioName.trim()) errs.push('请输入场景名称');
     if (!scenarioDesc.trim()) errs.push('请输入场景描述');
-    if (treeData.length === 0) errs.push('请至少添加一个L2子系统');
+    if (treeData.length === 0) errs.push('请至少添加一个推演节点');
     setErrors(errs);
     return errs.length === 0;
   };
 
-  const addL2Node = () => {
+  const addLevel1Node = () => {
     const newNode: TreeNode = {
       id: generateId(),
-      name: `子系统${treeData.length + 1}`,
+      name: `推演节点${treeData.length + 1}`,
       level: 2,
       children: [],
       atomRefs: [],
@@ -129,7 +129,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
   const addChildNode = (parentId: string, level: 3 | 4) => {
     const newNode: TreeNode = {
       id: generateId(),
-      name: level === 3 ? '新工艺过程' : '新参数',
+      name: level === 3 ? '新数据节点' : '新参数节点',
       level,
       children: [],
       atomRefs: [],
@@ -558,11 +558,11 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-slate-700">分子结构定义</h3>
                   <button
-                    onClick={addL2Node}
+                    onClick={addLevel1Node}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center text-sm"
                   >
                     <Plus size={16} className="mr-1" />
-                    添加L2子系统
+                    添加推演节点
                   </button>
                 </div>
 
@@ -570,7 +570,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
                   <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg">
                     <div className="text-center">
                       <Box className="mx-auto text-slate-300 mb-2" size={48} />
-                      <p className="text-slate-500">点击上方按钮添加第一个L2子系统</p>
+                      <p className="text-slate-500">点击上方按钮添加第一个推演节点</p>
                     </div>
                   </div>
                 ) : (
@@ -617,15 +617,15 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
                       <div className="h-full flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg">
                         <div className="text-center">
                           <AlertCircle className="mx-auto text-slate-300 mb-2" size={48} />
-                          <p className="text-slate-500">先在右侧选择一个L4参数节点</p>
+                          <p className="text-slate-500">先在右侧选择一个参数节点</p>
                         </div>
                       </div>
                     ) : selectedNode.level !== 4 ? (
                       <div className="h-full flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg">
                         <div className="text-center">
                           <AlertCircle className="mx-auto text-amber-300 mb-2" size={48} />
-                          <p className="text-slate-500">请选择L4层级（参数）节点进行原子绑定</p>
-                          <p className="text-sm text-slate-400 mt-1">当前选择: {selectedNode.name} (L{selectedNode.level})</p>
+                          <p className="text-slate-500">请选择参数节点进行原子绑定</p>
+                          <p className="text-sm text-slate-400 mt-1">当前选择: {selectedNode.name}</p>
                         </div>
                       </div>
                     ) : (

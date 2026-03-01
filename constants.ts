@@ -1,23 +1,11 @@
 import { Skill, OntologyData, ExecutionLog, Scenario, OntologyNode, OntologyLink, AtomicOntology, BusinessScenario, MolecularOntology, SimulationNodeConfig } from './types';
 
 export const SCENARIOS: Scenario[] = [
-  { id: 'raw_material', name: '1. 原材料管理', description: '正负极材料、隔膜、电解液的入库质检与追溯' },
-  { id: 'mixing', name: '2. 搅拌/制浆', description: '匀浆工艺参数控制、粘度预测与浆料输送' },
-  { id: 'coating', name: '3. 涂布工艺', description: '极片涂布厚度闭环控制、面密度检测' },
-  { id: 'calendaring', name: '4. 辊压工艺', description: '极片压实密度控制、延展率监测' },
-  { id: 'slitting', name: '5. 分切工艺', description: '极片分切宽度精度、毛刺检测' },
-  { id: 'winding', name: '6. 卷绕/叠片', description: '极片对齐度、张力控制与Overhang检测' },
-  { id: 'assembly', name: '7. 组装焊接', description: '超声波/激光焊接质量监测、Hi-Pot测试' },
-  { id: 'baking_injection', name: '8. 烘烤与注液', description: '水分含量预测、注液量精度控制' },
-  { id: 'formation', name: '9. 化成分容', description: 'SEI膜形成监测、容量预测与电芯分级' },
-  { id: 'pack', name: '10. 模组/Pack', description: 'BMS测试、热管理分析与Busbar焊接检测' },
-  { id: 'production_planning', name: '11. 产销生产计划', description: 'S&OP协同、产能平衡与主生产计划制定' },
-  { id: 'predictive_maintenance', name: '12. 设备预测性维护', description: '设备健康度监测、RUL预测与异常预警' },
-  { id: 'breakdown_maintenance', name: '13. 设备故障维修', description: '维修工时预测、备件物流与专家调度' },
-  { id: 'cost_management', name: '14. 经营成本管理', description: '单吨成本分析、能耗审计与库存周转优化' },
-  { id: 'production_sales_match', name: '15. 产销匹配协同', description: '需求预测、产能平衡、库存优化与订单履约协同' },
-  { id: 'new_project_planning', name: '16. 新项目落地推演分析', description: '新产线投资决策分析、选址评估、财务测算与风险推演' },
-  { id: 'capacity_assessment_prediction', name: '17. 产能评估推演预测分析', description: '现有产能评估、需求预测、产能缺口分析、投资决策推演与风险模拟' },
+  { id: 'predictive_maintenance', name: '1. 设备预测性维护', description: '设备健康度监测、RUL预测与异常预警' },
+  { id: 'breakdown_maintenance', name: '2. 设备故障维修时间预测', description: '维修工时预测、备件库存与物流时间、专家调度' },
+  { id: 'production_sales_match', name: '3. 产销匹配协同', description: 'S&OP层级的产销协同推演，包含需求预测、产能评估、库存优化、交付协同等，可调用产能评估推演预测分析' },
+  { id: 'new_project_planning', name: '4. 新项目落地推演分析', description: '新产线投资决策分析、选址评估、财务测算与风险推演' },
+  { id: 'capacity_assessment_prediction', name: '5. 产能评估推演预测分析', description: '供给侧产能评估，被产销匹配协同调用' },
 ];
 
 export const MOCK_SKILLS: Skill[] = [
@@ -917,6 +905,7 @@ interface ScenarioGraphConfig {
     l2: (string | { id: string; name: string })[]; // Subsystems
     l3: Record<string, (string | { id: string; name: string })[]>; // Processes per Subsystem
     l4: Record<string, string[]>; // Parameters per Process (always Chinese labels)
+    l2_links?: { source: string; target: string; relation?: string }[]; // Connections between L2 nodes (business flow)
 }
 
 const DEFAULT_GRAPH_CONFIG: ScenarioGraphConfig = {
@@ -927,181 +916,224 @@ const DEFAULT_GRAPH_CONFIG: ScenarioGraphConfig = {
 
 const SCENARIO_CONFIGS: Record<string, ScenarioGraphConfig> = {
     'breakdown_maintenance': {
-        l2: ['故障接报', '资源调度', '备件物流', '现场维修'],
-        l3: {
-            '故障接报': ['安灯呼叫', '故障分类', '远程初诊'],
-            '资源调度': ['专家匹配', '工单排程'],
-            '备件物流': ['库存查询', 'AGV配送', '备件出库'],
-            '现场维修': ['拆解作业', '更换调试', '验证运行']
-        },
-        l4: {
-            '故障分类': ['故障代码', '严重等级'],
-            '远程初诊': ['报警日志', '历史图像'],
-            '专家匹配': ['技能矩阵', '人员状态', '位置信息'],
-            '库存查询': ['SKU数量', '库位坐标'],
-            'AGV配送': ['路径规划', '预计到达时间'],
-            '更换调试': ['扭矩记录', '试运行参数']
-        }
-    },
-    'production_planning': {
-        l2: ['订单需求', '瓶颈资源', '关键物料', '计划排程'],
-        l3: {
-            '订单需求': ['储能电芯订单', '动力电池订单', 'Pack交付计划'],
-            '瓶颈资源': ['化成柜产能', '静置库位', '涂布车速'],
-            '关键物料': ['正极主材(LFP/NCM)', '结构件', '电解液'],
-            '计划排程': ['主生产计划(MPS)', '工序平衡分析']
-        },
-        l4: {
-            '储能电芯订单': ['280Ah方壳', '交付DDT'],
-            '化成柜产能': ['电源柜利用率', '托盘周转率'],
-            '静置库位': ['库位占用率', '静置周期(7-14天)'],
-            '正极主材(LFP/NCM)': ['供应商LT', '安全库存天数'],
-            '主生产计划(MPS)': ['电芯产出量(Wh)', 'Pack齐套率']
-        }
-    },
-    'cost_management': {
-        l2: ['成本核算', '能源管理', '资金流'],
-        l3: {
-            '成本核算': ['料工费分摊', '差异分析'],
-            '能源管理': ['电耗监控', '峰谷平衡'],
-            '资金流': ['库存占用', '采购付款']
-        },
-        l4: {
-            '料工费分摊': ['BOM定额', '实际工时'],
-            '电耗监控': ['分项计量', '功率因数'],
-            '库存占用': ['周转天数', '呆滞金额']
-        }
-    },
-    'predictive_maintenance': {
-        l2: ['数据采集', '信号处理', '状态监测', '决策支持'],
-        l3: {
-            '数据采集': ['振动监测', '温度监测', '油液采样'],
-            '信号处理': ['去噪处理', '特征提取(FFT)'],
-            '状态监测': ['健康度评分', '退化趋势分析'],
-            '决策支持': ['剩余寿命(RUL)', '维护建议']
-        },
-        l4: {
-            '振动监测': ['加速度峰值', '位移有效值'],
-            '特征提取(FFT)': ['特征频率', '能量谱密度'],
-            '健康度评分': ['基准偏差', '异常概率'],
-            '剩余寿命(RUL)': ['预测天数', '置信区间']
-        }
-    },
-    'coating': {
-        l2: ['供料系统', '涂布机头', '干燥烘箱', '收卷单元'],
-        l3: {
-            '供料系统': ['浆料过滤', '精密泵送'],
-            '涂布机头': ['间隙控制', '流体仿真'],
-            '干燥烘箱': ['温区控制', '风速调节'],
-            '收卷单元': ['张力控制', '纠偏控制']
-        },
-        l4: {
-            '精密泵送': ['泵转速', '流量稳定性'],
-            '间隙控制': ['极片厚度', '横向一致性'],
-            '温区控制': ['实际温度', '升温速率'],
-            '张力控制': ['收卷张力', '锥度系数']
-        }
-    },
-    // Fallback/Generic configs for others to prevent "Spare parts connecting to Environment" issues
-    'raw_material': {
-        l2: ['供应商管理', '入库检验', '仓储环境'],
-        l3: { '供应商管理': ['资质审核'], '入库检验': ['理化分析', '抽样检测'], '仓储环境': ['温湿度监控', '异物管控'] },
-        l4: { '理化分析': ['水分含量', '纯度指标'], '抽样检测': ['包装完整性'], '温湿度监控': ['露点温度'] }
-    },
-    'mixing': {
-        l2: ['投料系统', '搅拌工艺', '输送系统'],
-        l3: { '投料系统': ['称重配料'], '搅拌工艺': ['分散均质', '脱泡处理'], '输送系统': ['管道清洗', '磁性过滤'] },
-        l4: { '称重配料': ['配料精度'], '分散均质': ['搅拌转速', '浆料粘度', '固含量'], '脱泡处理': ['真空度'] }
-    },
-    'production_sales_match': {
-        // Use IDs from PRODUCTION_SALES_PROCESS_MAP to enable backward analysis
-        // ID format is semantic ID, label is Chinese display name
+        // 设备故障维修时间预测 - 聚焦维修工时预测
+        // 业务流程：故障诊断 → 维修时间评估 → 备件物流调度 → 维修执行
         l2: [
-            { id: 'demand_forecast', name: '需求预测' },
-            { id: 'sales_planning', name: '销售计划' },
-            { id: 'capacity_planning', name: '产能规划' },
-            { id: 'inventory_management', name: '库存管理' },
-            { id: 'production_scheduling', name: '生产排程' },
-            { id: 'quality_control', name: '质量控制' },
-            { id: 'logistics_delivery', name: '物流配送' },
-            { id: 'customer_service', name: '客户服务' }
+            { id: 'fault_diagnosis', name: '故障诊断推演' },
+            { id: 'repair_time_estimation', name: '维修时间评估推演' },
+            { id: 'spare_parts_logistics', name: '备件物流推演' },
+            { id: 'repair_execution', name: '维修执行推演' }
+        ],
+        // L2节点之间的连接关系（业务流程顺序）
+        l2_links: [
+            { source: 'fault_diagnosis', target: 'repair_time_estimation', relation: '后续' },
+            { source: 'repair_time_estimation', target: 'spare_parts_logistics', relation: '后续' },
+            { source: 'spare_parts_logistics', target: 'repair_execution', relation: '后续' }
         ],
         l3: {
-            'demand_forecast': [
-                { id: 'market_analysis', name: '市场分析' },
-                { id: 'forecast_model', name: '预测模型' },
-                { id: 'accuracy_evaluation', name: '准确度评估' }
+            // 故障诊断推演的数据支撑
+            'fault_diagnosis': [
+                { id: 'fault_info', name: '故障信息' },
+                { id: 'equipment_status', name: '设备状态' }
             ],
-            'sales_planning': [
-                { id: 'sales_target', name: '销售目标' },
-                { id: 'order_management', name: '订单管理' },
-                { id: 'customer_segmentation', name: '客户分级' }
+            // 维修时间评估推演的数据支撑
+            'repair_time_estimation': [
+                { id: 'fault_complexity', name: '故障复杂度' },
+                { id: 'repair_history_data', name: '历史维修数据' },
+                { id: 'expert_availability', name: '专家可用性' }
             ],
-            'capacity_planning': [
-                { id: 'capacity_assessment', name: '产能评估' },
-                { id: 'bottleneck_analysis', name: '瓶颈分析' },
-                { id: 'resource_allocation', name: '资源调配' }
+            // 备件物流推演的数据支撑
+            'spare_parts_logistics': [
+                { id: 'spare_parts_inventory', name: '备件库存' },
+                { id: 'logistics_time', name: '物流时间' },
+                { id: 'agv_scheduling', name: 'AGV调度' }
             ],
-            'inventory_management': [
-                { id: 'raw_material_inventory', name: '原材料库存' },
-                { id: 'wip_inventory', name: '在制品库存' },
-                { id: 'finished_goods_inventory', name: '成品库存' },
-                { id: 'safety_stock', name: '安全库存' }
-            ],
-            'production_scheduling': [
-                { id: 'mps_generation', name: '主生产计划' },
-                { id: 'production_tracking', name: '生产跟踪' },
-                { id: 'exception_handling', name: '异常处理' }
-            ],
-            'quality_control': [
-                { id: 'quality_inspection', name: '质量检验' },
-                { id: 'defect_analysis', name: '缺陷分析' },
-                { id: 'improvement_tracking', name: '改进跟踪' }
-            ],
-            'logistics_delivery': [
-                { id: 'delivery_planning', name: '配送计划' },
-                { id: 'shipment_tracking', name: '发货跟踪' },
-                { id: 'carrier_management', name: '承运商管理' }
-            ],
-            'customer_service': [
-                { id: 'order_inquiry', name: '订单查询' },
-                { id: 'complaint_handling', name: '投诉处理' },
-                { id: 'satisfaction_survey', name: '满意度调查' }
+            // 维修执行推演的数据支撑
+            'repair_execution': [
+                { id: 'work_order_record', name: '工单记录' },
+                { id: 'actual_repair_time', name: '实际维修时间' }
             ]
         },
         l4: {
-            'market_analysis': ['市场趋势', '竞争对手分析', '需求波动性'],
-            'forecast_model': ['时间序列模型', '机器学习预测', '集成预测'],
-            'accuracy_evaluation': ['MAE指标', 'MAPE指标', '偏差分析'],
-            'sales_target': ['月度目标', '季度目标', '年度目标'],
-            'order_management': ['订单录入', '订单验证', '优先级排序'],
-            'customer_segmentation': ['等级分类', '价值评分', '风险评估'],
-            'capacity_assessment': ['设备OEE', '人员可用性', '班次产能'],
-            'bottleneck_analysis': ['化成柜瓶颈', '静置库位瓶颈', '涂布瓶颈'],
-            'resource_allocation': ['储/动切换', '加班安排', '外包决策'],
-            'raw_material_inventory': ['正极材料库存', '负极材料库存', '电解液库存'],
-            'wip_inventory': ['极片WIP', '电芯WIP', '静置电芯'],
-            'finished_goods_inventory': ['储能电芯库存', '动力电芯库存', 'Pack库存'],
-            'safety_stock': ['服务水平', '补货点设置', '补货批量'],
-            'mps_generation': ['粗能力计划', '物料计划', '产能计划'],
-            'production_tracking': ['完工率', '质量状态', '产出预测'],
-            'exception_handling': ['延误响应', '质量问题', '产能短缺'],
-            'quality_inspection': ['来料检验', '过程检验', '成品检验'],
-            'defect_analysis': ['根本原因', '缺陷趋势', '纠正措施'],
-            'improvement_tracking': ['改善项目', '六西格玛', '质量审核'],
-            'delivery_planning': ['路径优化', '时间窗约束', '装载优化'],
-            'shipment_tracking': ['GPS跟踪', 'ETA预测', '异常预警'],
-            'carrier_management': ['承运商选择', '费率谈判', '绩效评估']
+            // 故障信息数据
+            'fault_info': ['故障代码', '报警时间', '故障描述', '严重程度', '故障类型'],
+            // 设备状态数据
+            'equipment_status': ['运行时长', '维护记录', '老化程度', '性能参数', '设备型号'],
+            // 故障复杂度
+            'fault_complexity': ['拆解难度', '工具要求', '技能等级', '预计工时'],
+            // 历史维修数据
+            'repair_history_data': ['同类故障工时', 'MTTR历史', '维修频次', '工时分布'],
+            // 专家可用性
+            'expert_availability': ['专家技能', '当前位置', '忙闲状态', '预计到达时间'],
+            // 备件库存数据
+            'spare_parts_inventory': ['SKU编号', '库存数量', '库位坐标', '备件类型', '库存状态'],
+            // 物流时间
+            'logistics_time': ['AGV运输时间', '人工取货时间', '备货时间', '总物流时间'],
+            // AGV调度
+            'agv_scheduling': ['AGV状态', '路径规划', '优先级', '预计到达'],
+            // 工单记录
+            'work_order_record': ['工单编号', '维修内容', '工时记录', '更换部件', '完成状态'],
+            // 实际维修时间
+            'actual_repair_time': ['开始时间', '结束时间', '实际工时', '偏差分析']
+        }
+    },
+    'predictive_maintenance': {
+        // 设备预测性维护 - "传感器数据"和"监测指标"是分类标签
+        // 真正的数据资产是具体的传感器类型和指标
+        // 业务流程：健康评估 → 维护决策
+        l2: [
+            { id: 'health_assessment', name: '健康评估推演' },
+            { id: 'maintenance_decision', name: '维护决策推演' }
+        ],
+        l2_links: [
+            { source: 'health_assessment', target: 'maintenance_decision', relation: '后续' }
+        ],
+        l3: {
+            // 健康评估推演的数据支撑（具体传感器作为独立数据资产）
+            'health_assessment': [
+                { id: 'vibration_sensor', name: '振动传感器' },
+                { id: 'temperature_sensor', name: '温度传感器' },
+                { id: 'oil_sensor', name: '油液传感器' },
+                { id: 'current_sensor', name: '电流传感器' },
+                { id: 'sound_sensor', name: '声音传感器' }
+            ],
+            // 维护决策推演的数据支撑
+            'maintenance_decision': [
+                { id: 'maintenance_plan', name: '维护计划' },
+                { id: 'spare_parts_demand', name: '备件需求' },
+                { id: 'maintenance_cost', name: '维护成本' }
+            ]
+        },
+        l4: {
+            // 振动传感器数据
+            'vibration_sensor': ['加速度峰值', '位移有效值', '速度有效值', '频谱特征', '包络分析'],
+            // 温度传感器数据
+            'temperature_sensor': ['轴承温度', '绕组温度', '润滑油温度', '温升速率', '热成像数据'],
+            // 油液传感器数据
+            'oil_sensor': ['金属磨粒', '粘度指标', '水分含量', '酸值变化', '污染等级'],
+            // 电流传感器数据
+            'current_sensor': ['电流不平衡度', '谐波含量', '功率因数', '启动电流', '空载电流'],
+            // 声音传感器数据
+            'sound_sensor': ['声压级', '频谱特征', '异常声响', '轴承噪声', '齿轮噪声'],
+            // 维护计划数据
+            'maintenance_plan': ['维护时间窗', '维护方式', '人员安排', '停机计划'],
+            // 备件需求数据
+            'spare_parts_demand': ['备件消耗率', '库存水位', '采购提前期', '安全库存'],
+            // 维护成本数据
+            'maintenance_cost': ['人工成本', '备件成本', '停机损失', '总成本预算']
+        }
+    },
+    'production_sales_match': {
+        // 产销匹配协同 - S&OP层级的综合推演，包含需求预测、产能评估调用、产销平衡、交付协同
+        // 注：产能评估推演预测分析作为子推演被调用
+        // 业务流程：需求预测 → 销售计划 → 产能评估 → 产销平衡 → 库存优化 → 交付协同
+        l2: [
+            { id: 'demand_forecast', name: '需求预测推演' },
+            { id: 'sales_planning', name: '销售计划推演' },
+            { id: 'capacity_assessment', name: '产能评估推演' },
+            { id: 'production_balance', name: '产销平衡推演' },
+            { id: 'inventory_optimization', name: '库存优化推演' },
+            { id: 'delivery_coordination', name: '交付协同推演' }
+        ],
+        l2_links: [
+            { source: 'demand_forecast', target: 'sales_planning', relation: '后续' },
+            { source: 'sales_planning', target: 'capacity_assessment', relation: '后续' },
+            { source: 'capacity_assessment', target: 'production_balance', relation: '后续' },
+            { source: 'production_balance', target: 'inventory_optimization', relation: '后续' },
+            { source: 'inventory_optimization', target: 'delivery_coordination', relation: '后续' }
+        ],
+        l3: {
+            // 需求预测推演的数据支撑
+            'demand_forecast': [
+                { id: 'market_intel', name: '市场情报' },
+                { id: 'historical_sales', name: '历史销售数据' },
+                { id: 'customer_forecast', name: '客户预测数据' }
+            ],
+            // 销售计划推演的数据支撑
+            'sales_planning': [
+                { id: 'sales_target', name: '销售目标' },
+                { id: 'order_backlog', name: '订单积压' },
+                { id: 'customer_contract', name: '客户合同' }
+            ],
+            // 产能评估推演 - 调用capacity_assessment_prediction子推演
+            'capacity_assessment': [
+                { id: 'current_capacity_status', name: '当前产能状态' },
+                { id: 'capacity_expansion_option', name: '扩产选项' },
+                { id: 'subcontracting_option', name: '委外选项' }
+            ],
+            // 产销平衡推演的数据支撑
+            'production_balance': [
+                { id: 'demand_supply_gap', name: '供需缺口' },
+                { id: 'priority_rule', name: '优先级规则' },
+                { id: 'allocation_strategy', name: '分配策略' }
+            ],
+            // 库存优化推演的数据支撑
+            'inventory_optimization': [
+                { id: 'raw_material_inventory', name: '原材料库存' },
+                { id: 'wip_inventory', name: '在制品库存' },
+                { id: 'fg_inventory', name: '成品库存' }
+            ],
+            // 交付协同推演的数据支撑
+            'delivery_coordination': [
+                { id: 'shipping_plan', name: '发货计划' },
+                { id: 'logistics_capacity', name: '物流运力' },
+                { id: 'customer_delivery_req', name: '客户交付要求' }
+            ]
+        },
+        l4: {
+            // 市场情报
+            'market_intel': ['行业趋势', '竞品动态', '价格走势', '政策影响'],
+            // 历史销售数据
+            'historical_sales': ['月度销量', '季度趋势', '年度对比', '季节性规律'],
+            // 客户预测数据
+            'customer_forecast': ['客户需求预测', '订单意向', '框架协议'],
+            // 销售目标
+            'sales_target': ['月度目标', '季度目标', '年度目标', '区域分解'],
+            // 订单积压
+            'order_backlog': ['超期订单', '紧急订单', 'VIP订单', '待排产订单'],
+            // 客户合同
+            'customer_contract': ['框架协议', '价格条款', '交付条款', '违约条款'],
+            // 当前产能状态
+            'current_capacity_status': ['设备OEE', '人员配置', '产线状态', '瓶颈工序'],
+            // 扩产选项
+            'capacity_expansion_option': ['加班方案', '新增班次', '设备增加', '委外加工'],
+            // 委外选项
+            'subcontracting_option': ['代工供应商', '代工成本', '质量协议', '产能锁定'],
+            // 供需缺口
+            'demand_supply_gap': ['月度缺口', '季度缺口', '峰值缺口', '结构性缺口'],
+            // 优先级规则
+            'priority_rule': ['VIP优先', '交期优先', '利润优先', '战略客户优先'],
+            // 分配策略
+            'allocation_strategy': ['按比例分配', '按优先级分配', '均衡分配', '应急分配'],
+            // 原材料库存
+            'raw_material_inventory': ['正极材料', '负极材料', '电解液', '结构件'],
+            // 在制品库存
+            'wip_inventory': ['极片WIP', '电芯WIP', 'Pack WIP'],
+            // 成品库存
+            'fg_inventory': ['储能电芯', '动力电芯', 'Pack成品'],
+            // 发货计划
+            'shipping_plan': ['发货批次', '发货时间', '运输方式', '目的地'],
+            // 物流运力
+            'logistics_capacity': ['自有运力', '第三方物流', '运力储备', '应急运力'],
+            // 客户交付要求
+            'customer_delivery_req': ['交期要求', '交付频次', '包装要求', '特殊要求']
         }
     },
     'new_project_planning': {
         // 新项目落地推演分析 - 5层决策结构
+        // 业务流程：战略决策 → 市场分析 → 产能制造 → 财务投资 → 风险评估
         l2: [
             { id: 'strategic_decision', name: '战略层决策' },
             { id: 'market_analysis', name: '需求与市场层' },
             { id: 'capacity_manufacturing', name: '产能与制造层' },
             { id: 'finance_investment', name: '财务与投资层' },
             { id: 'risk_constraints', name: '风险与约束层' }
+        ],
+        l2_links: [
+            { source: 'strategic_decision', target: 'market_analysis', relation: '后续' },
+            { source: 'market_analysis', target: 'capacity_manufacturing', relation: '后续' },
+            { source: 'capacity_manufacturing', target: 'finance_investment', relation: '后续' },
+            { source: 'finance_investment', target: 'risk_constraints', relation: '后续' }
         ],
         l3: {
             'strategic_decision': [
@@ -1117,22 +1149,16 @@ const SCENARIO_CONFIGS: Record<string, ScenarioGraphConfig> = {
             'market_analysis': [
                 { id: 'order_commitment', name: '客户订单锁定比例' },
                 { id: 'contract_duration', name: '合同周期长度' },
-                { id: 'demand_volatility', name: '需求波动性' },
                 { id: 'customer_concentration', name: '客户集中度' },
                 { id: 'price_trend', name: '销售价格趋势' },
-                { id: 'product_lifecycle', name: '产品生命周期预测' },
                 { id: 'tech_substitution', name: '技术替代风险' }
             ],
             'capacity_manufacturing': [
-                { id: 'current_utilization', name: '当前产能利用率' },
-                { id: 'oee_analysis', name: 'OEE设备综合效率' },
-                { id: 'yield_rate', name: '良率水平' },
-                { id: 'tech_compatibility', name: '技术适配性' },
-                { id: 'equipment_age', name: '设备老化程度' },
-                { id: 'retrofit_feasibility', name: '改造可行性' },
-                { id: 'switching_cost', name: '切换成本' },
-                { id: 'capacity_flexibility', name: '产能弹性空间' },
-                { id: 'staffing_match', name: '人员匹配度' }
+                // 原始数据（输入）
+                { id: 'equipment_data', name: '设备数据' },
+                { id: 'personnel_data', name: '人员数据' },
+                { id: 'production_data', name: '生产数据' }
+                // 注：利用率、OEE、良率、匹配度等是推演计算结果，不作为独立数据节点
             ],
             'finance_investment': [
                 { id: 'capex_investment', name: 'CAPEX投资额' },
@@ -1141,7 +1167,7 @@ const SCENARIO_CONFIGS: Record<string, ScenarioGraphConfig> = {
                 { id: 'land_acquisition', name: '土地获取周期' },
                 { id: 'policy_approval', name: '政策审批周期' },
                 { id: 'automation_level', name: '自动化水平' },
-                { id: 'unit_cost_forecast', name: '单位制造成本预测' },
+                { id: 'unit_cost', name: '单位制造成本' },
                 { id: 'energy_cost', name: '能耗成本' },
                 { id: 'depreciation_period', name: '折旧年限' },
                 { id: 'economies_scale', name: '规模经济临界点' },
@@ -1149,40 +1175,69 @@ const SCENARIO_CONFIGS: Record<string, ScenarioGraphConfig> = {
                 { id: 'digital_infrastructure', name: '数字化基础设施' }
             ],
             'risk_constraints': [
-                { id: 'sales_decline_scenario', name: '销量下降20%情景' },
-                { id: 'material_price_rise', name: '原材料上涨30%' },
-                { id: 'customer_default', name: '客户违约风险' },
+                { id: 'sales_decline', name: '销量下降数据' },
+                { id: 'material_price_rise', name: '原材料上涨数据' },
+                { id: 'customer_default', name: '客户违约记录' },
                 { id: 'tech_route_substitution', name: '技术路线替代' },
-                { id: 'subsidy_removal', name: '政策补贴取消' },
-                { id: 'delay_production_risk', name: '延期投产风险' },
+                { id: 'subsidy_removal', name: '政策补贴变动' },
+                { id: 'delay_production', name: '延期投产记录' },
                 { id: 'equipment_delay', name: '设备交付延迟' },
                 { id: 'approval_delay', name: '环保审批延迟' },
-                { id: 'exchange_rate_risk', name: '汇率风险' },
-                { id: 'strategic_shift_risk', name: '战略转型风险' }
+                { id: 'exchange_rate', name: '汇率变动数据' }
             ]
         },
         l4: {
-            'use_existing_line': ['现有产线产能', '改造成本评估', '停产损失'],
-            'add_new_capacity': ['产能缺口分析', '投资回收期', '市场需求预测'],
-            'expand_or_new': ['扩建成本', '新建成本', '建设周期对比'],
+            // strategic_decision 层 - 战略决策推演节点
+            'use_existing_line': ['现有产线产能', '改造成本', '停产损失', '改造周期'],
+            'add_new_capacity': ['产能缺口', '投资额度', '产能利用率'],
+            'expand_or_new': ['扩建成本', '新建成本', '建设周期', '土地面积'],
             'location_selection': ['供应链距离', '物流成本', '土地价格', '人工成本', '电价', '税收政策', '环保政策', '产业集群'],
-            'tech_upgrade': ['新工艺导入', '自动化升级', '数字化改造', '良率提升潜力'],
-            'phased_investment': ['一期产能', '二期扩展', '资金压力分散'],
-            'customer_partnership': ['绑定协议', '共建模式', '风险分担'],
+            'tech_upgrade': ['新工艺导入', '自动化升级', '数字化改造', '良率提升空间'],
+            'phased_investment': ['一期产能', '二期扩展', '资金安排', '建设节奏'],
+            'customer_partnership': ['绑定协议', '共建模式', '风险分担', '收益分配'],
             'gov_policy_support': ['税收优惠', '土地补贴', '能耗指标', '产业基金'],
-            'order_commitment': ['订单覆盖率', '违约条款', '客户信用评级'],
-            'contract_duration': ['长期合约占比', '价格调整机制', '续约概率'],
-            'demand_volatility': ['季节性波动', '市场不确定性', '预测准确率'],
-            'current_utilization': ['产线利用率', '峰值负荷', '瓶颈工序'],
-            'oee_analysis': ['时间开动率', '性能开动率', '合格品率'],
-            'capex_investment': ['设备投资', '厂房建设', '土地购置', '流动资金'],
-            'construction_cycle': ['土建周期', '设备安装', '调试爬坡', '量产时间'],
-            'sales_decline_scenario': ['盈亏平衡点', '现金流压力', '产能消化'],
-            'material_price_rise': ['成本传导', '价格谈判', '供应商管理']
+
+            // market_analysis 层 - 市场数据节点
+            'order_commitment': ['订单覆盖率', '违约条款', '客户信用评级', '合同金额'],
+            'contract_duration': ['长期合约占比', '价格调整机制', '续约概率', '合同锁定期'],
+            'customer_concentration': ['CR5集中度', '大客户依赖度', '客户分散策略', '新客户开发'],
+            'price_trend': ['历史价格走势', '成本推动因素', '市场竞争态势', '价格数据'],
+            'tech_substitution': ['固态电池进展', '钠离子电池威胁', '氢燃料电池竞争', '技术替代时间'],
+
+            // capacity_manufacturing 层 - 原始数据节点（利用率、OEE、良率、匹配度等是推演输出）
+            'equipment_data': ['设备台账', '设备役龄', '设备状态', '维护记录', '剩余寿命'],
+            'personnel_data': ['人员编制', '技能矩阵', '培训记录', '招聘需求'],
+            'production_data': ['产量统计', '质量记录', '切换记录', '改造历史'],
+
+            // finance_investment 层 - 财务投资数据节点
+            'capex_investment': ['设备投资', '厂房建设', '土地购置', '流动资金', '预备费'],
+            'construction_cycle': ['土建周期', '设备安装', '调试爬坡', '量产时间', '总建设周期'],
+            'equipment_delivery': ['设备订货周期', '生产排期', '运输时间', '安装调试时间'],
+            'land_acquisition': ['土地招拍挂周期', '手续办理时间', '三通一平周期', '拿地风险'],
+            'policy_approval': ['环评审批', '能评审批', '施工许可', '安全生产许可', '审批风险'],
+            'automation_level': ['自动化率目标', '机器人配置', '智能物流规划', '数字化投入'],
+            'unit_cost': ['材料成本', '人工成本', '制造费用', '成本数据'],
+            'energy_cost': ['电力成本', '天然气成本', '蒸汽成本', '能耗数据'],
+            'depreciation_period': ['设备折旧年限', '厂房折旧年限', '残值率', '折旧方法'],
+            'economies_scale': ['盈亏平衡产量', '最优经济规模', '规模效应', '产能利用率目标'],
+            'expansion_potential': ['预留扩建空间', '公用工程余量', '未来发展弹性', '二期扩展成本'],
+            'digital_infrastructure': ['MES系统', 'ERP系统', 'WMS系统', '工业互联网平台', '数字化投资'],
+
+            // risk_constraints 层 - 风险约束数据节点
+            'sales_decline': ['盈亏平衡点', '现金流压力', '产能消化', '减值风险'],
+            'material_price_rise': ['成本传导', '价格谈判空间', '供应商管理', '套期保值', '替代材料'],
+            'customer_default': ['客户信用', '应收账款', '坏账准备', '法律追偿'],
+            'tech_route_substitution': ['技术路线监测', '研发投入', '产线灵活性', '技术合作'],
+            'subsidy_removal': ['补贴依赖度', '无补贴盈利', '成本优化空间', '产品结构'],
+            'delay_production': ['延期概率', '延期成本', '客户违约', '市场份额损失'],
+            'equipment_delay': ['设备交付风险', '替代供应商', '国产替代方案', '项目缓冲时间'],
+            'approval_delay': ['审批流程', '关键路径', '关系协调', '合规风险'],
+            'exchange_rate': ['汇率敏感性', '自然对冲', '金融对冲', '币种结构']
         }
     },
     'capacity_assessment_prediction': {
         // 产能评估推演预测分析 - 锂电企业产能规划（供给侧视角）
+        // 业务流程：现有产能评估 → 产能供给能力评估 → 产能扩展潜力 → 产能规划方案 → 投资决策推演 → 风险情景模拟
         l2: [
             { id: 'current_capacity', name: '现有产能评估' },
             { id: 'supply_capability', name: '产能供给能力评估' },
@@ -1191,90 +1246,101 @@ const SCENARIO_CONFIGS: Record<string, ScenarioGraphConfig> = {
             { id: 'investment_decision', name: '投资决策推演' },
             { id: 'risk_simulation', name: '风险情景模拟' }
         ],
+        l2_links: [
+            { source: 'current_capacity', target: 'supply_capability', relation: '后续' },
+            { source: 'supply_capability', target: 'capacity_expansion', relation: '后续' },
+            { source: 'capacity_expansion', target: 'capacity_planning', relation: '后续' },
+            { source: 'capacity_planning', target: 'investment_decision', relation: '后续' },
+            { source: 'investment_decision', target: 'risk_simulation', relation: '后续' }
+        ],
         l3: {
             'current_capacity': [
-                { id: 'theoretical_capacity', name: '理论产能测算' },
-                { id: 'effective_capacity', name: '有效产能评估' },
-                { id: 'oee_analysis', name: 'OEE综合分析' },
-                { id: 'bottleneck_process', name: '瓶颈工序识别' },
-                { id: 'equipment_status', name: '设备状态评估' },
-                { id: 'personnel_config', name: '人员配置评估' }
+                // 原始数据资产
+                { id: 'equipment_base_data', name: '设备基础数据' },
+                { id: 'personnel_base_data', name: '人员基础数据' }
+                // 注：理论/有效产能、OEE、瓶颈等是推演计算结果
             ],
             'supply_capability': [
-                { id: 'max_output_capacity', name: '最大产出能力' },
-                { id: 'sustainable_capacity', name: '可持续产能' },
-                { id: 'flexibility_assessment', name: '产能弹性评估' },
-                { id: 'quality_capacity', name: '质量合格产能' },
-                { id: 'resource_constraints', name: '资源约束分析' },
-                { id: 'operation_mode', name: '运营模式分析' }
+                // 原始数据资产
+                { id: 'resource_data', name: '资源数据' },
+                { id: 'quality_data', name: '质量数据' }
+                // 注：最大产出、可持续产能、弹性等是推演评估结果
             ],
             'capacity_expansion': [
-                { id: 'short_term_expansion', name: '短期扩产潜力' },
-                { id: 'medium_term_expansion', name: '中期扩产潜力' },
-                { id: 'long_term_expansion', name: '长期扩产潜力' },
-                { id: 'peak_capacity_analysis', name: '峰值产能分析' },
-                { id: 'capacity_ceiling', name: '产能天花板分析' }
+                // 原始数据资产
+                { id: 'expansion_resource_data', name: '扩产资源数据' }
+                // 注：短期/中期/长期扩产潜力、峰值产能、产能天花板等是推演评估结果
             ],
             'capacity_planning': [
                 { id: 'existing_line_expansion', name: '现有产线扩产' },
                 { id: 'new_line_construction', name: '新建产线方案' },
-                { id: 'oem_consideration', name: '委外加工评估' },
+                { id: 'oem_consideration', name: '委外加工' },
                 { id: 'automation_upgrade', name: '自动化升级' },
-                { id: 'process_optimization', name: '工艺优化挖潜' },
+                { id: 'process_optimization', name: '工艺优化' },
                 { id: 'multi_shift_operation', name: '多班制运营' }
             ],
             'investment_decision': [
-                { id: 'capex_estimation', name: '资本支出估算' },
-                { id: 'roi_analysis', name: '投资回报分析' },
-                { id: 'payback_period', name: '回收期测算' },
-                { id: 'npv_calculation', name: 'NPV净现值分析' },
-                { id: 'financing_options', name: '融资方案选择' }
+                // 原始数据资产
+                { id: 'investment_data', name: '投资数据' },
+                { id: 'financing_data', name: '融资数据' }
+                // 注：ROI、回收期、NPV等是财务推演计算结果
             ],
             'risk_simulation': [
-                { id: 'capacity_volatility', name: '产能波动风险' },
-                { id: 'technology_obsolescence', name: '技术淘汰风险' },
-                { id: 'policy_change', name: '政策变化风险' },
-                { id: 'supply_chain_disruption', name: '供应链中断风险' },
-                { id: 'market_competition', name: '市场竞争风险' }
+                { id: 'capacity_volatility', name: '产能波动' },
+                { id: 'technology_obsolescence', name: '技术淘汰' },
+                { id: 'policy_change', name: '政策变化' },
+                { id: 'supply_chain_disruption', name: '供应链中断' },
+                { id: 'market_competition', name: '市场竞争' }
             ]
         },
         l4: {
-            'theoretical_capacity': ['设备铭牌产能', '理论产出计算', '产能利用率'],
-            'effective_capacity': ['良品率修正', '换型时间损耗', '计划停机时间'],
-            'oee_analysis': ['时间开动率', '性能开动率', '质量合格率'],
-            'bottleneck_process': ['化成工序', '涂布工序', '卷绕工序', '分容工序'],
-            'equipment_status': ['设备老化率', '故障频率', '维修成本'],
-            'max_output_capacity': ['极限产能测算', '设备满负荷产出', '产能爬坡极限'],
-            'sustainable_capacity': ['稳定产能水平', '质量标准产能', '可持续运营产能'],
-            'flexibility_assessment': ['产能调节范围', '快速响应能力', '弹性扩产空间'],
-            'quality_capacity': ['A品产能', '合格品产能', '返修品产能'],
-            'resource_constraints': ['电力供应约束', '原料供应约束', '劳动力约束'],
-            'short_term_expansion': ['3个月扩产潜力', '6个月扩产潜力', '12个月扩产潜力'],
-            'existing_line_expansion': ['设备增加', '节拍提升', '良率改善'],
-            'new_line_construction': ['GWh产能投资', '建设周期', '设备选型'],
-            'oem_consideration': ['代工成本', '质量控制', '产能锁定'],
-            'capex_estimation': ['设备投资', '厂房投资', '土地投资', '流动资金'],
-            'roi_analysis': ['年化收益率', '盈亏平衡点', '现金流分析'],
-            'capacity_volatility': ['设备故障情景', '原料短缺情景', '人员流失情景'],
-            'technology_obsolescence': ['固态电池威胁', '钠离子替代', '技术迭代周期']
+            // current_capacity 层 - 基础数据资产（产能指标是推演输出）
+            'equipment_base_data': ['设备台账', '设备铭牌参数', '设备役龄', '设备状态', '维护记录'],
+            'personnel_base_data': ['人员编制', '技能矩阵', '排班记录', '培训档案'],
+
+            // supply_capability 层 - 基础数据资产
+            'resource_data': ['电力供应能力', '原料供应能力', '劳动力数量', '场地面积'],
+            'quality_data': ['良率记录', '返修记录', '废品记录', '质量检测数据'],
+
+            // capacity_expansion 层 - 基础数据资产（扩产潜力是推演评估结果）
+            'expansion_resource_data': ['可用土地面积', '电力扩容空间', '环保排放余量', '资金储备'],
+
+            // capacity_planning 层 - 基础数据资产
+            'existing_line_expansion': ['现有设备清单', '节拍参数', '改造历史'],
+            'new_line_construction': ['新建产线需求', '设备选型参数', '产线布局方案'],
+            'oem_consideration': ['代工供应商档案', '代工协议条款', '质量协议'],
+            'automation_upgrade': ['自动化现状', '升级需求', '投资预算'],
+            'process_optimization': ['工艺参数', '效率基准', '优化需求'],
+            'multi_shift_operation': ['班次配置', '人员需求', '运营成本'],
+
+            // investment_decision 层 - 基础数据资产（ROI/NPV等是推演计算结果）
+            'investment_data': ['设备投资清单', '建设成本预算', '土地购置成本', '流动资金需求'],
+            'financing_data': ['融资渠道', '贷款利率', '政府补贴政策', '融资租赁方案'],
+
+            // risk_simulation 层 - 基础数据资产
+            'capacity_volatility': ['设备故障记录', '原料短缺记录', '人员流失记录', '需求波动记录'],
+            'technology_obsolescence': ['技术路线图', '竞品技术动态', '技术迭代周期'],
+            'policy_change': ['补贴政策', '环保政策', '能耗双控政策', '产业政策'],
+            'supply_chain_disruption': ['关键原料供应', '物流渠道', '供应商档案', '备选供应商'],
+            'market_competition': ['竞争对手动态', '市场价格数据', '市场份额数据', '客户分布']
         }
     }
 };
 
 // Function to generate ontologically consistent graphs
+// 节点分为两类：推演节点(simulation)和数据节点(data)
 const generateSpecificGraph = (scenarioId: string, scenarioName: string, skillIds: string[]): OntologyData => {
     const nodes: OntologyNode[] = [];
     const links: OntologyLink[] = [];
 
     // Helpers
     const randStatus = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-    const config = SCENARIO_CONFIGS[scenarioId] || DEFAULT_GRAPH_CONFIG; // Use specific or default
+    const config = SCENARIO_CONFIGS[scenarioId] || DEFAULT_GRAPH_CONFIG;
 
     // 示例数据生成器
     const owners = ['张工', '李经理', '王主管', '刘工程师', '陈博士', '赵主任', '孙技术员', '周专家'];
     const frequencies = ['实时', '每分钟', '每小时', '每班', '每日', '每周', '每月', '按需'];
     const dataFormats = ['JSON', 'XML', 'CSV', '数据库表', '消息队列', '文件', 'API接口', '二进制流'];
-    // 数据源类型：导入、各系统对接
     const dataSources = ['导入', 'CRM系统', 'BOM系统', 'MES系统', 'ERP系统', 'SCM系统', 'PLM系统', 'WMS系统'];
 
     const getRandomOwner = () => owners[Math.floor(Math.random() * owners.length)];
@@ -1282,283 +1348,172 @@ const generateSpecificGraph = (scenarioId: string, scenarioName: string, skillId
     const getRandomFormat = () => dataFormats[Math.floor(Math.random() * dataFormats.length)];
     const getRandomDataSource = () => dataSources[Math.floor(Math.random() * dataSources.length)];
 
-    // 根据场景生成相关任务
-    const generatePendingTasks = (nodeId: string, nodeName: string, nodeLevel: number): any[] => {
-      const tasks: any[] = [];
-      const taskCount = Math.floor(Math.random() * 3) + 1; // 1-3个任务
+    // 判断节点是否为推演节点（结合节点名称和场景上下文判断）
+    const isSimNode = (nodeLabel: string, parentId?: string) => {
+      // 1. 名称关键词判断
+      const simulationKeywords = [
+        '推演', '评估', '预测', '分析', '决策', '模拟', '优化', '规划',
+        '推荐', '诊断', '预警', '测算', '选型', '可行性', '盈亏',
+        '风险', '策略', '情景', '平衡', '计算', '判定', '评价',
+        '方案', '建议', '调研', '比选'
+      ];
+      const hasKeyword = simulationKeywords.some(keyword => nodeLabel.includes(keyword));
+      if (hasKeyword) return true;
 
-      // 场景相关的任务模板
-      const scenarioTaskTemplates: Record<string, Array<{title: string, desc: string, priority: string}>> = {
-        raw_material: [
-          { title: '原材料质检数据录入', desc: `录入${scenarioName}相关原材料的质量检测数据`, priority: 'high' },
-          { title: '供应商资质审核', desc: '审核新供应商资质文件并归档', priority: 'high' },
-          { title: '来料检验报告提交', desc: '提交来料检验报告至质量管理系统', priority: 'medium' },
-          { title: '批次追溯信息维护', desc: '维护原材料批次追溯信息', priority: 'medium' },
-        ],
-        mixing: [
-          { title: '浆料粘度检测数据提交', desc: '提交搅拌后浆料粘度检测数据', priority: 'high' },
-          { title: '配比参数确认', desc: '确认原材料配比参数设置', priority: 'high' },
-          { title: '搅拌工艺参数上报', desc: '上报搅拌工艺过程参数', priority: 'medium' },
-          { title: '浆料质量异常处理', desc: '处理浆料质量异常情况', priority: 'high' },
-        ],
-        coating: [
-          { title: '涂布厚度检测数据提交', desc: '提交涂布厚度检测数据至MES系统', priority: 'high' },
-          { title: '面密度检测报告', desc: '提交极片面密度检测报告', priority: 'high' },
-          { title: '涂布速度参数确认', desc: '确认涂布速度参数设置', priority: 'medium' },
-          { title: '涂布缺陷记录提交', desc: '提交涂布缺陷检测记录', priority: 'medium' },
-        ],
-        calendaring: [
-          { title: '压实密度数据录入', desc: '录入辊压后极片压实密度数据', priority: 'high' },
-          { title: '辊压参数上报', desc: '上报辊压压力和速度参数', priority: 'medium' },
-          { title: '延展率检测报告', desc: '提交极片延展率检测报告', priority: 'medium' },
-          { title: '辊压质量异常处理', desc: '处理辊压质量异常情况', priority: 'high' },
-        ],
-        winding: [
-          { title: '对齐度检测数据提交', desc: '提交卷绕对齐度检测数据', priority: 'high' },
-          { title: '张力参数确认', desc: '确认卷绕张力参数设置', priority: 'medium' },
-          { title: 'Overhang检测记录', desc: '提交Overhang检测记录', priority: 'high' },
-          { title: '卷绕工艺参数上报', desc: '上报卷绕工艺过程参数', priority: 'medium' },
-        ],
-        formation: [
-          { title: '化成数据上传', desc: '上传电芯化成过程数据', priority: 'high' },
-          { title: '容量测试报告', desc: '提交电芯容量测试报告', priority: 'high' },
-          { title: '电芯分级结果确认', desc: '确认电芯分级分类结果', priority: 'high' },
-          { title: '化成异常记录提交', desc: '提交化成过程异常记录', priority: 'medium' },
-        ],
-        production_planning: [
-          { title: '生产计划数据提交', desc: '提交月度/周度生产计划数据', priority: 'high' },
-          { title: '产能评估报告', desc: '提交产能评估分析报告', priority: 'medium' },
-          { title: '物料需求确认', desc: '确认生产物料需求清单', priority: 'high' },
-          { title: '排产计划审核', desc: '审核排产计划并提交', priority: 'high' },
-        ],
-        predictive_maintenance: [
-          { title: '设备状态数据提交', desc: '提交设备运行状态监测数据', priority: 'high' },
-          { title: '故障预警处理', desc: '处理设备故障预警信息', priority: 'high' },
-          { title: '维护计划确认', desc: '确认设备维护计划安排', priority: 'medium' },
-          { title: '备件库存更新', desc: '更新备件库存信息', priority: 'medium' },
-        ],
-        default: [
-          { title: `${nodeName}数据采集`, desc: `采集${nodeName}相关数据并提交`, priority: 'high' },
-          { title: `${nodeName}质量检查`, desc: `执行${nodeName}质量检查并提交报告`, priority: 'high' },
-          { title: `${nodeName}参数确认`, desc: `确认${nodeName}关键参数设置`, priority: 'medium' },
-          { title: `${nodeName}异常处理`, desc: `处理${nodeName}过程中的异常情况`, priority: 'medium' },
-          { title: `${nodeName}报告提交`, desc: `提交${nodeName}相关工作报告`, priority: 'low' },
-        ]
+      // 2. 场景上下文判断 - 某些场景下的L2节点即使名称不含关键词也应为推演节点
+      const simulationScenarios: Record<string, string[]> = {
+        // 新项目落地推演分析 - 五大决策维度都是推演节点
+        'new_project_planning': ['战略层决策', '需求与市场层', '产能与制造层', '财务与投资层', '风险与约束层'],
+        // 产能评估推演预测分析 - 所有L2都是推演节点
+        'capacity_assessment_prediction': ['现有产能评估', '产能供给能力评估', '产能扩展潜力', '产能规划方案', '投资决策推演', '风险情景模拟'],
+        // 产销匹配协同 - L2均为推演节点
+        'production_sales_match': ['需求预测推演', '销售计划推演', '产能评估推演', '产销平衡推演', '库存优化推演', '交付协同推演'],
       };
 
-      // 获取当前场景的任务模板
-      const taskTemplates = scenarioTaskTemplates[scenarioId] || scenarioTaskTemplates.default;
-
-      for (let i = 0; i < taskCount; i++) {
-        const template = taskTemplates[Math.floor(Math.random() * taskTemplates.length)];
-        const statuses = ['pending', 'in_progress', 'completed'];
-        const status = statuses[Math.floor(Math.random() * statuses.length)];
-
-        tasks.push({
-          id: `task_${scenarioId}_${nodeId}_${i}`,
-          title: template.title,
-          description: template.desc,
-          priority: template.priority,
-          status: status,
-          dueDate: status === 'completed' ? undefined : `2024-03-${10 + Math.floor(Math.random() * 20)}`,
-          assignee: undefined // 任务由当前节点负责人提交，不需要单独指派
-        });
+      if (simulationScenarios[scenarioId]?.includes(nodeLabel)) {
+        return true;
       }
-      return tasks;
+
+      // 3. 根据父节点判断 - 如果父节点是推演节点，且当前节点名称表示一个分析维度，则为推演节点
+      if (parentId) {
+        const parentNode = nodes.find(n => n.id === parentId);
+        if (parentNode?.type === 'simulation') {
+          // 检查是否是决策维度（以"层"、"维度"结尾，或是特定的分析类别）
+          const dimensionPatterns = ['层', '维度', '模块', '域'];
+          if (dimensionPatterns.some(p => nodeLabel.includes(p))) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     };
 
     // 辅助函数：生成关联节点状态
     const createRelatedNode = (id: string, label: string) => ({
       id,
       label,
-      dataSubmitted: Math.random() > 0.3, // 70%概率按时提交
-      instructionCompleted: Math.random() > 0.2 // 80%概率完成指令
+      dataSubmitted: Math.random() > 0.3,
+      instructionCompleted: Math.random() > 0.2
     });
 
-    // Level 1: Scenario Root
-    const rootId = 'root';
-    nodes.push({
-      id: rootId,
-      label: scenarioName,
-      type: 'concept',
-      group: 1,
-      data_readiness: 100,
+    // 生成推演节点
+    const createSimulationNode = (id: string, label: string): OntologyNode => ({
+      id,
+      label,
+      type: 'simulation',
+      group: 'simulation',
+      data_readiness: randStatus(80, 100),
       owner: getRandomOwner(),
-      responsibility: `全面负责${scenarioName}场景的业务管理、数据治理和系统协调，确保各环节高效协同运行`,
-      dataSource: '综合管理平台',
-      dataFormat: 'JSON',
-      updateFrequency: '实时监控',
-      pendingTasks: generatePendingTasks(rootId, scenarioName, 1)
+      responsibility: `负责${label}推演分析，整合各类数据节点输入，输出决策建议和预测结果`,
+      dataSource: getRandomDataSource(),
+      dataFormat: getRandomFormat(),
+      updateFrequency: getRandomFrequency(),
+      pendingTasks: []
     });
 
-    // Level 2: Sub-Systems
-    const l2Nodes: { id: string; label: string }[] = [];
-    config.l2.forEach((l2Item, i) => {
-        // Support both string format (old) and object format {id, name} (new)
-        const isObject = typeof l2Item === 'object' && l2Item !== null && 'id' in l2Item;
-        const l2Id = isObject ? (l2Item as any).id : l2Item;
-        const l2Label = isObject ? (l2Item as any).name : l2Item;
+    // 生成数据节点
+    const createDataNode = (id: string, label: string, parentId: string): OntologyNode => ({
+      id,
+      label,
+      type: 'data',
+      group: 'data',
+      data_readiness: randStatus(40, 90),
+      owner: getRandomOwner(),
+      responsibility: `提供${label}相关数据，支持上级推演节点的分析计算`,
+      upstreamNodes: [createRelatedNode(parentId, '')],
+      dataSource: getRandomDataSource(),
+      dataFormat: getRandomFormat(),
+      updateFrequency: getRandomFrequency(),
+      pendingTasks: []
+    });
 
-        l2Nodes.push({ id: l2Id, label: l2Label });
-        // L2 nodes usually have aggregated high data readiness
+    // 不再创建场景级别的根节点（避免与场景本身重复且范围过大）
+    // L2节点直接作为图谱的顶层节点
+
+    // 第一层节点：根据节点性质分类（推演节点或数据节点）
+    const level1Nodes: { id: string; label: string }[] = [];
+    config.l2.forEach((l2Item) => {
+      const isObject = typeof l2Item === 'object' && l2Item !== null && 'id' in l2Item;
+      const nodeId = isObject ? (l2Item as any).id : l2Item;
+      const nodeLabel = isObject ? (l2Item as any).name : l2Item;
+
+      level1Nodes.push({ id: nodeId, label: nodeLabel });
+
+      // 根据节点名称和场景上下文判断：推演节点或数据节点
+      const nodeType = isSimNode(nodeLabel) ? 'simulation' : 'data';
+      if (nodeType === 'simulation') {
+        nodes.push(createSimulationNode(nodeId, nodeLabel));
+      } else {
+        // 顶层数据节点（无父节点）
         nodes.push({
-            id: l2Id,
-            label: l2Label,
-            type: 'concept',
-            group: 2,
-            data_readiness: randStatus(80, 100),
-            owner: getRandomOwner(),
-            responsibility: `管理${l2Label}子系统的运行状态，协调内部工艺过程，确保与子系统间数据互通`,
-            upstreamNodes: i > 0 ? [createRelatedNode(l2Nodes[i - 1].id, l2Nodes[i - 1].label)] : undefined,
-            downstreamNodes: i < config.l2.length - 1 ? [createRelatedNode(
-                (typeof config.l2[i + 1] === 'object' && config.l2[i + 1] !== null && 'id' in config.l2[i + 1])
-                    ? (config.l2[i + 1] as any).id
-                    : config.l2[i + 1],
-                (typeof config.l2[i + 1] === 'object' && config.l2[i + 1] !== null && 'name' in config.l2[i + 1])
-                    ? (config.l2[i + 1] as any).name
-                    : config.l2[i + 1]
-            )] : undefined,
-            dataSource: getRandomDataSource(),
-            dataFormat: getRandomFormat(),
-            updateFrequency: getRandomFrequency(),
-            pendingTasks: generatePendingTasks(l2Id, l2Label, 2)
+          id: nodeId,
+          label: nodeLabel,
+          type: 'data',
+          group: 'data',
+          data_readiness: randStatus(60, 95),
+          owner: getRandomOwner(),
+          responsibility: `提供${nodeLabel}相关数据，支持推演节点的分析计算`,
+          dataSource: getRandomDataSource(),
+          dataFormat: getRandomFormat(),
+          updateFrequency: getRandomFrequency(),
+          pendingTasks: []
         });
-        links.push({ source: rootId, target: l2Id, relation: '组成' });
+      }
 
-        // Level 3: Processes
-        // L3 config key can be the ID (for object format) or the label (for string format)
-        const l3Config = config.l3[l2Id] || config.l3[l2Label] || [`${l2Label}_Process`];
-        const l3Nodes: { id: string; label: string }[] = [];
-        l3Config.forEach((l3Item, j) => {
-            // Support both string format and object format {id, name}
-            const isL3Object = typeof l3Item === 'object' && l3Item !== null && 'id' in l3Item;
-            const l3Id = isL3Object ? (l3Item as any).id : l3Item;
-            const l3Label = isL3Object ? (l3Item as any).name : l3Item;
+      // 第二层子节点：根据节点性质分类（推演节点或数据节点）
+      const level2Config = config.l3[nodeId] || config.l3[nodeLabel] || [];
+      level2Config.forEach((l3Item: any) => {
+        const isL3Object = typeof l3Item === 'object' && l3Item !== null && 'id' in l3Item;
+        const childId = isL3Object ? (l3Item as any).id : l3Item;
+        const childLabel = isL3Object ? (l3Item as any).name : l3Item;
 
-            l3Nodes.push({ id: l3Id, label: l3Label });
-            nodes.push({
-                id: l3Id,
-                label: l3Label,
-                type: 'concept',
-                group: 3,
-                data_readiness: randStatus(60, 95),
-                owner: getRandomOwner(),
-                responsibility: `执行${l3Label}工艺过程，监控关键指标，确保工艺参数在合理范围内`,
-                upstreamNodes: j > 0 ? [createRelatedNode(l3Nodes[j - 1].id, l3Nodes[j - 1].label)] : [createRelatedNode(l2Id, l2Label)],
-                downstreamNodes: j < l3Config.length - 1 ? [createRelatedNode(
-                    (typeof l3Config[j + 1] === 'object' && l3Config[j + 1] !== null && 'id' in l3Config[j + 1])
-                        ? (l3Config[j + 1] as any).id
-                        : `${l2Id}_l3_${j + 1}`,
-                    (typeof l3Config[j + 1] === 'object' && l3Config[j + 1] !== null && 'name' in l3Config[j + 1])
-                        ? (l3Config[j + 1] as any).name
-                        : l3Config[j + 1]
-                )] : undefined,
-                dataSource: getRandomDataSource(),
-                dataFormat: getRandomFormat(),
-                updateFrequency: getRandomFrequency(),
-                pendingTasks: generatePendingTasks(l3Id, l3Label, 3)
-            });
-            links.push({ source: l2Id, target: l3Id, relation: '包含' });
+        // 根据节点名称和父节点类型判断：推演节点或数据节点
+        const childNodeType = isSimNode(childLabel, nodeId) ? 'simulation' : 'data';
+        if (childNodeType === 'simulation') {
+          nodes.push(createSimulationNode(childId, childLabel));
+        } else {
+          nodes.push(createDataNode(childId, childLabel, nodeId));
+        }
+        links.push({ source: nodeId, target: childId, relation: '包含' });
 
-            // Level 4: Parameters
-            // L4 config key can be the ID (for object format) or the label (for string format)
-            const parameters = config.l4[l3Id] || config.l4[l3Label] || (SCENARIO_CONFIGS[scenarioId] ? [] : [`${l3Label}_Param`]);
-            const l4Nodes: { id: string; label: string }[] = [];
-            parameters.forEach((l4Label, k) => {
-                // L4 always uses generated IDs since they are Chinese labels
-                const l4Id = `${l3Id}_l4_${k}`;
-                l4Nodes.push({ id: l4Id, label: l4Label });
-                // L4 (Raw Data) can have varying readiness
-                nodes.push({
-                    id: l4Id,
-                    label: l4Label,
-                    type: 'concept',
-                    group: 4,
-                    data_readiness: randStatus(40, 90),
-                    owner: getRandomOwner(),
-                    responsibility: `采集和预处理${l4Label}数据，确保数据质量和时效性`,
-                    upstreamNodes: [createRelatedNode(l3Id, l3Label)],
-                    downstreamNodes: k < parameters.length - 1 ? [createRelatedNode(
-                        `${l3Id}_l4_${k + 1}`,
-                        parameters[k + 1]
-                    )] : undefined,
-                    dataSource: getRandomDataSource(),
-                    dataFormat: getRandomFormat(),
-                    updateFrequency: ['实时', '每分钟', '每小时'][Math.floor(Math.random() * 3)],
-                    pendingTasks: generatePendingTasks(l4Id, l4Label, 4)
-                });
-                links.push({ source: l3Id, target: l4Id, relation: '监控' });
-            });
+        // 第三层子节点：数据参数节点（均为数据节点）
+        let parameters = config.l4[childId] || config.l4[childLabel] || [];
+
+        // 如果是推演节点且没有定义L4数据参数，自动生成默认数据参数
+        if (childNodeType === 'simulation' && parameters.length === 0) {
+          parameters = [
+            `${childLabel}输入数据`,
+            `${childLabel}历史记录`,
+            `${childLabel}基准指标`,
+            `${childLabel}约束条件`
+          ];
+        }
+
+        parameters.forEach((paramLabel: string, k: number) => {
+          const paramId = `${childId}_param_${k}`;
+          nodes.push(createDataNode(paramId, paramLabel, childId));
+          links.push({ source: childId, target: paramId, relation: '包含' });
         });
+      });
     });
 
-    // Level 5: Skills
-    // Connect skills to relevant L4 nodes if possible, or L3 if no L4 matches, or random L3/L4 as fallback
-    // For specific scenarios, we try to match names, otherwise attach to the last generated nodes
-    const l4Nodes = nodes.filter(n => n.group === 4);
-    const l3Nodes = nodes.filter(n => n.group === 3);
-    const targetNodes = l4Nodes.length > 0 ? l4Nodes : l3Nodes;
-
-    skillIds.forEach((sid, idx) => {
-        const skill = MOCK_SKILLS.find(s => s.skill_id === sid);
-        if (skill && targetNodes.length > 0) {
-            // Intelligent linking could go here, for now we attach to nodes to ensure graph connectivity
-            // Use modulo to distribute skills if multiple
-            const targetNode = targetNodes[idx % targetNodes.length];
-
-            nodes.push({
-                id: skill.skill_id,
-                label: skill.name,
-                type: 'skill',
-                group: 5,
-                data_readiness: 100, // Skills themselves are "ready"
-                owner: getRandomOwner(),
-                responsibility: `提供${skill.name}智能算法服务，分析输入数据并输出预测/控制结果，支持业务决策`,
-                upstreamNodes: [targetNode.id],
-                dataSourceFormat: 'API接口',
-                updateFrequency: '实时调用',
-                pendingTasks: [
-                  {
-                    id: `task_skill_${sid}_1`,
-                    title: '模型性能监控',
-                    description: '监控模型预测准确率，触发重训练流程',
-                    priority: 'high',
-                    status: 'pending',
-                    dueDate: '2024-03-15',
-                    assignee: getRandomOwner()
-                  },
-                  {
-                    id: `task_skill_${sid}_2`,
-                    title: '算法版本更新',
-                    description: '升级到最新模型版本',
-                    priority: 'medium',
-                    status: 'in_progress',
-                    assignee: getRandomOwner()
-                  }
-                ]
-            });
-            links.push({ source: targetNode.id, target: skill.skill_id, relation: '赋能' });
-        }
+    // 处理L2节点之间的连接关系（业务流程顺序）
+    const l2Links = (config as any).l2_links || [];
+    l2Links.forEach((link: any) => {
+      links.push({
+        source: link.source,
+        target: link.target,
+        relation: link.relation || '后续'
+      });
     });
 
     return { nodes, links };
 };
 
 export const SCENARIO_ONTOLOGY_MAP: Record<string, OntologyData> = {
-  'raw_material': generateSpecificGraph('raw_material', '原材料管理', ['material_purity_check_v2']),
-  'mixing': generateSpecificGraph('mixing', '搅拌制浆', ['viscosity_prediction_v3']),
-  'coating': generateSpecificGraph('coating', '涂布工艺', ['coating_thickness_loop_v1']),
-  'calendaring': generateSpecificGraph('calendaring', '辊压工艺', ['roller_pressure_opt_v2']),
-  'slitting': generateSpecificGraph('slitting', '分切工艺', []), 
-  'winding': generateSpecificGraph('winding', '卷绕叠片', ['tension_control_algo_v1']),
-  'assembly': generateSpecificGraph('assembly', '组装焊接', []),
-  'baking_injection': generateSpecificGraph('baking_injection', '烘烤注液', ['electrolyte_soaking_pred_v1']),
-  'formation': generateSpecificGraph('formation', '化成分容', ['capacity_prediction_v5']),
-  'pack': generateSpecificGraph('pack', '模组Pack', ['thermal_runaway_warning_v2']),
-  'production_planning': generateSpecificGraph('production_planning', '产销计划 (S&OP)', ['sop_balancer_v1', 'inventory_turnover_opt_v2']),
   'predictive_maintenance': generateSpecificGraph('predictive_maintenance', '设备预测性维护', ['equipment_rul_pred_v2']),
   'breakdown_maintenance': generateSpecificGraph('breakdown_maintenance', '设备故障维修', ['repair_time_estimator_v1']),
-  'cost_management': generateSpecificGraph('cost_management', '经营成本管理', ['cost_realtime_analyzer_v1', 'energy_consumption_audit_v1']),
   'production_sales_match': generateSpecificGraph('production_sales_match', '产销匹配协同', [
     'demand_forecast_v3', 'capacity_evaluation_v2', 'smart_scheduling_v4', 'inventory_optimization_v3',
     'supply_chain_collab_v2', 'order_fulfillment_tracking_v2', 'logistics_optimization_v2', 'production_sales_alert_v1'
@@ -1662,6 +1617,20 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
     ],
     outputMetrics: ['理论产能', '有效产能', '产能利用率', '瓶颈工序'],
     supportedSkills: ['oee_analyzer_v1', 'bottleneck_identifier_v1', 'capacity_calculator_v1']
+  },
+  {
+    nodeId: 'supply_capability',
+    nodeName: '产能供给能力评估',
+    scenarioId: 'capacity_assessment_prediction',
+    category: 'capacity_planning',
+    description: '评估产能供给能力和可持续产出水平',
+    inputParams: [
+      { id: 'max_output', name: '最大产出', description: '设备最大产出能力', dataType: 'number', required: true, unit: 'GWh/月' },
+      { id: 'quality_rate', name: '良品率', description: '产品良品率', dataType: 'number', required: true, unit: '%', defaultValue: 95 },
+      { id: 'resource_limit', name: '资源限制', description: '关键资源约束', dataType: 'string', required: true },
+    ],
+    outputMetrics: ['供给能力', '可持续产能', '弹性空间', '质量产能'],
+    supportedSkills: ['capacity_evaluation_v2', 'supply_analyzer_v1']
   },
   {
     nodeId: 'capacity_expansion',
@@ -3511,17 +3480,18 @@ export function getSkillsBySemantic(semanticId: string): {
 
 /**
  * 获取产销场景完整的依赖关系图
+ * 统一使用两种节点类型：推演节点(simulation)和数据节点(data)
  */
 export function getProductionSalesDependencyGraph(): {
-  nodes: { id: string; type: 'process' | 'semantic' | 'skill' | 'atom'; name: string }[];
+  nodes: { id: string; type: 'simulation' | 'data'; name: string }[];
   links: { source: string; target: string; type: string }[];
 } {
-  const nodes: { id: string; type: 'process' | 'semantic' | 'skill' | 'atom'; name: string }[] = [];
+  const nodes: { id: string; type: 'simulation' | 'data'; name: string }[] = [];
   const links: { source: string; target: string; type: string }[] = [];
 
-  // 添加业务流程节点
+  // 添加业务流程节点 - 推演节点（业务流程是推演主体）
   PRODUCTION_SALES_PROCESS_MAP.forEach(proc => {
-    nodes.push({ id: proc.nodeId, type: 'process', name: proc.nodeName });
+    nodes.push({ id: proc.nodeId, type: 'simulation', name: proc.nodeName });
 
     // 业务流程 -> 业务语义
     proc.semantics.forEach(semId => {
@@ -3547,10 +3517,10 @@ export function getProductionSalesDependencyGraph(): {
     });
   });
 
-  // 添加业务语义节点
+  // 添加业务语义节点 - 数据节点（业务语义是数据定义）
   PRODUCTION_SALES_SEMANTICS.forEach(sem => {
     if (!nodes.find(n => n.id === sem.id)) {
-      nodes.push({ id: sem.id, type: 'semantic', name: sem.name });
+      nodes.push({ id: sem.id, type: 'data', name: sem.name });
     }
   });
 
@@ -3666,149 +3636,140 @@ export const convertMolecularToOntologyData = (
     instructionCompleted: Math.random() > 0.2
   });
 
-  // L1: 场景根节点
-  nodes.push({
-    id: 'root',
-    label: scenario.name,
-    type: 'concept',
-    group: 1,
-    data_readiness: 100,
-    owner: getRandomOwner(),
-    responsibility: `全面负责${scenario.name}场景的业务管理、数据治理和系统协调，确保各环节高效协同运行`,
-    dataSource: '综合管理平台',
-    dataFormat: 'JSON',
-    updateFrequency: '实时监控',
-    pendingTasks: generatePendingTasks('root', scenario.name, 1)
-  });
+  // 不再创建场景级别的根节点（避免与场景本身重复且范围过大）
+  // L2节点直接作为图谱的顶层节点
 
-  // 构建层级结构
-  const l2Nodes = scenario.molecularStructure.filter(m => m.level === 2);
-  const l3Nodes = scenario.molecularStructure.filter(m => m.level === 3);
-  const l4Nodes = scenario.molecularStructure.filter(m => m.level === 4);
+  // 构建结构 - 根据节点名称和场景上下文判断性质（推演节点或数据节点）
+  const structureNodes = scenario.molecularStructure;
 
-  // L2: 子系统
-  l2Nodes.forEach((l2, i) => {
+  // 判断节点是否为推演节点（结合节点名称和场景上下文判断）
+  const isSimNode = (nodeName: string, parentId?: string) => {
+    // 1. 名称关键词判断
+    const simulationKeywords = [
+      '推演', '评估', '预测', '分析', '决策', '模拟', '优化', '规划',
+      '推荐', '诊断', '预警', '测算', '选型', '可行性', '盈亏',
+      '风险', '策略', '情景', '平衡', '计算', '判定', '评价',
+      '方案', '建议', '调研', '比选'
+    ];
+    const hasKeyword = simulationKeywords.some(keyword => nodeName.includes(keyword));
+    if (hasKeyword) return true;
+
+    // 2. 场景上下文判断 - 某些场景下的L2节点即使名称不含关键词也应为推演节点
+    const simulationScenarios: Record<string, string[]> = {
+      // 新项目落地推演分析 - 五大决策维度都是推演节点
+      'new_project_planning': ['战略层决策', '需求与市场层', '产能与制造层', '财务与投资层', '风险与约束层'],
+      // 产能评估推演预测分析 - 所有L2都是推演节点
+      'capacity_assessment_prediction': ['现有产能评估', '产能供给能力评估', '产能扩展潜力', '产能规划方案', '投资决策推演', '风险情景模拟'],
+      // 产销匹配协同 - L2均为推演节点
+      'production_sales_match': ['需求预测推演', '销售计划推演', '产能评估推演', '产销平衡推演', '库存优化推演', '交付协同推演'],
+    };
+
+    if (simulationScenarios[scenario.id]?.includes(nodeName)) {
+      return true;
+    }
+
+    // 3. 根据父节点判断 - 如果父节点是推演节点，且当前节点名称表示一个分析维度，则为推演节点
+    if (parentId) {
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (parentNode?.type === 'simulation') {
+        // 检查是否是决策维度（以"层"、"维度"结尾，或是特定的分析类别）
+        const dimensionPatterns = ['层', '维度', '模块', '域'];
+        if (dimensionPatterns.some(p => nodeName.includes(p))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // 第一层节点（原level 2）- 直接作为顶层节点
+  const level1Nodes = structureNodes.filter(m => m.level === 2);
+  level1Nodes.forEach((node, i) => {
+    const nodeType = isSimNode(node.name) ? 'simulation' : 'data';
     nodes.push({
-      id: l2.id,
-      label: l2.name,
-      type: 'concept',
-      group: 2,
-      data_readiness: 85 + Math.floor(Math.random() * 15),
+      id: node.id,
+      label: node.name,
+      type: nodeType,
+      group: nodeType,
+      data_readiness: nodeType === 'simulation' ? 85 + Math.floor(Math.random() * 15) : 60 + Math.floor(Math.random() * 35),
       owner: getRandomOwner(),
-      responsibility: `管理${l2.name}子系统的运行状态，协调内部工艺过程，确保与子系统间数据互通`,
-      upstreamNodes: i > 0 ? [createRelatedNode(l2Nodes[i - 1].id, l2Nodes[i - 1].name)] : undefined,
-      downstreamNodes: i < l2Nodes.length - 1 ? [createRelatedNode(l2Nodes[i + 1].id, l2Nodes[i + 1].name)] : undefined,
+      responsibility: nodeType === 'simulation'
+        ? `负责${node.name}的推演分析，整合数据并输出决策建议`
+        : `提供${node.name}相关数据，支持推演节点的分析计算`,
+      upstreamNodes: i > 0 ? [createRelatedNode(level1Nodes[i - 1].id, level1Nodes[i - 1].name)] : undefined,
+      downstreamNodes: i < level1Nodes.length - 1 ? [createRelatedNode(level1Nodes[i + 1].id, level1Nodes[i + 1].name)] : undefined,
       dataSource: getRandomDataSource(),
       dataFormat: getRandomFormat(),
       updateFrequency: getRandomFrequency(),
-      pendingTasks: generatePendingTasks(l2.id, l2.name, 2)
+      pendingTasks: generatePendingTasks(node.id, node.name, 2)
     });
-    links.push({ source: 'root', target: l2.id, relation: '包含' });
+    // 不再链接到root节点，L2节点本身就是顶层节点
   });
 
-  // L3: 工艺过程
-  l3Nodes.forEach((l3, i) => {
-    const sameParentL3 = l3Nodes.filter(n => n.parentId === l3.parentId);
-    const indexInParent = sameParentL3.findIndex(n => n.id === l3.id);
-    const parentL2 = l2Nodes.find(l2 => l2.id === l3.parentId);
+  // 第二层节点（原level 3）
+  const level2Nodes = structureNodes.filter(m => m.level === 3);
+  level2Nodes.forEach((node, i) => {
+    const nodeType = isSimNode(node.name, node.parentId) ? 'simulation' : 'data';
+    const sameParentNodes = level2Nodes.filter(n => n.parentId === node.parentId);
+    const indexInParent = sameParentNodes.findIndex(n => n.id === node.id);
+    const parentNode = level1Nodes.find(n => n.id === node.parentId);
     nodes.push({
-      id: l3.id,
-      label: l3.name,
-      type: 'concept',
-      group: 3,
-      data_readiness: 60 + Math.floor(Math.random() * 35),
+      id: node.id,
+      label: node.name,
+      type: nodeType,
+      group: nodeType,
+      data_readiness: nodeType === 'simulation' ? 85 + Math.floor(Math.random() * 15) : 60 + Math.floor(Math.random() * 35),
       owner: getRandomOwner(),
-      responsibility: `执行${l3.name}工艺过程，监控关键指标，确保工艺参数在合理范围内`,
+      responsibility: nodeType === 'simulation'
+        ? `负责${node.name}的推演分析，整合数据并输出决策建议`
+        : `提供${node.name}相关数据，支持推演节点的分析计算`,
       upstreamNodes: indexInParent > 0
-        ? [createRelatedNode(sameParentL3[indexInParent - 1].id, sameParentL3[indexInParent - 1].name)]
-        : parentL2 ? [createRelatedNode(parentL2.id, parentL2.name)] : undefined,
-      downstreamNodes: indexInParent < sameParentL3.length - 1
-        ? [createRelatedNode(sameParentL3[indexInParent + 1].id, sameParentL3[indexInParent + 1].name)]
+        ? [createRelatedNode(sameParentNodes[indexInParent - 1].id, sameParentNodes[indexInParent - 1].name)]
+        : parentNode ? [createRelatedNode(parentNode.id, parentNode.name)] : undefined,
+      downstreamNodes: indexInParent < sameParentNodes.length - 1
+        ? [createRelatedNode(sameParentNodes[indexInParent + 1].id, sameParentNodes[indexInParent + 1].name)]
         : undefined,
       dataSource: getRandomDataSource(),
       dataFormat: getRandomFormat(),
       updateFrequency: getRandomFrequency(),
-      pendingTasks: generatePendingTasks(l3.id, l3.name, 3)
+      pendingTasks: generatePendingTasks(node.id, node.name, 3)
     });
-    links.push({ source: l3.parentId || 'root', target: l3.id, relation: '包含' });
+    links.push({ source: node.parentId || 'root', target: node.id, relation: '包含' });
   });
 
-  // L4: 参数（关联原子本体）
-  l4Nodes.forEach((l4, i) => {
+  // 第三层节点（原level 4，均为数据节点）
+  const level3Nodes = structureNodes.filter(m => m.level === 4);
+  level3Nodes.forEach((node, i) => {
     // 获取原子引用信息
-    const atomNames = l4.atomRefs
+    const atomNames = node.atomRefs
       .map(ref => {
         const atom = ATOMIC_ONTOLOGY_LIBRARY.find(a => a.id === ref.atomId);
         return atom ? `${atom.name}(${ref.role})` : null;
       })
       .filter(Boolean)
       .join(', ');
-    const parentL3 = l3Nodes.find(l3 => l3.id === l4.parentId);
+    const parentNode = level2Nodes.find(n => n.id === node.parentId);
 
     nodes.push({
-      id: l4.id,
-      label: l4.name + (atomNames ? ` [${atomNames}]` : ''),
-      type: 'concept',
-      group: 4,
+      id: node.id,
+      label: node.name + (atomNames ? ` [${atomNames}]` : ''),
+      type: 'data',
+      group: 'data',
       data_readiness: 40 + Math.floor(Math.random() * 50),
       owner: getRandomOwner(),
-      responsibility: `采集和预处理${l4.name}数据，确保数据质量和时效性`,
-      upstreamNodes: parentL3 ? [createRelatedNode(parentL3.id, parentL3.name)] : undefined,
+      responsibility: `采集和预处理${node.name}数据，确保数据质量`,
+      upstreamNodes: parentNode ? [createRelatedNode(parentNode.id, parentNode.name)] : undefined,
       dataSource: getRandomDataSource(),
       dataFormat: getRandomFormat(),
       updateFrequency: ['实时', '每分钟', '每小时'][Math.floor(Math.random() * 3)],
-      pendingTasks: generatePendingTasks(l4.id, l4.name, 4)
+      pendingTasks: generatePendingTasks(node.id, node.name, 4)
     });
-    links.push({ source: l4.parentId || 'root', target: l4.id, relation: '监控' });
+    links.push({ source: node.parentId || 'root', target: node.id, relation: '监控' });
   });
 
-  // L5: 关联技能
-  const relevantSkills = skills.filter(s =>
-    s.domain.includes(scenario.id) ||
-    s.capability_tags.some(tag =>
-      scenario.tags.some(st => st.toLowerCase().includes(tag.toLowerCase()))
-    )
-  );
-
-  relevantSkills.forEach((skill, idx) => {
-    nodes.push({
-      id: skill.skill_id,
-      label: skill.name,
-      type: 'skill',
-      group: 5,
-      data_readiness: 100,
-      owner: getRandomOwner(),
-      responsibility: `提供${skill.name}智能算法服务，分析输入数据并输出预测/控制结果，支持业务决策`,
-      upstreamNodes: l4Nodes.length > 0 ? [l4Nodes[idx % l4Nodes.length]?.id] : [l3Nodes[idx % l3Nodes.length]?.id],
-      dataSource: 'API接口',
-      dataFormat: 'JSON',
-      updateFrequency: '实时调用',
-      pendingTasks: [
-        {
-          id: `task_skill_${skill.skill_id}_1`,
-          title: '模型性能监控',
-          description: '监控模型预测准确率，触发重训练流程',
-          priority: 'high',
-          status: 'pending',
-          dueDate: '2024-03-15'
-        },
-        {
-          id: `task_skill_${skill.skill_id}_2`,
-          title: '算法版本更新',
-          description: '升级到最新模型版本',
-          priority: 'medium',
-          status: 'in_progress',
-          assignee: getRandomOwner()
-        }
-      ]
-    });
-    // 连接到相关的L4节点或L3节点
-    const targetNodes = l4Nodes.length > 0 ? l4Nodes : l3Nodes;
-    if (targetNodes.length > 0) {
-      const target = targetNodes[idx % targetNodes.length];
-      links.push({ source: target.id, target: skill.skill_id, relation: '赋能' });
-    }
-  });
+  // 技能作为推演节点的关联能力（不在图谱中显示为节点，而是在推演时使用）
+  // 技能通过推演节点的supportedSkills配置进行关联
 
   return { nodes, links };
 };

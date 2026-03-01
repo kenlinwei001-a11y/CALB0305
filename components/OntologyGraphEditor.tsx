@@ -6,30 +6,31 @@ import {
   X,
   MousePointer2,
   GitBranch,
-  Settings,
   Database,
   Box,
-  Layers,
   Zap,
   Move,
-  CheckCircle,
-  ArrowRight,
-  MoreHorizontal,
-  Type,
-  Hash,
-  Activity,
-  AlertCircle
 } from 'lucide-react';
-import { OntologyNode, OntologyLink, OntologyData, AtomicOntology } from '../types';
-import { ATOMIC_ONTOLOGY_LIBRARY, ATOMIC_CATEGORIES } from '../constants';
+import { OntologyNode, OntologyLink, OntologyData } from '../types';
 
-// 节点层级定义
-const NODE_LEVELS = [
-  { level: 1, name: '场景', color: '#4f46e5', bgColor: '#e0e7ff', icon: Layers, description: '业务场景根节点' },
-  { level: 2, name: '子系统', color: '#2563eb', bgColor: '#dbeafe', icon: Box, description: '业务子系统/模块' },
-  { level: 3, name: '工艺过程', color: '#0284c7', bgColor: '#e0f2fe', icon: Settings, description: '工艺/流程/活动' },
-  { level: 4, name: '参数', color: '#0d9488', bgColor: '#ccfbf1', icon: Database, description: '参数/指标/变量' },
-  { level: 5, name: '技能', color: '#16a34a', bgColor: '#dcfce7', icon: Zap, description: 'AI技能/能力' }
+// 节点类型定义 - 只有两种：推演节点和数据节点
+const NODE_TYPES = [
+  {
+    type: 'simulation' as const,
+    name: '推演节点',
+    color: '#6b46c1',
+    bgColor: '#f3e8ff',
+    icon: Zap,
+    description: '负责推演分析，输出决策建议'
+  },
+  {
+    type: 'data' as const,
+    name: '数据节点',
+    color: '#2b6cb0',
+    bgColor: '#dbeafe',
+    icon: Database,
+    description: '提供数据支持推演分析'
+  }
 ];
 
 // 关系类型定义
@@ -50,7 +51,6 @@ interface GraphNode extends OntologyNode {
   x: number;
   y: number;
   description?: string;
-  atomRefs?: string[];
   properties?: Record<string, any>;
 }
 
@@ -78,7 +78,6 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
       x: 100 + (i % 5) * 200,
       y: 100 + Math.floor(i / 5) * 150,
       description: '',
-      atomRefs: [],
       properties: {}
     }))
   );
@@ -102,19 +101,18 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // 添加新节点
-  const addNode = (level: number) => {
-    const levelConfig = NODE_LEVELS.find(l => l.level === level);
-    if (!levelConfig) return;
+  const addNode = (nodeType: 'simulation' | 'data') => {
+    const typeConfig = NODE_TYPES.find(t => t.type === nodeType);
+    if (!typeConfig) return;
 
     const newNode: GraphNode = {
       id: `node_${Date.now()}`,
-      label: `${levelConfig.name}_${nodes.filter(n => n.group === level).length + 1}`,
-      type: level === 5 ? 'skill' : 'concept',
-      group: level,
+      label: `${typeConfig.name}_${nodes.filter(n => n.group === nodeType).length + 1}`,
+      type: nodeType,
+      group: nodeType,
       x: 400 - offset.x,
       y: 300 - offset.y,
       description: '',
-      atomRefs: [],
       properties: {},
       data_readiness: 80
     };
@@ -307,23 +305,23 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
               <h3 className="font-semibold text-slate-700 text-sm">组件库</h3>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {NODE_LEVELS.map(level => {
-                const Icon = level.icon;
+              {NODE_TYPES.map(nodeType => {
+                const Icon = nodeType.icon;
                 return (
                   <button
-                    key={level.level}
-                    onClick={() => addNode(level.level)}
+                    key={nodeType.type}
+                    onClick={() => addNode(nodeType.type)}
                     className="w-full flex items-center p-3 bg-white rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all group"
                   >
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
-                      style={{ backgroundColor: level.bgColor }}
+                      style={{ backgroundColor: nodeType.bgColor }}
                     >
-                      <Icon size={20} style={{ color: level.color }} />
+                      <Icon size={20} style={{ color: nodeType.color }} />
                     </div>
                     <div className="text-left flex-1">
-                      <div className="font-medium text-slate-700 text-sm">{level.name}</div>
-                      <div className="text-xs text-slate-400">{level.description}</div>
+                      <div className="font-medium text-slate-700 text-sm">{nodeType.name}</div>
+                      <div className="text-xs text-slate-400">{nodeType.description}</div>
                     </div>
                     <Plus size={16} className="text-slate-300 group-hover:text-indigo-500" />
                   </button>
@@ -335,10 +333,14 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
             <div className="p-3 border-t border-slate-200 bg-slate-100">
               <div className="text-xs text-slate-500 space-y-1">
                 <div className="flex justify-between">
-                  <span>节点数量:</span>
-                  <span className="font-medium">{nodes.length}</span>
+                  <span>推演节点:</span>
+                  <span className="font-medium">{nodes.filter(n => n.group === 'simulation').length}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>数据节点:</span>
+                  <span className="font-medium">{nodes.filter(n => n.group === 'data').length}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-1 mt-1">
                   <span>连线数量:</span>
                   <span className="font-medium">{links.length}</span>
                 </div>
@@ -425,8 +427,8 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
 
                 {/* Nodes */}
                 {nodes.map(node => {
-                  const level = NODE_LEVELS.find(l => l.level === node.group);
-                  const Icon = level?.icon || Box;
+                  const nodeType = NODE_TYPES.find(t => t.type === node.group);
+                  const Icon = nodeType?.icon || Box;
                   const isSelected = node.id === selectedNodeId;
                   const isConnecting = node.id === connectingSource;
 
@@ -456,7 +458,7 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
                             ? 'border-amber-400 shadow-amber-200'
                             : 'border-white hover:shadow-xl'
                         }`}
-                        style={{ backgroundColor: level?.bgColor || '#f1f5f9', minWidth: '140px' }}
+                        style={{ backgroundColor: nodeType?.bgColor || '#f1f5f9', minWidth: '140px' }}
                       >
                         {/* Delete Button */}
                         {isSelected && (
@@ -477,18 +479,18 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
 
                         {/* Icon & Label */}
                         <div className="flex items-center space-x-2">
-                          <Icon size={18} style={{ color: level?.color }} />
+                          <Icon size={18} style={{ color: nodeType?.color }} />
                           <span className="font-semibold text-slate-700 text-sm truncate max-w-[100px]">
                             {node.label}
                           </span>
                         </div>
 
-                        {/* Level Badge */}
+                        {/* Type Badge */}
                         <div
                           className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{ backgroundColor: level?.color, color: 'white' }}
+                          style={{ backgroundColor: nodeType?.color, color: 'white' }}
                         >
-                          L{node.group}
+                          {nodeType?.name}
                         </div>
 
                         {/* Data Readiness Badge */}
@@ -552,22 +554,22 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
                     />
                   </div>
 
-                  {/* Level */}
+                  {/* Node Type */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">层级</label>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">节点类型</label>
                     <select
                       value={selectedNode.group}
                       onChange={(e) => {
-                        const level = parseInt(e.target.value);
+                        const nodeType = e.target.value as 'simulation' | 'data';
                         updateNode(selectedNode.id, {
-                          group: level,
-                          type: level === 5 ? 'skill' : 'concept'
+                          group: nodeType,
+                          type: nodeType
                         });
                       }}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                     >
-                      {NODE_LEVELS.map(l => (
-                        <option key={l.level} value={l.level}>L{l.level} - {l.name}</option>
+                      {NODE_TYPES.map(t => (
+                        <option key={t.type} value={t.type}>{t.name}</option>
                       ))}
                     </select>
                   </div>
@@ -597,31 +599,6 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
                       onChange={(e) => updateNode(selectedNode.id, { data_readiness: parseInt(e.target.value) })}
                       className="w-full"
                     />
-                  </div>
-
-                  {/* Atom References */}
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-2">关联原子业务语义</label>
-                    <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1">
-                      {ATOMIC_ONTOLOGY_LIBRARY.map(atom => (
-                        <label key={atom.id} className="flex items-center text-sm">
-                          <input
-                            type="checkbox"
-                            checked={selectedNode.atomRefs?.includes(atom.id) || false}
-                            onChange={(e) => {
-                              const refs = selectedNode.atomRefs || [];
-                              if (e.target.checked) {
-                                updateNode(selectedNode.id, { atomRefs: [...refs, atom.id] });
-                              } else {
-                                updateNode(selectedNode.id, { atomRefs: refs.filter(id => id !== atom.id) });
-                              }
-                            }}
-                            className="mr-2"
-                          />
-                          <span className="text-slate-700">{atom.name}</span>
-                        </label>
-                      ))}
-                    </div>
                   </div>
 
                   {/* Decision Properties */}

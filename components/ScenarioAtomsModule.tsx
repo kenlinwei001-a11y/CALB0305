@@ -34,7 +34,7 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
   {
     id: 'hierarchy_structure',
     name: '层级结构原子业务语义',
-    description: '支撑L1-L5层级定义的核心原子业务语义，用于构建场景的分子结构',
+    description: '支撑推演节点和数据节点定义的核心原子业务语义，用于构建场景的分子结构',
     icon: Box,
     color: '#2563eb',
     bgColor: '#dbeafe',
@@ -263,16 +263,12 @@ const ScenarioAtomsModule: React.FC = () => {
             </div>
             <div className="space-y-2 text-sm text-slate-600">
               <p>
-                <span className="font-medium text-slate-700">L1 场景层：</span>
-                使用场景核心原子业务语义定义场景的基本属性和元数据
+                <span className="font-medium text-slate-700">推演节点：</span>
+                负责分析、评估、预测、决策的节点，整合数据节点输入并输出决策建议
               </p>
               <p>
-                <span className="font-medium text-slate-700">L2-L4 结构层：</span>
-                通过层级结构原子业务语义构建子系统、工艺过程和参数的层次关系
-              </p>
-              <p>
-                <span className="font-medium text-slate-700">L5 技能层：</span>
-                绑定执行度量原子业务语义和决策支撑原子业务语义，实现场景的智能化执行
+                <span className="font-medium text-slate-700">数据节点：</span>
+                提供原始数据、参数、指标的节点，为推演节点提供分析所需的数据支撑
               </p>
               <p>
                 <span className="font-medium text-slate-700">关系连接：</span>
