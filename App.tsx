@@ -14,14 +14,14 @@ const NavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; acti
   <Link
     to={to}
     onClick={onClick}
-    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-1 ${
+    className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 mb-1 ${
       active
-        ? 'bg-indigo-600 text-white shadow-md'
-        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+        ? 'bg-[#007AFF]/10 text-[#007AFF]'
+        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
     }`}
   >
     {icon}
-    <span className="font-medium">{label}</span>
+    <span className="font-medium text-sm">{label}</span>
   </Link>
 );
 
@@ -41,12 +41,12 @@ const BusinessSemanticPage: React.FC = () => {
     <div className="h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">原子业务语义管理</h2>
-          <p className="text-slate-500 text-sm">定义锂电行业产销协同的不可再分基础业务概念（共36个业务释义）</p>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">原子业务语义管理</h2>
+          <p className="text-gray-500 mt-1">定义锂电行业产销协同的不可再分基础业务概念（共36个业务释义）</p>
         </div>
         <button
           onClick={() => setIsCreatorOpen(true)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 transition-colors"
+          className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl hover:bg-[#0051D5] flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
         >
           <Plus size={20} />
           查看业务释义库
@@ -70,40 +70,40 @@ const BusinessSemanticPage: React.FC = () => {
             <div
               key={category.id}
               onClick={() => setIsCreatorOpen(true)}
-              className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-white rounded-2xl p-5 hover:shadow-lg transition-all duration-300 cursor-pointer shadow-sm"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${category.color}`}>
                   <Icon size={20} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-900">{category.name}</h3>
-                  <span className="text-xs text-slate-500">{category.count} 个定义</span>
+                  <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                  <span className="text-xs text-gray-400">{category.count} 个定义</span>
                 </div>
               </div>
-              <p className="text-sm text-slate-500">{category.desc}</p>
+              <p className="text-sm text-gray-500 leading-relaxed">{category.desc}</p>
             </div>
           );
         })}
       </div>
 
       {/* 什么是原子业务语义说明 */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
-        <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-          <Info size={20} className="text-indigo-600" />
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Info size={20} className="text-[#007AFF]" />
           什么是原子业务语义？
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-slate-600">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
           <div>
-            <h4 className="font-semibold text-slate-800 mb-2">不可再分</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">不可再分</h4>
             <p>原子业务语义是业务领域中最基础的、不可再分解的概念，如"订单量"、"库存量"、"良品率"等。</p>
           </div>
           <div>
-            <h4 className="font-semibold text-slate-800 mb-2">标准化定义</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">标准化定义</h4>
             <p>每个业务释义都有统一的编码、定义、数据类型、计量单位和计算规则，确保跨系统一致性。</p>
           </div>
           <div>
-            <h4 className="font-semibold text-slate-800 mb-2">业务规则绑定</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">业务规则绑定</h4>
             <p>每个业务释义关联特定的业务规则，如"良品率低于95%触发预警"、"库存低于安全库存补货"。</p>
           </div>
         </div>
@@ -137,21 +137,25 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-[#F5F5F7] overflow-hidden" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif' }}>
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-0 md:w-20'
-        } bg-slate-900 transition-all duration-300 flex flex-col border-r border-slate-800 z-20`}
+        } bg-white/80 backdrop-blur-xl transition-all duration-300 flex flex-col border-r border-gray-200/50 z-20`}
       >
         <div className="p-6 flex items-center justify-between">
           {sidebarOpen ? (
-            <div className="flex items-center space-x-2 text-white font-bold text-xl">
-              <Box className="text-indigo-400" />
-              <span>Nexus<span className="text-indigo-400"> Platform</span></span>
+            <div className="flex items-center space-x-3 text-gray-900 font-semibold text-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#5856D6] rounded-lg flex items-center justify-center">
+                <Box className="text-white" size={18} />
+              </div>
+              <span>Nexus<span className="text-gray-400"> Platform</span></span>
             </div>
           ) : (
-            <Box className="text-indigo-400 mx-auto" />
+            <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#5856D6] rounded-lg flex items-center justify-center mx-auto">
+              <Box className="text-white" size={18} />
+            </div>
           )}
         </div>
 
@@ -163,7 +167,7 @@ const AppContent: React.FC = () => {
           <NavLink to="/business-semantic" icon={<Layers size={20} />} label={sidebarOpen ? "业务语义创建" : ""} active={isActive('/business-semantic')} />
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-gray-200/50">
            <NavLink to="/settings" icon={<Settings size={20} />} label={sidebarOpen ? "设置" : ""} active={isActive('/settings')} />
         </div>
       </aside>
@@ -171,24 +175,24 @@ const AppContent: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shadow-sm z-10">
-          <button 
+        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 h-16 flex items-center justify-between px-6 z-10">
+          <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded hover:bg-slate-100 text-slate-600"
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
           >
             {sidebarOpen ? <Menu size={20} /> : <Menu size={20} />}
           </button>
           
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-slate-500">环境: <span className="font-semibold text-green-600">Production</span></span>
-            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-200">
+            <span className="text-sm text-gray-500"><span className="font-medium text-[#34C759]">●</span> Production</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white flex items-center justify-center font-semibold text-xs">
               AD
             </div>
           </div>
         </header>
 
         {/* Viewport */}
-        <main className="flex-1 overflow-auto p-6 relative">
+        <main className="flex-1 overflow-auto p-8 relative">
           <div className="w-full h-full max-w-[1920px] mx-auto">
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -199,7 +203,7 @@ const AppContent: React.FC = () => {
               <Route path="/atoms/scenario" element={<ScenarioAtomsModule />} />
               <Route path="/atoms" element={<AtomicOntologyModule />} />
               <Route path="/business-semantic" element={<BusinessSemanticPage />} />
-              <Route path="*" element={<div className="p-10 text-center"><h1 className="text-2xl text-red-500">404 - Page Not Found</h1><p>Path: {location.pathname}</p></div>} />
+              <Route path="*" element={<div className="p-10 text-center"><h1 className="text-2xl text-[#FF3B30]">404 - Page Not Found</h1><p className="text-gray-500">Path: {location.pathname}</p></div>} />
             </Routes>
           </div>
         </main>

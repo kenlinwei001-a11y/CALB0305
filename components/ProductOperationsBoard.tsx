@@ -455,21 +455,21 @@ const ProductTab: React.FC<{
   onClick: () => void;
 }> = ({ product, data, isActive, onClick }) => {
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-200',
-    amber: 'bg-amber-50 text-amber-600 border-amber-200',
-    green: 'bg-green-50 text-green-600 border-green-200'
+    blue: 'bg-blue-50 text-[#007AFF] border-blue-200',
+    amber: 'bg-amber-50 text-[#FF9500] border-amber-200',
+    green: 'bg-green-50 text-[#34C759] border-green-200'
   };
 
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 px-5 py-4 rounded-xl border-2 transition-all ${
+      className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 transition-all ${
         isActive
           ? colorClasses[data.color as keyof typeof colorClasses]
-          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
       }`}
     >
-      <div className={`p-2 rounded-lg ${isActive ? 'bg-white/50' : 'bg-slate-100'}`}>
+      <div className={`p-2 rounded-xl ${isActive ? 'bg-white/50' : 'bg-gray-100'}`}>
         {data.icon}
       </div>
       <div className="text-left">
@@ -490,24 +490,24 @@ const MetricCard: React.FC<{
   color?: string;
   subValue?: string;
 }> = ({ title, value, unit, trend, icon, color = 'blue', subValue }) => (
-  <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
+  <div className="bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between mb-3">
-      <span className="text-sm text-slate-500">{title}</span>
-      <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600`}>
+      <span className="text-sm text-gray-500">{title}</span>
+      <div className={`p-2 rounded-xl bg-${color}-50 text-${color}-600`}>
         {icon}
       </div>
     </div>
     <div className="flex items-baseline gap-1">
-      <span className="text-2xl font-bold text-slate-900">{value}</span>
-      {unit && <span className="text-sm text-slate-500">{unit}</span>}
+      <span className="text-2xl font-bold text-gray-900">{value}</span>
+      {unit && <span className="text-sm text-gray-500">{unit}</span>}
     </div>
     {trend !== undefined && (
-      <div className={`flex items-center gap-1 mt-2 text-sm ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+      <div className={`flex items-center gap-1 mt-2 text-sm ${trend >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
         {trend >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
         <span>{trend > 0 ? '+' : ''}{trend}%</span>
       </div>
     )}
-    {subValue && <div className="text-xs text-slate-400 mt-2">{subValue}</div>}
+    {subValue && <div className="text-xs text-gray-400 mt-2">{subValue}</div>}
   </div>
 );
 
@@ -522,11 +522,11 @@ const CapacityView: React.FC<{ data: CapacityData }> = ({ data }) => (
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <MetricCard title="实际产出" value={data.actualOutput.toString()} unit="GWh" icon={<Zap size={18} />} color="purple" />
-      <MetricCard title="UPH" value={data.uph.toString()} unit="件" icon={<Clock size={18} />} color="indigo" />
+      <MetricCard title="UPH" value={data.uph.toString()} unit="件" icon={<Clock size={18} />} color="blue" />
       <MetricCard title="人员配置率" value={data.staffingRate.toString()} unit="%" icon={<Users size={18} />} color="pink" />
       <MetricCard title="设备稼动率" value={data.equipmentUptime.toString()} unit="%" icon={<Wrench size={18} />} color="teal" />
     </div>
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
       <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
         <AlertTriangle size={18} />
         瓶颈工序: {data.bottleneckProcess}
@@ -548,12 +548,12 @@ const InventoryView: React.FC<{ data: InventoryData }> = ({ data }) => (
       <MetricCard title="库存周转" value={data.turnoverDays.toString()} unit="天" icon={<TrendingUp size={18} />} color="purple" trend={-1.5} />
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <h4 className="font-semibold text-slate-800 mb-3">原材料明细</h4>
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <h4 className="font-semibold text-gray-800 mb-3">原材料明细</h4>
         <div className="space-y-2">
           {Object.entries(data.rawMaterial).map(([key, value]) => (
             <div key={key} className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-gray-600">
                 {key === 'cathode' ? '正极材料' : key === 'anode' ? '负极材料' : key === 'electrolyte' ? '电解液' : key === 'separator' ? '隔膜' : '其他'}
               </span>
               <span className="font-medium">{value} 吨</span>
@@ -561,12 +561,12 @@ const InventoryView: React.FC<{ data: InventoryData }> = ({ data }) => (
           ))}
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <h4 className="font-semibold text-slate-800 mb-3">在制品明细</h4>
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <h4 className="font-semibold text-gray-800 mb-3">在制品明细</h4>
         <div className="space-y-2">
           {Object.entries(data.wip).map(([key, value]) => (
             <div key={key} className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-gray-600">
                 {key === 'electrode' ? '极片在制' : key === 'cell' ? '电芯在制' : '静置中'}
               </span>
               <span className="font-medium">{value} 万支</span>
@@ -576,11 +576,11 @@ const InventoryView: React.FC<{ data: InventoryData }> = ({ data }) => (
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
         <div className="text-red-800 font-medium">呆滞库存: {data.slowMovingInventory} 万元</div>
-        <div className="text-sm text-red-600 mt-1">呆滞风险: {data.obsoleteRisk} 万元</div>
+        <div className="text-sm text-[#FF3B30] mt-1">呆滞风险: {data.obsoleteRisk} 万元</div>
       </div>
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="text-blue-800 font-medium">库存资金占用</div>
         <div className="text-2xl font-bold text-blue-900 mt-1">{data.totalValue.toLocaleString()} 万元</div>
       </div>
@@ -597,32 +597,32 @@ const MaterialView: React.FC<{ data: MaterialData }> = ({ data }) => (
       <MetricCard title="短缺风险" value={data.shortageRisk.toString()} unit="项" icon={<AlertCircle size={18} />} color="red" />
       <MetricCard title="预测准确率" value={data.forecastAccuracy.toString()} unit="%" icon={<BarChart3 size={18} />} color="green" />
     </div>
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <h4 className="font-semibold text-slate-800 mb-4">原材料价格走势 (万元/吨)</h4>
+    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <h4 className="font-semibold text-gray-800 mb-4">原材料价格走势 (万元/吨)</h4>
       <div className="grid grid-cols-3 gap-4">
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
-          <div className="text-sm text-slate-500">碳酸锂</div>
-          <div className="text-xl font-bold text-slate-900 mt-1">{data.priceTrend.lithiumCarbonate}</div>
-          <div className="text-xs text-red-600 mt-1">↑ 5.2%</div>
+        <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="text-sm text-gray-500">碳酸锂</div>
+          <div className="text-xl font-bold text-gray-900 mt-1">{data.priceTrend.lithiumCarbonate}</div>
+          <div className="text-xs text-[#FF3B30] mt-1">↑ 5.2%</div>
         </div>
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
-          <div className="text-sm text-slate-500">钴</div>
-          <div className="text-xl font-bold text-slate-900 mt-1">{data.priceTrend.cobalt}</div>
-          <div className="text-xs text-green-600 mt-1">↓ 2.1%</div>
+        <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="text-sm text-gray-500">钴</div>
+          <div className="text-xl font-bold text-gray-900 mt-1">{data.priceTrend.cobalt}</div>
+          <div className="text-xs text-[#34C759] mt-1">↓ 2.1%</div>
         </div>
-        <div className="text-center p-4 bg-slate-50 rounded-lg">
-          <div className="text-sm text-slate-500">镍</div>
-          <div className="text-xl font-bold text-slate-900 mt-1">{data.priceTrend.nickel}</div>
-          <div className="text-xs text-slate-500 mt-1">- 0.0%</div>
+        <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="text-sm text-gray-500">镍</div>
+          <div className="text-xl font-bold text-gray-900 mt-1">{data.priceTrend.nickel}</div>
+          <div className="text-xs text-gray-500 mt-1">- 0.0%</div>
         </div>
       </div>
     </div>
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <h4 className="font-semibold text-slate-800 mb-3">采购交期趋势 (天)</h4>
+    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <h4 className="font-semibold text-gray-800 mb-3">采购交期趋势 (天)</h4>
       <div className="flex items-end gap-1 h-20">
         {data.leadTimeTrend.map((val, idx) => (
-          <div key={idx} className="flex-1 bg-indigo-100 rounded-t" style={{ height: `${(val / 35) * 100}%` }}>
-            <div className="text-center text-xs text-slate-600 mt-1">{val}</div>
+          <div key={idx} className="flex-1 bg-[#007AFF]/10 rounded-t" style={{ height: `${(val / 35) * 100}%` }}>
+            <div className="text-center text-xs text-gray-600 mt-1">{val}</div>
           </div>
         ))}
       </div>
@@ -639,16 +639,16 @@ const SupplierView: React.FC<{ data: SupplierData }> = ({ data }) => (
       <MetricCard title="高风险供应" value={data.riskSuppliers.toString()} unit="家" icon={<AlertTriangle size={18} />} color="red" />
       <MetricCard title="国产化率" value={data.localizationRate.toString()} unit="%" icon={<ShieldCheck size={18} />} color="green" />
     </div>
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <h4 className="font-semibold text-slate-800 mb-4">供应商绩效指标</h4>
+    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <h4 className="font-semibold text-gray-800 mb-4">供应商绩效指标</h4>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {Object.entries(data.performanceMetrics).map(([key, value]) => (
-          <div key={key} className="p-3 bg-slate-50 rounded-lg">
-            <div className="text-sm text-slate-500">
+          <div key={key} className="p-3 bg-gray-50 rounded-xl">
+            <div className="text-sm text-gray-500">
               {key === 'otd' ? '准时交付率' : key === 'ppm' ? 'PPM不良率' : key === 'qualityScore' ? '质量评分' :
                key === 'costCompetitiveness' ? '成本竞争力' : key === 'technicalCapability' ? '技术能力' : '响应速度'}
             </div>
-            <div className="text-lg font-bold text-slate-900 mt-1">
+            <div className="text-lg font-bold text-gray-900 mt-1">
               {value}{key === 'otd' || key === 'qualityScore' || key === 'costCompetitiveness' || key === 'technicalCapability' || key === 'responseSpeed' ? '%' : ''}
             </div>
           </div>
@@ -656,13 +656,13 @@ const SupplierView: React.FC<{ data: SupplierData }> = ({ data }) => (
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <div className="text-amber-800 font-medium">单一来源物料: {data.singleSourceMaterials} 项</div>
-        <div className="text-sm text-amber-600 mt-1">建议开发第二供应商降低风险</div>
+        <div className="text-sm text-[#FF9500] mt-1">建议开发第二供应商降低风险</div>
       </div>
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="text-blue-800 font-medium">进口依赖度: {data.importDependency}%</div>
-        <div className="text-sm text-blue-600 mt-1">持续推进国产化替代</div>
+        <div className="text-sm text-[#007AFF] mt-1">持续推进国产化替代</div>
       </div>
     </div>
   </div>
@@ -678,17 +678,17 @@ const QualityView: React.FC<{ data: QualityData }> = ({ data }) => (
       <MetricCard title="DPPM" value={data.dppm.toString()} icon={<BarChart3 size={18} />} color="amber" />
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <h4 className="font-semibold text-slate-800 mb-3">质量指标明细</h4>
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <h4 className="font-semibold text-gray-800 mb-3">质量指标明细</h4>
         <div className="space-y-2">
-          <div className="flex justify-between"><span className="text-slate-600">不良率</span><span className="font-medium">{data.defectRate}%</span></div>
-          <div className="flex justify-between"><span className="text-slate-600">退货率</span><span className="font-medium">{data.returnRate}%</span></div>
-          <div className="flex justify-between"><span className="text-slate-600">重大质量问题</span><span className={`font-medium ${data.majorIssues > 0 ? 'text-red-600' : ''}`}>{data.majorIssues} 起</span></div>
-          <div className="flex justify-between"><span className="text-slate-600">开放CAPA</span><span className="font-medium">{data.capaOpen} 项</span></div>
-          <div className="flex justify-between"><span className="text-slate-600">待检批次</span><span className="font-medium">{data.inspectionPending} 批</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">不良率</span><span className="font-medium">{data.defectRate}%</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">退货率</span><span className="font-medium">{data.returnRate}%</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">重大质量问题</span><span className={`font-medium ${data.majorIssues > 0 ? 'text-[#FF3B30]' : ''}`}>{data.majorIssues} 起</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">开放CAPA</span><span className="font-medium">{data.capaOpen} 项</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">待检批次</span><span className="font-medium">{data.inspectionPending} 批</span></div>
         </div>
       </div>
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
         <div className="flex items-center gap-2 text-green-800 font-medium mb-2">
           <CheckCircle size={18} />
           质量状态良好
@@ -710,9 +710,9 @@ const FinanceView: React.FC<{ data: FinancialData }> = ({ data }) => (
       <MetricCard title="单位成本" value={data.unitCost.toString()} unit="元/Wh" icon={<Scale size={18} />} color="amber" />
       <MetricCard title="现金周转" value={data.cashConversion.toString()} unit="天" icon={<Clock size={18} />} color="purple" trend={-3} />
     </div>
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <h4 className="font-semibold text-slate-800 mb-3">成本结构</h4>
-      <div className="flex h-8 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <h4 className="font-semibold text-gray-800 mb-3">成本结构</h4>
+      <div className="flex h-8 rounded-xl overflow-hidden">
         <div className="bg-blue-500" style={{ width: `${data.costBreakdown.material}%` }} />
         <div className="bg-green-500" style={{ width: `${data.costBreakdown.labor}%` }} />
         <div className="bg-amber-500" style={{ width: `${data.costBreakdown.overhead}%` }} />
@@ -724,15 +724,15 @@ const FinanceView: React.FC<{ data: FinancialData }> = ({ data }) => (
       </div>
     </div>
     <div className="grid grid-cols-3 gap-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="text-sm text-blue-600">应收账款</div>
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="text-sm text-[#007AFF]">应收账款</div>
         <div className="text-xl font-bold text-blue-900">{(data.accountsReceivable / 10000).toFixed(1)} 亿</div>
       </div>
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <div className="text-sm text-green-600">应付账款</div>
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+        <div className="text-sm text-[#34C759]">应付账款</div>
         <div className="text-xl font-bold text-green-900">{(data.accountsPayable / 10000).toFixed(1)} 亿</div>
       </div>
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
         <div className="text-sm text-purple-600">库存资金</div>
         <div className="text-xl font-bold text-purple-900">{(data.inventoryCost / 10000).toFixed(1)} 亿</div>
       </div>
@@ -749,7 +749,7 @@ const AlertCard: React.FC<{ alert: AlertItem }> = ({ alert }) => {
   };
 
   return (
-    <div className={`p-3 rounded-lg border ${colors[alert.level]}`}>
+    <div className={`p-3 rounded-xl border ${colors[alert.level]}`}>
       <div className="flex items-start gap-2">
         {alert.level === 'critical' ? <AlertCircle size={16} className="mt-0.5" /> :
          alert.level === 'warning' ? <AlertTriangle size={16} className="mt-0.5" /> :
@@ -774,10 +774,10 @@ const ViewTab: React.FC<{
 }> = ({ label, icon, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
       isActive
-        ? 'bg-indigo-600 text-white'
-        : 'text-slate-600 hover:bg-slate-100'
+        ? 'bg-[#007AFF] text-white'
+        : 'text-gray-600 hover:bg-gray-100'
     }`}
   >
     {icon}
@@ -817,10 +817,10 @@ const ProductOperationsBoard: React.FC = () => {
       {/* 标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">产品经营看板</h2>
-          <p className="text-sm text-slate-500 mt-1">乘用车 / 商用车 / 储能 三大产品线经营数据</p>
+          <h2 className="text-xl font-bold text-gray-900">产品经营看板</h2>
+          <p className="text-sm text-gray-500 mt-1">乘用车 / 商用车 / 储能 三大产品线经营数据</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
           <Calendar size={16} />
           <span>数据更新: 2026-02-28 14:30</span>
         </div>
@@ -849,7 +849,7 @@ const ProductOperationsBoard: React.FC = () => {
       )}
 
       {/* 视图导航 */}
-      <div className="flex flex-wrap gap-2 bg-white p-2 rounded-lg border border-slate-200">
+      <div className="flex flex-wrap gap-2 bg-white p-2 rounded-xl border border-gray-200">
         <ViewTab view="overview" label="总览" icon={<BarChart3 size={16} />} isActive={activeView === 'overview'} onClick={() => setActiveView('overview')} />
         <ViewTab view="capacity" label="产能" icon={<Factory size={16} />} isActive={activeView === 'capacity'} onClick={() => setActiveView('capacity')} />
         <ViewTab view="inventory" label="库存" icon={<Package size={16} />} isActive={activeView === 'inventory'} onClick={() => setActiveView('inventory')} />
@@ -860,28 +860,28 @@ const ProductOperationsBoard: React.FC = () => {
       </div>
 
       {/* 内容区域 */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         {renderView()}
       </div>
 
       {/* 市场数据概览 */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-[#007AFF] to-[#5856D6] rounded-2xl p-6 text-white">
         <h3 className="font-semibold mb-4">市场概况 - {data.name}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <div className="text-indigo-100 text-sm">在手订单</div>
+            <div className="text-white/80 text-sm">在手订单</div>
             <div className="text-2xl font-bold">{data.market.orderBacklog} GWh</div>
           </div>
           <div>
-            <div className="text-indigo-100 text-sm">本月新签</div>
+            <div className="text-white/80 text-sm">本月新签</div>
             <div className="text-2xl font-bold">{data.market.newOrders} GWh</div>
           </div>
           <div>
-            <div className="text-indigo-100 text-sm">市场份额</div>
+            <div className="text-white/80 text-sm">市场份额</div>
             <div className="text-2xl font-bold">{data.market.marketShare}%</div>
           </div>
           <div>
-            <div className="text-indigo-100 text-sm">主要客户</div>
+            <div className="text-white/80 text-sm">主要客户</div>
             <div className="text-sm mt-1">{data.market.topCustomers.slice(0, 3).join(', ')}</div>
           </div>
         </div>

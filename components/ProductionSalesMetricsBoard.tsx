@@ -206,24 +206,24 @@ const categoryIcons: Record<string, React.ReactNode> = {
   finance: <DollarSign size={20} />
 };
 
-const categoryColors: Record<string, string> = {
-  sales: 'blue',
-  production: 'cyan',
-  inventory: 'amber',
-  logistics: 'purple',
-  finance: 'green'
+const categoryIconColors: Record<string, { bg: string; text: string }> = {
+  sales: { bg: 'bg-[#007AFF]/10', text: 'text-[#007AFF]' },
+  production: { bg: 'bg-[#5AC8FA]/10', text: 'text-[#5AC8FA]' },
+  inventory: { bg: 'bg-[#FF9500]/10', text: 'text-[#FF9500]' },
+  logistics: { bg: 'bg-[#AF52DE]/10', text: 'text-[#AF52DE]' },
+  finance: { bg: 'bg-[#34C759]/10', text: 'text-[#34C759]' }
 };
 
 const severityColors = {
-  high: 'bg-red-100 text-red-700 border-red-200',
-  medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  low: 'bg-green-100 text-green-700 border-green-200'
+  high: 'bg-[#FF3B30]/10 text-[#FF3B30]',
+  medium: 'bg-[#FF9500]/10 text-[#FF9500]',
+  low: 'bg-[#34C759]/10 text-[#34C759]'
 };
 
 const statusColors = {
-  resolved: 'bg-green-100 text-green-700',
-  pending: 'bg-yellow-100 text-yellow-700',
-  in_progress: 'bg-blue-100 text-blue-700'
+  resolved: 'bg-[#34C759]/10 text-[#34C759]',
+  pending: 'bg-[#FF9500]/10 text-[#FF9500]',
+  in_progress: 'bg-[#007AFF]/10 text-[#007AFF]'
 };
 
 // 指标卡片组件
@@ -233,48 +233,48 @@ const MetricCard: React.FC<{
   onClick: () => void;
   eventCount: number;
 }> = ({ metric, isSelected, onClick, eventCount }) => {
-  const color = categoryColors[metric.category];
+  const iconColor = categoryIconColors[metric.category];
   const isPositiveDeviation = metric.deviationType === 'positive' && metric.deviation > 0;
   const isNegative = metric.deviation < 0;
 
   return (
     <div
       onClick={onClick}
-      className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
+      className={`p-5 rounded-2xl cursor-pointer transition-all hover:shadow-lg ${
         isSelected
-          ? `border-${color}-500 bg-${color}-50`
-          : 'border-slate-200 bg-white hover:border-slate-300'
+          ? 'bg-gray-50 shadow-md ring-2 ring-[#007AFF]/20'
+          : 'bg-white shadow-sm hover:shadow-md'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className={`p-2 rounded-lg bg-${color}-100 text-${color}-600`}>
+        <div className={`p-2.5 rounded-xl ${iconColor.bg} ${iconColor.text}`}>
           {categoryIcons[metric.category]}
         </div>
         {eventCount > 0 && (
-          <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+          <span className="flex items-center gap-1 text-xs font-semibold text-[#FF9500] bg-[#FF9500]/10 px-2.5 py-0.5 rounded-full">
             <AlertCircle size={12} />
             {eventCount} 个事件
           </span>
         )}
       </div>
 
-      <h4 className="text-sm font-medium text-slate-600 mb-1">{metric.name}</h4>
+      <h4 className="text-sm font-medium text-gray-500 mb-1">{metric.name}</h4>
 
       <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-2xl font-bold text-slate-900">
+        <span className="text-2xl font-bold text-gray-900 tracking-tight">
           {metric.actual}{metric.unit}
         </span>
-        <span className="text-xs text-slate-400">目标: {metric.target}{metric.unit}</span>
+        <span className="text-xs text-gray-400">目标: {metric.target}{metric.unit}</span>
       </div>
 
       <div className="flex items-center gap-2">
-        <span className={`flex items-center text-xs font-medium ${
-          isNegative ? 'text-red-600' : 'text-green-600'
+        <span className={`flex items-center text-xs font-semibold ${
+          isNegative ? 'text-[#FF3B30]' : 'text-[#34C759]'
         }`}>
           {isNegative ? <TrendingDown size={14} className="mr-0.5" /> : <TrendingUp size={14} className="mr-0.5" />}
           {metric.deviation > 0 ? '+' : ''}{metric.deviation}{metric.unit}
         </span>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-gray-400">
           ({((metric.actual / metric.target - 1) * 100).toFixed(1)}%)
         </span>
       </div>
@@ -286,7 +286,7 @@ const MetricCard: React.FC<{
           return (
             <div
               key={idx}
-              className={`flex-1 rounded-t ${isNegative ? 'bg-red-200' : 'bg-green-200'}`}
+              className={`flex-1 rounded-t ${isNegative ? 'bg-[#FF3B30]/20' : 'bg-[#34C759]/20'}`}
               style={{ height: `${height}%` }}
             />
           );
@@ -302,10 +302,10 @@ const EventDetailModal: React.FC<{
   onClose: () => void;
 }> = ({ event, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-start justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${severityColors[event.severity]}`}>
@@ -315,14 +315,14 @@ const EventDetailModal: React.FC<{
                 {event.status === 'resolved' ? '已解决' : event.status === 'pending' ? '待处理' : '进行中'}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{event.title}</h2>
-            <p className="text-sm text-slate-500 mt-1">{event.date}</p>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{event.title}</h2>
+            <p className="text-sm text-gray-500 mt-1">{event.date}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
           >
-            <X size={20} className="text-slate-500" />
+            <X size={20} className="text-gray-400" />
           </button>
         </div>
 
@@ -330,50 +330,50 @@ const EventDetailModal: React.FC<{
         <div className="p-6 space-y-6">
           {/* 事件描述 */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <FileText size={16} />
               事件描述
             </h3>
-            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{event.description}</p>
+            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{event.description}</p>
           </div>
 
           {/* 影响分析 */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <AlertCircle size={16} />
               影响分析
             </h3>
-            <p className="text-sm text-slate-600 bg-red-50 p-3 rounded-lg border border-red-100">{event.impact}</p>
+            <p className="text-sm text-[#FF3B30] bg-[#FF3B30]/5 p-3 rounded-xl">{event.impact}</p>
           </div>
 
           {/* 责任人 */}
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <User size={16} />
                 责任人
               </h3>
-              <p className="text-sm text-slate-600">{event.responsible}</p>
+              <p className="text-sm text-gray-600">{event.responsible}</p>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <Clock size={16} />
                 发生时间
               </h3>
-              <p className="text-sm text-slate-600">{event.date}</p>
+              <p className="text-sm text-gray-600">{event.date}</p>
             </div>
           </div>
 
           {/* 处理措施 */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <Target size={16} />
               处理措施
             </h3>
             <ul className="space-y-2">
               {event.actions.map((action, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-medium">
+                <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center text-xs font-medium">
                     {idx + 1}
                   </span>
                   {action}
@@ -407,10 +407,10 @@ const ProductionSalesMetricsBoard: React.FC = () => {
       {/* 标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">产销协同指标看板</h2>
-          <p className="text-sm text-slate-500 mt-1">实时监控关键指标达成情况，追踪历史事件影响</p>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">产销协同指标看板</h2>
+          <p className="text-gray-500 mt-1">实时监控关键指标达成情况，追踪历史事件影响</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
           <Calendar size={16} />
           <span>数据更新: 2026-02-28 14:30</span>
         </div>
@@ -430,28 +430,28 @@ const ProductionSalesMetricsBoard: React.FC = () => {
       </div>
 
       {/* 历史事件列表 */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertCircle size={18} className="text-indigo-600" />
-            <h3 className="font-semibold text-slate-900">
+            <AlertCircle size={18} className="text-[#007AFF]" />
+            <h3 className="font-semibold text-gray-900">
               历史事件列表
-              {selectedMetric && <span className="text-slate-500 font-normal"> - {selectedMetric.name}</span>}
+              {selectedMetric && <span className="text-gray-400 font-normal"> - {selectedMetric.name}</span>}
             </h3>
           </div>
           {selectedMetricId && (
             <button
               onClick={() => setSelectedMetricId(null)}
-              className="text-xs text-slate-500 hover:text-indigo-600 transition-colors"
+              className="text-sm text-gray-500 hover:text-[#007AFF] transition-colors"
             >
               查看全部
             </button>
           )}
         </div>
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-gray-100">
           {filteredEvents.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-8 text-center text-gray-500">
               暂无相关历史事件
             </div>
           ) : (
@@ -459,7 +459,7 @@ const ProductionSalesMetricsBoard: React.FC = () => {
               <div
                 key={event.id}
                 onClick={() => setSelectedEvent(event)}
-                className="p-4 hover:bg-slate-50 cursor-pointer transition-colors group"
+                className="p-5 hover:bg-gray-50 cursor-pointer transition-colors group"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -470,17 +470,17 @@ const ProductionSalesMetricsBoard: React.FC = () => {
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[event.status]}`}>
                         {event.status === 'resolved' ? '已解决' : event.status === 'pending' ? '待处理' : '进行中'}
                       </span>
-                      <span className="text-xs text-slate-400">{event.date}</span>
+                      <span className="text-xs text-gray-400">{event.date}</span>
                     </div>
-                    <h4 className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
+                    <h4 className="font-medium text-gray-900 group-hover:text-[#007AFF] transition-colors">
                       {event.title}
                     </h4>
-                    <p className="text-sm text-slate-500 mt-1 line-clamp-2">{event.description}</p>
-                    <p className="text-sm text-red-600 mt-2">
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{event.description}</p>
+                    <p className="text-sm text-[#FF3B30] mt-2">
                       <span className="font-medium">影响:</span> {event.impact}
                     </p>
                   </div>
-                  <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-600 mt-1" />
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-[#007AFF] mt-1" />
                 </div>
               </div>
             ))
