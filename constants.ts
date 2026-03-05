@@ -294,6 +294,36 @@ export const MOCK_SKILLS: Skill[] = [
       scriptLang: "python"
     }
   },
+  {
+    skill_id: "quality_predict_v2",
+    name: "电芯质量预测模型",
+    version: "2.0.0",
+    domain: ["quality_control", "production_sales_match"],
+    capability_tags: ["quality", "prediction", "defect_detection", "ml"],
+    input_schema: {
+      process_parameters: "object",
+      raw_material_specs: "object",
+      equipment_status: "object",
+      environmental_data: "object"
+    },
+    output_schema: {
+      quality_score: "number",
+      defect_probability: "number",
+      risk_factors: "array",
+      recommendations: "array"
+    },
+    cost: 0.6,
+    latency: 800,
+    accuracy_score: 0.93,
+    dependencies: [],
+    description: "基于工艺参数、原材料规格、设备状态和环境数据，预测电芯质量等级和缺陷概率，提前识别质量风险。",
+    files: {
+      readme: "# Quality Prediction Model\n\n## 概述\n电芯质量预测模型，用于在化成分容前预测电芯质量等级。\n\n## 输入特征\n- **工艺参数**: 涂布重量、辊压厚度、卷绕张力等\n- **原材料规格**: 正极材料批次、电解液配方等\n- **设备状态**: 关键设备的健康度和稳定性\n- **环境数据**: 温湿度、洁净度等\n\n## 输出\n- 质量评分 (0-100)\n- 缺陷概率\n- 主要风险因素\n- 改进建议",
+      config: "{\"model_type\": \"xgboost\", \"threshold\": 0.85}",
+      script: "def predict_quality(process, material, equipment, env):\n    features = extract_features(process, material, equipment, env)\n    score = model.predict_proba(features)[0]\n    risks = identify_risk_factors(features)\n    return {'quality_score': score * 100, 'defect_probability': 1 - score, 'risk_factors': risks}",
+      scriptLang: "python"
+    }
+  },
   // ========== 产销匹配协同场景技能 ==========
   {
     skill_id: "demand_forecast_v3",
@@ -896,6 +926,1441 @@ export const MOCK_SKILLS: Skill[] = [
       ,
       scriptLang: "python"
     }
+  },
+
+  // ========== 领域层 Domain Skills（锂电制造语义注入） ==========
+  {
+    skill_id: "domain_equipment_health_assessment",
+    name: "设备健康评估Skill",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["health_assessment", "equipment", "lithium_battery"],
+    input_schema: {
+      oee_data: "object",
+      vibration_data: "array",
+      temperature_data: "array",
+      threshold_config: "object"
+    },
+    output_schema: {
+      health_score: "number",
+      health_level: "string",
+      anomaly_indicators: "array",
+      maintenance_suggestions: "array"
+    },
+    cost: 0.5,
+    latency: 800,
+    accuracy_score: 0.90,
+    dependencies: ["atom_time_series_forecast", "atom_anomaly_detection"],
+    description: "基于OEE、振动、温度等数据，注入锂电设备阈值语义，输出设备健康评分。",
+    files: {
+      readme: "# 设备健康评估Skill\n\n## 概述\n领域层技能，封装锂电制造设备健康评估行业认知。\n\n## 注入语义\n- OEE阈值：>85%正常，70-85%关注，<70%预警\n- 振动阈值：ISO 10816标准适配锂电设备\n- 温度阈值：轴承<75°C正常，75-85°C关注，>85°C预警\n\n## 依赖原子技能\n- 时序预测 + 异常检测",
+      config: "{\"oee_threshold\": {\"normal\": 85, \"warning\": 70}, \"vibration_std\": \"iso_10816\", \"temp_threshold\": {\"normal\": 75, \"warning\": 85}}",
+      script: "def health_assessment(oee, vibration, temperature):\n    # 注入锂电设备阈值语义\n    oee_score = calculate_oee_score(oee)\n    vib_score = calculate_vibration_score(vibration)\n    temp_score = calculate_temperature_score(temperature)\n    overall_health = weighted_average([oee_score, vib_score, temp_score])\n    return {'health_score': overall_health, 'level': classify_health(overall_health)}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_rul_prediction",
+    name: "RUL预测Skill",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["rul", "prediction", "battery_equipment", "degradation"],
+    input_schema: {
+      health_history: "array",
+      equipment_type: "string",
+      operating_conditions: "object",
+      degradation_model: "string"
+    },
+    output_schema: {
+      rul_days: "number",
+      rul_confidence: "number",
+      failure_probability_curve: "array",
+      recommended_action: "string"
+    },
+    cost: 0.6,
+    latency: 1000,
+    accuracy_score: 0.88,
+    dependencies: ["atom_degradation_curve_fitting", "atom_multivariate_regression"],
+    description: "基于电芯设备寿命曲线，预测设备剩余使用寿命。",
+    files: {
+      readme: "# RUL预测Skill\n\n## 概述\n领域层技能，封装锂电设备RUL预测行业认知。\n\n## 注入语义\n- 电芯设备寿命曲线：涂布机5-7年，卷绕机6-8年，化成柜4-6年\n- 退化模型：威布尔分布适配锂电设备退化特性\n\n## 依赖原子技能\n- 退化建模 + 回归预测",
+      config: "{\"equipment_lifecycle\": {\"coating\": 6, \"winding\": 7, \"formation\": 5}, \"degradation_model\": \"weibull\"}",
+      script: "def predict_rul(health_history, equipment_type, conditions):\n    # 注入电芯设备寿命曲线语义\n    baseline_life = get_baseline_life(equipment_type)\n    degradation_rate = fit_degradation_curve(health_history)\n    rul = calculate_remaining_life(baseline_life, degradation_rate, conditions)\n    return {'rul_days': rul, 'confidence': 0.85}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_mttr_prediction",
+    name: "MTTR预测Skill",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance"],
+    capability_tags: ["mttr", "repair_time", "maintenance", "classification"],
+    input_schema: {
+      fault_code: "string",
+      fault_symptoms: "array",
+      equipment_model: "string",
+      maintenance_history: "array"
+    },
+    output_schema: {
+      estimated_mttr: "number",
+      mttr_range: "object",
+      required_skills: "array",
+      required_spare_parts: "array"
+    },
+    cost: 0.4,
+    latency: 500,
+    accuracy_score: 0.87,
+    dependencies: ["atom_classification", "atom_multivariate_regression"],
+    description: "基于故障类型映射维修时间，预测设备平均修复时间。",
+    files: {
+      readme: "# MTTR预测Skill\n\n## 概述\n领域层技能，封装故障类型到维修时间的行业映射认知。\n\n## 注入语义\n- 故障类型映射：机械故障2-4h，电气故障1-3h，软件故障0.5-1h\n- 锂电专用故障：极片断裂3-5h，电解液泄漏4-6h，隔膜破损2-3h\n\n## 依赖原子技能\n- 分类 + 回归",
+      config: "{\"fault_mttr_map\": {\"mechanical\": 3, \"electrical\": 2, \"software\": 0.75, \"electrode_break\": 4, \"electrolyte_leak\": 5}}",
+      script: "def predict_mttr(fault_code, symptoms, equipment_model):\n    # 故障类型分类\n    fault_type = classify_fault(fault_code, symptoms)\n    # 基础MTTR + 调整因子\n    base_mttr = get_base_mttr(fault_type)\n    adjustment = calculate_adjustment(equipment_model)\n    return {'mttr_hours': base_mttr * adjustment}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_spare_part_demand_forecast",
+    name: "备件需求预测Skill",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance"],
+    capability_tags: ["spare_part", "demand_forecast", "inventory"],
+    input_schema: {
+      spare_part_category: "string",
+      historical_consumption: "array",
+      equipment_count: "number",
+      maintenance_plan: "array"
+    },
+    output_schema: {
+      demand_forecast: "array",
+      safety_stock_level: "number",
+      reorder_point: "number",
+      procurement_suggestion: "object"
+    },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.89,
+    dependencies: ["atom_time_series_forecast"],
+    description: "基于备件消耗规律预测备件需求。",
+    files: {
+      readme: "# 备件需求预测Skill\n\n## 概述\n领域层技能，封装锂电设备备件消耗规律。\n\n## 注入语义\n- 备件消耗规律：易损件月均消耗，关键件故障率驱动\n- 锂电专用：模头垫片、卷针、注液嘴等专用件\n\n## 依赖原子技能\n- 时序预测",
+      config: "{\"consumption_pattern\": {\"wearable\": \"monthly\", \"critical\": \"failure_driven\"}}",
+      script: "def forecast_spare_parts(category, history, equipment_count):\n    # 注入备件消耗规律\n    base_consumption = time_series_forecast(history)\n    equipment_factor = adjust_by_equipment_count(equipment_count)\n    return {'demand': base_consumption * equipment_factor}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_process_cycle_modeling",
+    name: "工序节拍建模Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["cycle_time", "process_modeling", "capacity"],
+    input_schema: {
+      process_type: "string",
+      equipment_parameters: "object",
+      product_specifications: "object",
+      historical_cycle_data: "array"
+    },
+    output_schema: {
+      cycle_time: "number",
+      cycle_time_std: "number",
+      hourly_capacity: "number",
+      bottleneck_analysis: "object"
+    },
+    cost: 0.5,
+    latency: 700,
+    accuracy_score: 0.91,
+    dependencies: ["atom_multivariate_regression"],
+    description: "基于涂布/辊压等工序特性建模单工序产能。",
+    files: {
+      readme: "# 工序节拍建模Skill\n\n## 概述\n领域层技能，封装锂电制造工序节拍行业认知。\n\n## 注入语义\n- 涂布节拍：速度m/min × 涂宽 × 面密度系数\n- 辊压节拍：速度m/min × 辊压压力系数\n- 卷绕节拍：ppm × 层数系数\n\n## 依赖原子技能\n- 回归预测",
+      config: "{\"coating\": {\"base_speed\": 30, \"width_factor\": 1.0}, \"calendering\": {\"base_speed\": 20, \"pressure_factor\": 0.9}}",
+      script: "def model_cycle_time(process_type, params, product_specs):\n    # 注入工序节拍语义\n    base_cycle = get_base_cycle(process_type)\n    param_factors = calculate_param_factors(params, product_specs)\n    return {'cycle_time': base_cycle / param_factors}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_line_balancing",
+    name: "产线平衡Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["line_balancing", "optimization", "bottleneck"],
+    input_schema: {
+      process_steps: "array",
+      cycle_times: "object",
+      resource_constraints: "object",
+      target_takt_time: "number"
+    },
+    output_schema: {
+      balanced_line_config: "object",
+      station_count: "number",
+      line_efficiency: "number",
+      bottleneck_process: "string"
+    },
+    cost: 0.6,
+    latency: 1200,
+    accuracy_score: 0.88,
+    dependencies: ["atom_multi_objective_optimization"],
+    description: "基于工序约束生成产线平衡方案。",
+    files: {
+      readme: "# 产线平衡Skill\n\n## 概述\n领域层技能，封装锂电产线平衡行业认知。\n\n## 注入语义\n- 工序约束：涂布-辊压-分切-卷绕-装配-化成的串联关系\n- 平衡目标：最小化节拍差，最大化线平衡率\n\n## 依赖原子技能\n- 优化求解",
+      config: "{\"line_type\": \"lithium_battery\", \"process_sequence\": [\"coating\", \"calendering\", \"slitting\", \"winding\", \"assembly\", \"formation\"]}",
+      script: "def balance_line(steps, cycle_times, constraints, target_takt):\n    # 注入工序约束语义\n    optimization_model = build_balancing_model(steps, cycle_times, constraints)\n    solution = solve_optimization(optimization_model, target_takt)\n    return {'config': solution, 'efficiency': calculate_efficiency(solution)}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_bottleneck_identification",
+    name: "瓶颈识别Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["bottleneck", "causal_analysis", "resource_graph"],
+    input_schema: {
+      resource_graph: "object",
+      flow_data: "object",
+      utilization_data: "object",
+      constraint_rules: "array"
+    },
+    output_schema: {
+      bottleneck_nodes: "array",
+      bottleneck_severity: "object",
+      throughput_limit: "number",
+      improvement_suggestions: "array"
+    },
+    cost: 0.5,
+    latency: 800,
+    accuracy_score: 0.89,
+    dependencies: ["atom_causal_graph"],
+    description: "基于产线资源图谱识别瓶颈节点。",
+    files: {
+      readme: "# 瓶颈识别Skill\n\n## 概述\n领域层技能，封装锂电产线瓶颈识别行业认知。\n\n## 注入语义\n- 产线资源图谱：设备-工序-物料的关联关系\n- 瓶颈判定：利用率>95%且下游 starving 频繁\n\n## 依赖原子技能\n- 因果传播",
+      config: "{\"bottleneck_threshold\": {\"utilization\": 0.95, \"starving_freq\": 0.1}}",
+      script: "def identify_bottlenecks(graph, flows, utilization):\n    # 注入产线资源图谱语义\n    causal_effects = propagate_causal_effects(graph, flows)\n    bottlenecks = detect_bottleneck_nodes(utilization, causal_effects)\n    return {'bottlenecks': bottlenecks, 'severity': calculate_severity(bottlenecks)}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_scheduling_optimization",
+    name: "排产优化Skill",
+    version: "1.0.0",
+    domain: ["production_sales_match"],
+    capability_tags: ["scheduling", "optimization", "production_planning"],
+    input_schema: {
+      work_orders: "array",
+      process_routing: "object",
+      resource_availability: "object",
+      priority_rules: "array"
+    },
+    output_schema: {
+      production_schedule: "array",
+      resource_allocation: "object",
+      makespan: "number",
+      delivery_achievement_rate: "number"
+    },
+    cost: 0.7,
+    latency: 2000,
+    accuracy_score: 0.87,
+    dependencies: ["atom_constraint_expression", "atom_mixed_integer_programming"],
+    description: "基于工单/工序关系生成优化排产表。",
+    files: {
+      readme: "# 排产优化Skill\n\n## 概述\n领域层技能，封装锂电制造排产行业认知。\n\n## 注入语义\n- 工单/工序关系：BOM展开、工序先后顺序\n- 锂电约束：化成柜容量、高温静置时间、换型时间\n\n## 依赖原子技能\n- 约束建模 + 求解",
+      config: "{\"constraints\": [\"formation_capacity\", \"aging_time\", \"changeover_time\"], \"objective\": \"min_makespan\"}",
+      script: "def optimize_scheduling(orders, routing, resources, priorities):\n    # 注入工单/工序关系语义\n    constraint_model = build_scheduling_model(orders, routing, resources)\n    schedule = solve_constraint_model(constraint_model, priorities)\n    return {'schedule': schedule, 'makespan': calculate_makespan(schedule)}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_yield_ramp_prediction",
+    name: "良率爬坡预测Skill",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["yield_ramp", "new_line", "prediction"],
+    input_schema: {
+      line_type: "string",
+      equipment_configuration: "object",
+      similar_line_history: "array",
+      ramp_target: "number"
+    },
+    output_schema: {
+      ramp_curve: "array",
+      time_to_target: "number",
+      steady_state_yield: "number",
+      key_milestones: "object"
+    },
+    cost: 0.6,
+    latency: 1000,
+    accuracy_score: 0.85,
+    dependencies: ["atom_time_series_forecast"],
+    description: "基于新产线爬坡规律预测达产周期。",
+    files: {
+      readme: "# 良率爬坡预测Skill\n\n## 概述\n领域层技能，封装新产线良率爬坡行业认知。\n\n## 注入语义\n- 新产线爬坡规律：起步60%，周爬坡3-5%，目标98%\n- 锂电专用：涂布线、卷绕线、Pack线不同爬坡曲线\n\n## 依赖原子技能\n- 时序预测",
+      config: "{\"ramp_pattern\": {\"initial\": 0.6, \"weekly_improvement\": 0.04, \"target\": 0.98}}",
+      script: "def predict_yield_ramp(line_type, config, history, target):\n    # 注入新产线爬坡规律\n    base_curve = get_historical_ramp_curve(line_type, history)\n    adjusted_curve = adjust_by_configuration(base_curve, config)\n    return {'ramp_curve': adjusted_curve, 'time_to_target': find_time_to_target(adjusted_curve, target)}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_supply_chain_capacity_matching",
+    name: "供应链容量匹配Skill",
+    version: "1.0.0",
+    domain: ["production_sales_match"],
+    capability_tags: ["supply_chain", "capacity_matching", "supplier"],
+    input_schema: {
+      demand_forecast: "array",
+      supplier_capacity: "object",
+      supplier_reliability: "object",
+      matching_constraints: "object"
+    },
+    output_schema: {
+      capacity_gap_analysis: "object",
+      matching_risk_level: "string",
+      alternative_suppliers: "array",
+      procurement_strategy: "object"
+    },
+    cost: 0.5,
+    latency: 800,
+    accuracy_score: 0.88,
+    dependencies: ["atom_constraint_expression"],
+    description: "基于供应商产能评估匹配风险。",
+    files: {
+      readme: "# 供应链容量匹配Skill\n\n## 概述\n领域层技能，封装供应链容量匹配行业认知。\n\n## 注入语义\n- 供应商产能：正极、负极、电解液、隔膜产能映射\n- 匹配风险：需求>供给时的缺口风险等级\n\n## 依赖原子技能\n- 约束建模",
+      config: "{\"material_categories\": [\"cathode\", \"anode\", \"electrolyte\", \"separator\"], \"risk_threshold\": 0.9}",
+      script: "def match_capacity(demand, supplier_cap, reliability, constraints):\n    # 注入供应商产能语义\n    gaps = calculate_capacity_gaps(demand, supplier_cap)\n    risks = assess_matching_risks(gaps, reliability)\n    return {'gaps': gaps, 'risk_level': classify_risk(risks)}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "domain_oee_comprehensive_analysis",
+    name: "OEE综合分析Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["oee", "analysis", "capacity"],
+    input_schema: {
+      availability_data: "object",
+      performance_data: "object",
+      quality_data: "object",
+      equipment_hierarchy: "object"
+    },
+    output_schema: {
+      oee_score: "number",
+      oee_breakdown: "object",
+      capacity_conversion: "number",
+      improvement_potential: "array"
+    },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.92,
+    dependencies: ["atom_probability_distribution_fit"],
+    description: "基于稼动率数据计算实际产能。",
+    files: {
+      readme: "# OEE综合分析Skill\n\n## 概述\n领域层技能，封装OEE分析行业认知。\n\n## 注入语义\n- 稼动率数据：时间稼动×性能稼动×良品率\n- 产能转换：OEE→实际产能的锂电专用换算\n\n## 依赖原子技能\n- 统计建模",
+      config: "{\"world_class_oee\": 0.85, \"minimum_acceptable\": 0.6}",
+      script: "def analyze_oee(availability, performance, quality, hierarchy):\n    # 注入稼动率数据语义\n    oee = availability * performance * quality\n    actual_capacity = convert_oee_to_capacity(oee, hierarchy)\n    return {'oee': oee, 'actual_capacity': actual_capacity}",
+      scriptLang: "python"
+    }
+  },
+
+  // ========== 场景层 Scenario Skills（业务决策导向） ==========
+  // 1️⃣ 设备预测性维护场景
+  {
+    skill_id: "scenario_predictive_maintenance_decision",
+    name: "预测性维护决策Skill",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["predictive_maintenance", "decision", "optimal_window"],
+    input_schema: {
+      equipment_health: "object",
+      rul_prediction: "object",
+      production_schedule: "object",
+      maintenance_constraints: "object"
+    },
+    output_schema: {
+      optimal_maintenance_window: "object",
+      maintenance_priority: "string",
+      estimated_downtime: "number",
+      cost_benefit_analysis: "object"
+    },
+    cost: 0.7,
+    latency: 1500,
+    accuracy_score: 0.89,
+    dependencies: ["domain_equipment_health_assessment", "domain_rul_prediction", "domain_scheduling_optimization"],
+    description: "综合设备健康、RUL预测和排产，输出最优维修窗口。",
+    files: {
+      readme: "# 预测性维护决策Skill\n\n## 场景\n设备预测性维护场景\n\n## 依赖领域Skill\n设备健康评估 + RUL预测 + 排产优化\n\n## 最终业务输出\n最优维修窗口",
+      config: "{\"decision_factors\": [\"health\", \"rul\", \"production_impact\"]}",
+      script: "def maintenance_decision(health, rul, schedule, constraints):\n    # 综合多维度因素\n    health_score = domain_equipment_health_assessment(health)\n    rul_days = domain_rul_prediction(rul)\n    schedule_impact = domain_scheduling_optimization(schedule)\n    optimal_window = find_optimal_window(health_score, rul_days, schedule_impact)\n    return {'optimal_window': optimal_window}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_downtime_impact_assessment",
+    name: "停机影响评估Skill",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["downtime", "impact_assessment", "capacity_loss"],
+    input_schema: {
+      downtime_scenario: "object",
+      oee_analysis: "object",
+      bottleneck_info: "object",
+      production_plan: "array"
+    },
+    output_schema: {
+      capacity_loss: "number",
+      revenue_impact: "number",
+      delivery_delay_risk: "array",
+      mitigation_options: "array"
+    },
+    cost: 0.6,
+    latency: 1000,
+    accuracy_score: 0.88,
+    dependencies: ["domain_oee_comprehensive_analysis", "domain_bottleneck_identification"],
+    description: "评估停机对产能和交付的影响。",
+    files: {
+      readme: "# 停机影响评估Skill\n\n## 场景\n设备预测性维护场景\n\n## 依赖领域Skill\nOEE分析 + 瓶颈识别\n\n## 输出\n产能损失",
+      config: "{}",
+      script: "def assess_downtime_impact(scenario, oee, bottleneck, plan):\n    oee_data = domain_oee_comprehensive_analysis(oee)\n    bottleneck_data = domain_bottleneck_identification(bottleneck)\n    loss = calculate_capacity_loss(scenario, oee_data, bottleneck_data)\n    return {'capacity_loss': loss}",
+      scriptLang: "python"
+    }
+  },
+
+  // 2️⃣ 设备故障维修时间预测场景
+  {
+    skill_id: "scenario_repair_time_decision",
+    name: "维修时间预测决策Skill",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance"],
+    capability_tags: ["repair_time", "decision", "scheduling"],
+    input_schema: {
+      fault_info: "object",
+      mttr_prediction: "object",
+      resource_availability: "object",
+      repair_constraints: "object"
+    },
+    output_schema: {
+      repair_schedule: "object",
+      estimated_completion: "string",
+      resource_allocation: "object",
+      alternative_plans: "array"
+    },
+    cost: 0.6,
+    latency: 800,
+    accuracy_score: 0.87,
+    dependencies: ["domain_mttr_prediction"],
+    description: "基于MTTR预测生成维修排期。",
+    files: {
+      readme: "# 维修时间预测决策Skill\n\n## 场景\n设备故障维修时间预测\n\n## 依赖领域Skill\nMTTR预测 + 维修资源匹配\n\n## 输出\n维修排期",
+      config: "{}",
+      script: "def repair_time_decision(fault, mttr, resources, constraints):\n    mttr_data = domain_mttr_prediction(mttr)\n    schedule = generate_repair_schedule(mttr_data, resources)\n    return {'repair_schedule': schedule}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_repair_impact_simulation",
+    name: "维修影响仿真Skill",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance"],
+    capability_tags: ["simulation", "impact", "delivery"],
+    input_schema: {
+      repair_scenario: "object",
+      production_schedule: "object",
+      customer_orders: "array"
+    },
+    output_schema: {
+      delivery_impact: "object",
+      order_delay_risk: "array",
+      recovery_plan: "object",
+      customer_notification: "array"
+    },
+    cost: 0.7,
+    latency: 1200,
+    accuracy_score: 0.86,
+    dependencies: ["atom_monte_carlo_simulation", "domain_scheduling_optimization"],
+    description: "仿真推演维修对交付的影响。",
+    files: {
+      readme: "# 维修影响仿真Skill\n\n## 场景\n设备故障维修时间预测\n\n## 依赖领域Skill\n仿真推演 + 排产优化\n\n## 输出\n交付影响",
+      config: "{}",
+      script: "def simulate_repair_impact(scenario, schedule, orders):\n    impact = monte_carlo_simulation(scenario, schedule, orders)\n    return {'delivery_impact': impact}",
+      scriptLang: "python"
+    }
+  },
+
+  // 3️⃣ 产销匹配协同场景
+  {
+    skill_id: "scenario_demand_capacity_matching",
+    name: "需求-产能匹配Skill",
+    version: "1.0.0",
+    domain: ["production_sales_match"],
+    capability_tags: ["demand_capacity", "matching", "sop"],
+    input_schema: {
+      demand_forecast: "object",
+      capacity_assessment: "object",
+      inventory_status: "object",
+      matching_constraints: "object"
+    },
+    output_schema: {
+      match_rate: "number",
+      gap_analysis: "object",
+      balance_scenarios: "array",
+      recommended_actions: "array"
+    },
+    cost: 0.7,
+    latency: 1500,
+    accuracy_score: 0.88,
+    dependencies: ["atom_time_series_forecast", "domain_scheduling_optimization"],
+    description: "评估需求与产能的匹配度。",
+    files: {
+      readme: "# 需求-产能匹配Skill\n\n## 场景\n产销匹配协同\n\n## 依赖领域Skill\n需求预测 + 排产优化\n\n## 输出\n供需匹配率",
+      config: "{}",
+      script: "def match_demand_capacity(demand, capacity, inventory, constraints):\n    match_result = calculate_match_rate(demand, capacity)\n    return {'match_rate': match_result}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_inventory_optimization_decision",
+    name: "库存优化决策Skill",
+    version: "1.0.0",
+    domain: ["production_sales_match"],
+    capability_tags: ["inventory", "optimization", "strategy"],
+    input_schema: {
+      demand_variability: "object",
+      supply_leadtime: "object",
+      cost_structure: "object",
+      service_level_target: "number"
+    },
+    output_schema: {
+      safety_stock_strategy: "object",
+      reorder_strategy: "object",
+      inventory_turnover_target: "number",
+      working_capital_impact: "number"
+    },
+    cost: 0.6,
+    latency: 1000,
+    accuracy_score: 0.89,
+    dependencies: ["atom_inventory_model", "atom_dcf_calculation"],
+    description: "制定库存优化策略。",
+    files: {
+      readme: "# 库存优化决策Skill\n\n## 场景\n产销匹配协同\n\n## 依赖领域Skill\n安全库存模型 + 财务测算\n\n## 输出\n库存策略",
+      config: "{}",
+      script: "def inventory_decision(demand, leadtime, costs, service_level):\n    strategy = optimize_inventory(demand, leadtime, costs, service_level)\n    return {'strategy': strategy}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_production_sales_deviation_alert",
+    name: "产销偏差预警Skill",
+    version: "1.0.0",
+    domain: ["production_sales_match"],
+    capability_tags: ["deviation", "alert", "early_warning"],
+    input_schema: {
+      production_actual: "array",
+      sales_actual: "array",
+      deviation_threshold: "number",
+      alert_rules: "array"
+    },
+    output_schema: {
+      deviation_level: "string",
+      alert_triggers: "array",
+      root_cause: "object",
+      corrective_actions: "array"
+    },
+    cost: 0.4,
+    latency: 500,
+    accuracy_score: 0.90,
+    dependencies: ["atom_anomaly_detection"],
+    description: "监测产销偏差并预警。",
+    files: {
+      readme: "# 产销偏差预警Skill\n\n## 场景\n产销匹配协同\n\n## 依赖领域Skill\n偏差监测\n\n## 输出\n风险预警",
+      config: "{}",
+      script: "def deviation_alert(production, sales, threshold, rules):\n    deviation = detect_deviation(production, sales, threshold)\n    return {'deviation_level': deviation}",
+      scriptLang: "python"
+    }
+  },
+
+  // 4️⃣ 新项目落地推演分析场景
+  {
+    skill_id: "scenario_new_line_investment",
+    name: "新产线投资推演Skill",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["investment", "new_line", "roi"],
+    input_schema: {
+      investment_params: "object",
+      yield_ramp_forecast: "object",
+      financial_model: "object",
+      risk_factors: "array"
+    },
+    output_schema: {
+      roi_projection: "object",
+      payback_period: "number",
+      npv_irr: "object",
+      sensitivity_analysis: "object"
+    },
+    cost: 0.8,
+    latency: 2000,
+    accuracy_score: 0.85,
+    dependencies: ["domain_yield_ramp_prediction", "atom_dcf_calculation"],
+    description: "推演新产线投资回报。",
+    files: {
+      readme: "# 新产线投资推演Skill\n\n## 场景\n新项目落地推演分析\n\n## 依赖领域Skill\n良率爬坡 + 财务测算\n\n## 输出\nROI",
+      config: "{}",
+      script: "def new_line_investment(params, yield_ramp, financial, risks):\n    ramp_data = domain_yield_ramp_prediction(yield_ramp)\n    roi = calculate_roi(params, ramp_data, financial, risks)\n    return {'roi': roi}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_multi_option_comparison",
+    name: "多方案对比决策Skill",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["comparison", "decision", "site_selection"],
+    input_schema: {
+      alternatives: "array",
+      evaluation_criteria: "object",
+      simulation_config: "object"
+    },
+    output_schema: {
+      ranking: "array",
+      best_option: "object",
+      trade_off_analysis: "object",
+      decision_rationale: "string"
+    },
+    cost: 0.7,
+    latency: 1800,
+    accuracy_score: 0.87,
+    dependencies: ["atom_monte_carlo_simulation", "atom_probability_distribution_fit"],
+    description: "多方案对比选择最优选址。",
+    files: {
+      readme: "# 多方案对比决策Skill\n\n## 场景\n新项目落地推演分析\n\n## 依赖领域Skill\n仿真推演 + 风险概率\n\n## 输出\n最优选址",
+      config: "{}",
+      script: "def compare_options(alternatives, criteria, config):\n    comparison = monte_carlo_simulation(alternatives, criteria)\n    return {'best_option': comparison.best}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_supply_chain_risk_assessment",
+    name: "供应链风险评估Skill",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["supply_chain", "risk_assessment", "new_project"],
+    input_schema: {
+      supplier_landscape: "object",
+      capacity_matching: "object",
+      risk_model: "object"
+    },
+    output_schema: {
+      overall_risk_level: "string",
+      risk_breakdown: "object",
+      mitigation_strategies: "array",
+      contingency_plans: "array"
+    },
+    cost: 0.6,
+    latency: 1000,
+    accuracy_score: 0.88,
+    dependencies: ["domain_supply_chain_capacity_matching", "atom_probability_distribution_fit"],
+    description: "评估新项目供应链风险等级。",
+    files: {
+      readme: "# 供应链风险评估Skill\n\n## 场景\n新项目落地推演分析\n\n## 依赖领域Skill\n容量匹配 + 风险模型\n\n## 输出\n风险等级",
+      config: "{}",
+      script: "def assess_supply_chain_risk(suppliers, capacity, risk_model):\n    capacity_data = domain_supply_chain_capacity_matching(capacity)\n    risk = calculate_risk(capacity_data, risk_model)\n    return {'risk_level': risk}",
+      scriptLang: "python"
+    }
+  },
+
+  // 5️⃣ 产能评估推演预测场景
+  {
+    skill_id: "scenario_future_capacity_prediction",
+    name: "未来产能预测Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["capacity", "prediction", "monthly"],
+    input_schema: {
+      process_cycle_models: "array",
+      oee_forecast: "object",
+      constraint_analysis: "object",
+      planning_horizon: "number"
+    },
+    output_schema: {
+      monthly_capacity: "array",
+      capacity_trends: "object",
+      bottleneck_forecast: "array",
+      confidence_intervals: "object"
+    },
+    cost: 0.7,
+    latency: 1200,
+    accuracy_score: 0.86,
+    dependencies: ["domain_process_cycle_modeling", "domain_oee_comprehensive_analysis"],
+    description: "预测月度产能。",
+    files: {
+      readme: "# 未来产能预测Skill\n\n## 场景\n产能评估推演预测\n\n## 依赖领域Skill\n工序节拍建模 + OEE分析\n\n## 输出\n月度产能",
+      config: "{}",
+      script: "def predict_future_capacity(cycles, oee, constraints, horizon):\n    cycle_data = domain_process_cycle_modeling(cycles)\n    oee_data = domain_oee_comprehensive_analysis(oee)\n    capacity = calculate_monthly_capacity(cycle_data, oee_data)\n    return {'monthly_capacity': capacity}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_expansion_benefit",
+    name: "扩产收益推演Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["expansion", "benefit", "irr"],
+    input_schema: {
+      expansion_scenario: "object",
+      financial_params: "object",
+      simulation_model: "object"
+    },
+    output_schema: {
+      irr: "number",
+      npv: "number",
+      payback: "number",
+      sensitivity: "object"
+    },
+    cost: 0.7,
+    latency: 1500,
+    accuracy_score: 0.85,
+    dependencies: ["atom_dcf_calculation", "atom_monte_carlo_simulation"],
+    description: "推演扩产IRR。",
+    files: {
+      readme: "# 扩产收益推演Skill\n\n## 场景\n产能评估推演预测\n\n## 依赖领域Skill\n财务测算 + 仿真推演\n\n## 输出\nIRR",
+      config: "{}",
+      script: "def expansion_benefit(scenario, financial, model):\n    irr = calculate_irr(scenario, financial, model)\n    return {'irr': irr}",
+      scriptLang: "python"
+    }
+  },
+  {
+    skill_id: "scenario_constraint_bottleneck",
+    name: "约束瓶颈推演Skill",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction"],
+    capability_tags: ["constraint", "bottleneck", "capacity_limit"],
+    input_schema: {
+      resource_topology: "object",
+      causal_model: "object",
+      demand_scenarios: "array"
+    },
+    output_schema: {
+      capacity_ceiling: "number",
+      limiting_constraints: "array",
+      bottleneck_evolution: "array",
+      relaxation_options: "array"
+    },
+    cost: 0.6,
+    latency: 1000,
+    accuracy_score: 0.87,
+    dependencies: ["domain_bottleneck_identification", "atom_causal_graph"],
+    description: "推演产能上限。",
+    files: {
+      readme: "# 约束瓶颈推演Skill\n\n## 场景\n产能评估推演预测\n\n## 依赖领域Skill\n因果传播 + 约束建模\n\n## 输出\n产能上限",
+      config: "{}",
+      script: "def constraint_bottleneck(topology, causal, demands):\n    bottleneck = domain_bottleneck_identification(topology)\n    ceiling = calculate_capacity_ceiling(bottleneck, causal, demands)\n    return {'capacity_ceiling': ceiling}",
+      scriptLang: "python"
+    }
+  },
+
+  // ========== 原子层基础算法技能 ==========
+  {
+    skill_id: "atom_time_series_forecast",
+    name: "时间序列预测",
+    version: "1.0.0",
+    domain: ["predictive_maintenance", "production_sales_match", "capacity_assessment_prediction"],
+    capability_tags: ["forecast", "time_series", "trend", "seasonality"],
+    input_schema: { historical_data: "array", forecast_horizon: "number", seasonality: "boolean" },
+    output_schema: { forecast_values: "array", confidence_intervals: "array", trend: "string" },
+    cost: 0.3,
+    latency: 500,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "基于历史时间序列数据预测未来趋势，支持趋势分解和季节性调整。",
+    files: { readme: "# Time Series Forecast\n\n时序预测基础算法。", config: "{}", script: "def forecast(data, horizon, seasonality): return {'forecast': [], 'trend': 'up'}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_anomaly_detection",
+    name: "异常检测",
+    version: "1.0.0",
+    domain: ["predictive_maintenance", "quality_control"],
+    capability_tags: ["anomaly", "outlier", "statistics", "ml"],
+    input_schema: { data: "array", threshold: "number", method: "string" },
+    output_schema: { anomalies: "array", anomaly_scores: "array", threshold_used: "number" },
+    cost: 0.2,
+    latency: 200,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "识别数据中的异常点和离群值，支持统计方法和机器学习方法。",
+    files: { readme: "# Anomaly Detection\n\n异常检测算法。", config: "{}", script: "def detect_anomalies(data, threshold): return {'anomalies': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_change_point_detection",
+    name: "变点检测",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["change_point", "segmentation", "statistics"],
+    input_schema: { time_series: "array", penalty: "number", min_segment_length: "number" },
+    output_schema: { change_points: "array", segments: "array", confidence_scores: "array" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.85,
+    dependencies: [],
+    description: "检测时间序列中的突变点和状态转换点。",
+    files: { readme: "# Change Point Detection", config: "{}", script: "def detect(data): return {'change_points': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_degradation_curve_fitting",
+    name: "退化曲线拟合",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["degradation", "curve_fitting", "reliability"],
+    input_schema: { health_indicators: "array", time_points: "array", model_type: "string" },
+    output_schema: { fitted_curve: "array", parameters: "object", r_squared: "number" },
+    cost: 0.4,
+    latency: 400,
+    accuracy_score: 0.87,
+    dependencies: [],
+    description: "拟合设备健康指标的退化曲线，支持指数、线性和威布尔模型。",
+    files: { readme: "# Degradation Curve", config: "{}", script: "def fit(data, times): return {'curve': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_remaining_useful_life",
+    name: "剩余寿命估计",
+    version: "1.0.0",
+    domain: ["predictive_maintenance"],
+    capability_tags: ["rul", "prognostics", "reliability"],
+    input_schema: { current_health: "number", degradation_model: "object", failure_threshold: "number" },
+    output_schema: { rul_estimate: "number", confidence_interval: "object", failure_probability: "array" },
+    cost: 0.5,
+    latency: 500,
+    accuracy_score: 0.86,
+    dependencies: ["atom_degradation_curve_fitting"],
+    description: "基于退化模型估计设备的剩余使用寿命。",
+    files: { readme: "# RUL Estimation", config: "{}", script: "def estimate_rul(health, model): return {'rul': 100}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_feature_importance",
+    name: "特征重要性计算",
+    version: "1.0.0",
+    domain: ["predictive_maintenance", "demand_forecast"],
+    capability_tags: ["feature_importance", "shap", "permutation"],
+    input_schema: { model: "object", features: "array", target: "array", method: "string" },
+    output_schema: { importance_scores: "object", ranked_features: "array", shap_values: "array" },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "计算特征对模型预测的重要性，支持SHAP、Permutation等方法。",
+    files: { readme: "# Feature Importance", config: "{}", script: "def calc_importance(model, X, y): return {'scores': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_threshold_decision",
+    name: "阈值判定算法",
+    version: "1.0.0",
+    domain: ["predictive_maintenance", "quality_control"],
+    capability_tags: ["threshold", "decision", "classification"],
+    input_schema: { value: "number", thresholds: "object", rules: "array" },
+    output_schema: { decision: "string", alert_level: "string", action_required: "boolean" },
+    cost: 0.1,
+    latency: 50,
+    accuracy_score: 0.95,
+    dependencies: [],
+    description: "基于阈值规则进行判定和分级预警。",
+    files: { readme: "# Threshold Decision", config: "{}", script: "def decide(value, thresholds): return {'decision': 'normal'}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_probability_distribution_fit",
+    name: "概率分布拟合",
+    version: "1.0.0",
+    domain: ["predictive_maintenance", "new_project_planning", "inventory_optimization"],
+    capability_tags: ["distribution", "fitting", "mle", "kde"],
+    input_schema: { data: "array", distributions: "array", method: "string" },
+    output_schema: { best_fit: "object", parameters: "object", goodness_of_fit: "object" },
+    cost: 0.3,
+    latency: 400,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "拟合数据的最佳概率分布模型，支持正态、对数正态、威布尔等分布。",
+    files: { readme: "# Distribution Fitting", config: "{}", script: "def fit_dist(data): return {'best_fit': 'normal'}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_classification",
+    name: "分类识别",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance", "quality_control"],
+    capability_tags: ["classification", "supervised", "ml"],
+    input_schema: { features: "array", labels: "array", new_data: "array", algorithm: "string" },
+    output_schema: { predictions: "array", probabilities: "array", confidence: "array" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "基于特征数据进行分类预测，支持多种机器学习算法。",
+    files: { readme: "# Classification", config: "{}", script: "def classify(X, y, new_X): return {'predictions': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_multivariate_regression",
+    name: "多变量回归预测",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance", "demand_forecast"],
+    capability_tags: ["regression", "multivariate", "prediction"],
+    input_schema: { X: "array", y: "array", X_new: "array", regularization: "string" },
+    output_schema: { predictions: "array", coefficients: "object", r_squared: "number" },
+    cost: 0.3,
+    latency: 400,
+    accuracy_score: 0.87,
+    dependencies: [],
+    description: "基于多变量输入进行回归预测，支持线性、岭回归、Lasso等方法。",
+    files: { readme: "# Multivariate Regression", config: "{}", script: "def regress(X, y, X_new): return {'predictions': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_clustering",
+    name: "聚类分析",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance", "new_project_planning"],
+    capability_tags: ["clustering", "unsupervised", "segmentation"],
+    input_schema: { data: "array", n_clusters: "number", algorithm: "string" },
+    output_schema: { labels: "array", cluster_centers: "array", inertia: "number" },
+    cost: 0.3,
+    latency: 500,
+    accuracy_score: 0.85,
+    dependencies: [],
+    description: "对数据进行无监督聚类分组，支持K-Means、DBSCAN等算法。",
+    files: { readme: "# Clustering", config: "{}", script: "def cluster(data, k): return {'labels': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_resource_allocation",
+    name: "资源分配算法",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance", "profit_simulation"],
+    capability_tags: ["allocation", "optimization", "scheduling"],
+    input_schema: { resources: "object", demands: "array", constraints: "object", objective: "string" },
+    output_schema: { allocation_plan: "object", utilization_rate: "number", unmet_demands: "array" },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "优化分配有限资源以满足多目标需求。",
+    files: { readme: "# Resource Allocation", config: "{}", script: "def allocate(resources, demands): return {'plan': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_queuing_theory",
+    name: "排队论计算",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance", "capacity_assessment_prediction"],
+    capability_tags: ["queuing", "stochastic", "waiting_time"],
+    input_schema: { arrival_rate: "number", service_rate: "number", servers: "number", capacity: "number" },
+    output_schema: { utilization: "number", avg_wait_time: "number", queue_length: "number", prob_wait: "number" },
+    cost: 0.2,
+    latency: 150,
+    accuracy_score: 0.92,
+    dependencies: [],
+    description: "基于排队论计算系统性能指标（等待时间、利用率等）。",
+    files: { readme: "# Queuing Theory", config: "{}", script: "def queue(arrival, service, servers): return {'wait_time': 0}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_shortest_path",
+    name: "路径最短算法",
+    version: "1.0.0",
+    domain: ["breakdown_maintenance", "logistics_optimization"],
+    capability_tags: ["shortest_path", "graph", "dijkstra", "a_star"],
+    input_schema: { graph: "object", start: "string", end: "string", algorithm: "string" },
+    output_schema: { path: "array", distance: "number", visited_nodes: "array" },
+    cost: 0.2,
+    latency: 100,
+    accuracy_score: 0.95,
+    dependencies: [],
+    description: "在图中找到最短路径，支持Dijkstra、A*等算法。",
+    files: { readme: "# Shortest Path", config: "{}", script: "def shortest_path(graph, start, end): return {'path': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_linear_programming",
+    name: "线性规划求解",
+    version: "1.0.0",
+    domain: ["production_sales_match", "capacity_assessment_prediction", "profit_simulation"],
+    capability_tags: ["linear_programming", "optimization", "simplex"],
+    input_schema: { objective: "object", constraints: "array", bounds: "object", method: "string" },
+    output_schema: { optimal_value: "number", solution: "object", status: "string", shadow_prices: "object" },
+    cost: 0.4,
+    latency: 800,
+    accuracy_score: 0.93,
+    dependencies: [],
+    description: "求解线性规划问题，支持单纯形法和内点法。",
+    files: { readme: "# Linear Programming", config: "{}", script: "def solve_lp(objective, constraints): return {'optimal': 0}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_mixed_integer_programming",
+    name: "混合整数规划求解",
+    version: "1.0.0",
+    domain: ["production_sales_match", "master_production_schedule", "rush_order_management"],
+    capability_tags: ["mip", "integer", "branch_and_bound", "optimization"],
+    input_schema: { objective: "object", constraints: "array", integer_vars: "array", binary_vars: "array" },
+    output_schema: { optimal_value: "number", solution: "object", status: "string", gap: "number" },
+    cost: 0.6,
+    latency: 2000,
+    accuracy_score: 0.91,
+    dependencies: ["atom_linear_programming"],
+    description: "求解混合整数规划问题，适用于排程、选址等离散决策问题。",
+    files: { readme: "# Mixed Integer Programming", config: "{}", script: "def solve_mip(obj, cons, int_vars): return {'optimal': 0}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_multi_objective_optimization",
+    name: "多目标优化",
+    version: "1.0.0",
+    domain: ["production_sales_match", "new_project_planning", "rush_order_management", "profit_simulation"],
+    capability_tags: ["multi_objective", "pareto", "nsga2", "optimization"],
+    input_schema: { objectives: "array", constraints: "array", weights: "array", method: "string" },
+    output_schema: { pareto_front: "array", solutions: "array", selected_solution: "object" },
+    cost: 0.7,
+    latency: 3000,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "求解多目标优化问题，生成Pareto前沿解集。",
+    files: { readme: "# Multi-Objective Optimization", config: "{}", script: "def optimize_multi(obj, cons): return {'pareto': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_inventory_model",
+    name: "库存模型计算",
+    version: "1.0.0",
+    domain: ["production_sales_match", "inventory_optimization"],
+    capability_tags: ["inventory", "eoq", "newsvendor", "safety_stock"],
+    input_schema: { demand_params: "object", cost_params: "object", lead_time: "number", service_level: "number" },
+    output_schema: { reorder_point: "number", order_quantity: "number", safety_stock: "number", total_cost: "number" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "计算最优库存策略，支持EOQ、报童模型、安全库存计算。",
+    files: { readme: "# Inventory Model", config: "{}", script: "def calc_inventory(demand, costs): return {'reorder_point': 0}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_network_flow",
+    name: "网络流计算",
+    version: "1.0.0",
+    domain: ["production_sales_match", "master_production_schedule", "supplier_collaboration"],
+    capability_tags: ["network_flow", "min_cost_flow", "max_flow", "transportation"],
+    input_schema: { network: "object", source: "string", sink: "string", supplies: "object", demands: "object" },
+    output_schema: { flow: "object", total_cost: "number", feasible: "boolean", bottleneck_edges: "array" },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.91,
+    dependencies: [],
+    description: "求解网络流问题，支持最小费用流和最大流算法。",
+    files: { readme: "# Network Flow", config: "{}", script: "def solve_flow(network, source, sink): return {'flow': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_constraint_expression",
+    name: "约束表达",
+    version: "1.0.0",
+    domain: ["production_sales_match", "capacity_constraint_rules", "what_if_simulation"],
+    capability_tags: ["constraint", "csp", "satisfaction"],
+    input_schema: { variables: "array", domains: "object", constraints: "array" },
+    output_schema: { feasible: "boolean", solutions: "array", constraint_violations: "array" },
+    cost: 0.2,
+    latency: 200,
+    accuracy_score: 0.94,
+    dependencies: [],
+    description: "表达和验证约束条件，支持约束满足问题求解。",
+    files: { readme: "# Constraint Expression", config: "{}", script: "def check_constraints(vars, cons): return {'feasible': True}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_monte_carlo_simulation",
+    name: "蒙特卡洛仿真",
+    version: "1.0.0",
+    domain: ["production_sales_match", "new_project_planning", "inventory_optimization", "sales_operations_planning", "what_if_simulation"],
+    capability_tags: ["simulation", "monte_carlo", "random_sampling", "uncertainty"],
+    input_schema: { model: "object", distributions: "object", n_samples: "number", seed: "number" },
+    output_schema: { results: "array", statistics: "object", confidence_intervals: "object", histogram: "object" },
+    cost: 0.5,
+    latency: 1500,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "基于随机采样的蒙特卡洛仿真，用于不确定性分析和风险评估。",
+    files: { readme: "# Monte Carlo Simulation", config: "{}", script: "def monte_carlo(model, dists, n): return {'results': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_bayesian_update",
+    name: "贝叶斯更新",
+    version: "1.0.0",
+    domain: ["new_project_planning", "demand_forecast", "inventory_optimization"],
+    capability_tags: ["bayesian", "posterior", "prior", "update"],
+    input_schema: { prior: "object", likelihood: "object", observations: "array" },
+    output_schema: { posterior: "object", posterior_predictive: "object", credibility_interval: "object" },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "基于观测数据更新贝叶斯后验分布，支持概率推断。",
+    files: { readme: "# Bayesian Update", config: "{}", script: "def bayesian_update(prior, likelihood, obs): return {'posterior': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_dcf_calculation",
+    name: "现金流折现计算",
+    version: "1.0.0",
+    domain: ["new_project_planning", "profit_simulation"],
+    capability_tags: ["dcf", "npv", "irr", "payback", "finance"],
+    input_schema: { cash_flows: "array", discount_rate: "number", initial_investment: "number" },
+    output_schema: { npv: "number", irr: "number", payback_period: "number", pi: "number" },
+    cost: 0.2,
+    latency: 100,
+    accuracy_score: 0.95,
+    dependencies: [],
+    description: "计算投资项目的NPV、IRR、投资回收期等财务指标。",
+    files: { readme: "# DCF Calculation", config: "{}", script: "def dcf(cash_flows, rate): return {'npv': 0}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_cost_structure",
+    name: "成本结构分解",
+    version: "1.0.0",
+    domain: ["new_project_planning"],
+    capability_tags: ["cost", "breakdown", "capex", "opex"],
+    input_schema: { total_cost: "number", cost_categories: "array", allocation_rules: "object" },
+    output_schema: { cost_breakdown: "object", fixed_costs: "number", variable_costs: "number", unit_cost: "number" },
+    cost: 0.2,
+    latency: 150,
+    accuracy_score: 0.92,
+    dependencies: [],
+    description: "分解成本结构，区分固定成本和变动成本。",
+    files: { readme: "# Cost Structure", config: "{}", script: "def breakdown_costs(total, categories): return {'breakdown': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_sensitivity_analysis",
+    name: "参数敏感性分析",
+    version: "1.0.0",
+    domain: ["new_project_planning", "sales_operations_planning", "what_if_simulation"],
+    capability_tags: ["sensitivity", "tornado", "what_if", "parameter"],
+    input_schema: { base_case: "object", parameters: "array", variation_range: "number", model: "object" },
+    output_schema: { sensitivity_scores: "object", tornado_data: "array", spider_data: "object", critical_params: "array" },
+    cost: 0.4,
+    latency: 800,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "分析模型输出对各输入参数的敏感程度，生成龙卷风图。",
+    files: { readme: "# Sensitivity Analysis", config: "{}", script: "def sensitivity(base, params): return {'scores': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_load_simulation",
+    name: "负荷模拟",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction", "rush_order_management"],
+    capability_tags: ["load", "simulation", "capacity", "stress_test"],
+    input_schema: { capacity_limits: "object", demand_scenarios: "array", time_periods: "array" },
+    output_schema: { load_distribution: "array", bottleneck_periods: "array", utilization_forecast: "array", overload_risk: "number" },
+    cost: 0.4,
+    latency: 700,
+    accuracy_score: 0.87,
+    dependencies: [],
+    description: "模拟不同负荷情景下的产能表现，识别瓶颈时段。",
+    files: { readme: "# Load Simulation", config: "{}", script: "def simulate_load(capacity, demands): return {'load': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_constraint_programming",
+    name: "约束规划求解",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction", "master_production_schedule"],
+    capability_tags: ["constraint_programming", "cp_sat", "scheduling"],
+    input_schema: { variables: "array", domains: "object", constraints: "array", objective: "object" },
+    output_schema: { solution: "object", objective_value: "number", solve_time: "number", status: "string" },
+    cost: 0.5,
+    latency: 1000,
+    accuracy_score: 0.91,
+    dependencies: [],
+    description: "使用约束编程求解组合优化问题，适用于复杂排程场景。",
+    files: { readme: "# Constraint Programming", config: "{}", script: "def solve_cp(vars, cons): return {'solution': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_causal_graph",
+    name: "因果图推理",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction", "demand_forecast", "rush_order_management", "change_management", "abnormal_alert", "kpi_monitoring"],
+    capability_tags: ["causal", "graph", "reasoning", "do_calculus"],
+    input_schema: { causal_graph: "object", interventions: "array", observations: "object", target: "string" },
+    output_schema: { causal_effects: "object", counterfactuals: "object", confounders: "array", recommendations: "array" },
+    cost: 0.6,
+    latency: 1200,
+    accuracy_score: 0.86,
+    dependencies: [],
+    description: "基于因果图进行推理，支持干预效果估计和反事实分析。",
+    files: { readme: "# Causal Graph", config: "{}", script: "def causal_inference(graph, interventions): return {'effects': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_graph_path_search",
+    name: "图路径搜索",
+    version: "1.0.0",
+    domain: ["capacity_assessment_prediction", "master_production_schedule"],
+    capability_tags: ["graph", "path", "search", "bfs", "dfs"],
+    input_schema: { graph: "object", start: "string", goal: "string", algorithm: "string", constraints: "object" },
+    output_schema: { path: "array", path_length: "number", alternatives: "array", visited: "array" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.93,
+    dependencies: [],
+    description: "在图中搜索可行路径，支持BFS、DFS、A*等算法。",
+    files: { readme: "# Graph Path Search", config: "{}", script: "def search_path(graph, start, goal): return {'path': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_feature_selection",
+    name: "特征选择算法",
+    version: "1.0.0",
+    domain: ["demand_forecast"],
+    capability_tags: ["feature_selection", "dimensionality", "rfe", "lasso"],
+    input_schema: { features: "array", target: "array", method: "string", n_features: "number" },
+    output_schema: { selected_features: "array", feature_scores: "object", ranking: "array", support: "array" },
+    cost: 0.3,
+    latency: 500,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "选择最相关的特征子集，支持过滤法、包装法、嵌入法。",
+    files: { readme: "# Feature Selection", config: "{}", script: "def select_features(X, y, method): return {'selected': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_trend_decomposition",
+    name: "趋势分解算法",
+    version: "1.0.0",
+    domain: ["demand_forecast", "kpi_monitoring"],
+    capability_tags: ["decomposition", "trend", "seasonal", "residual"],
+    input_schema: { time_series: "array", period: "number", model: "string" },
+    output_schema: { trend: "array", seasonal: "array", residual: "array", components: "object" },
+    cost: 0.3,
+    latency: 400,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "将时间序列分解为趋势、季节性和残差成分。",
+    files: { readme: "# Trend Decomposition", config: "{}", script: "def decompose(ts, period): return {'trend': [], 'seasonal': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_probability_scoring",
+    name: "概率评分模型",
+    version: "1.0.0",
+    domain: ["sales_operations_planning", "abnormal_alert"],
+    capability_tags: ["scoring", "probability", "risk", "classification"],
+    input_schema: { features: "object", model_weights: "object", thresholds: "object" },
+    output_schema: { score: "number", probability: "number", risk_level: "string", factors: "array" },
+    cost: 0.2,
+    latency: 100,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "基于概率模型的评分系统，用于风险评估和等级划分。",
+    files: { readme: "# Probability Scoring", config: "{}", script: "def score_probability(features, weights): return {'score': 0.5}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_rule_engine",
+    name: "规则引擎执行",
+    version: "1.0.0",
+    domain: ["master_production_schedule", "change_management", "kpi_monitoring"],
+    capability_tags: ["rules", "engine", "inference", "drools"],
+    input_schema: { facts: "object", rules: "array", agenda: "array" },
+    output_schema: { fired_rules: "array", actions: "array", output_facts: "object", execution_trace: "array" },
+    cost: 0.1,
+    latency: 50,
+    accuracy_score: 0.96,
+    dependencies: [],
+    description: "执行规则引擎，基于事实和规则进行推理和决策。",
+    files: { readme: "# Rule Engine", config: "{}", script: "def execute_rules(facts, rules): return {'fired': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_bottleneck_detection",
+    name: "瓶颈识别算法",
+    version: "1.0.0",
+    domain: ["capacity_constraint_rules"],
+    capability_tags: ["bottleneck", "constraint", "toc", "throughput"],
+    input_schema: { process_data: "object", resource_utilization: "object", demand: "array" },
+    output_schema: { bottlenecks: "array", bottleneck_severity: "object", throughput_impact: "number", recommendations: "array" },
+    cost: 0.4,
+    latency: 500,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "识别系统中的瓶颈资源和约束环节，基于TOC理论。",
+    files: { readme: "# Bottleneck Detection", config: "{}", script: "def detect_bottlenecks(process, resources): return {'bottlenecks': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_priority_sorting",
+    name: "优先级排序算法",
+    version: "1.0.0",
+    domain: ["capacity_constraint_rules"],
+    capability_tags: ["priority", "sorting", "ranking", "ahp"],
+    input_schema: { items: "array", criteria: "array", weights: "object", method: "string" },
+    output_schema: { ranked_items: "array", scores: "object", top_k: "array", ties: "array" },
+    cost: 0.2,
+    latency: 150,
+    accuracy_score: 0.91,
+    dependencies: [],
+    description: "基于多准则对项目进行优先级排序，支持AHP等方法。",
+    files: { readme: "# Priority Sorting", config: "{}", script: "def sort_priority(items, criteria): return {'ranked': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_stochastic_inventory",
+    name: "随机库存模型计算",
+    version: "1.0.0",
+    domain: ["inventory_optimization"],
+    capability_tags: ["stochastic", "inventory", "newsvendor", "base_stock"],
+    input_schema: { demand_distribution: "object", cost_params: "object", lead_time: "number", service_level: "number" },
+    output_schema: { optimal_policy: "object", expected_cost: "number", fill_rate: "number", stockout_prob: "number" },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.87,
+    dependencies: ["atom_inventory_model"],
+    description: "基于随机需求的库存模型计算，考虑不确定性。",
+    files: { readme: "# Stochastic Inventory", config: "{}", script: "def calc_stochastic_inventory(demand_dist, costs): return {'policy': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_dynamic_programming",
+    name: "动态规划算法",
+    version: "1.0.0",
+    domain: ["inventory_optimization"],
+    capability_tags: ["dynamic_programming", "optimal", "recursive", "memoization"],
+    input_schema: { stages: "array", states: "array", decisions: "array", transition: "object", reward: "object" },
+    output_schema: { optimal_policy: "object", optimal_value: "number", value_function: "object", policy_function: "object" },
+    cost: 0.5,
+    latency: 1000,
+    accuracy_score: 0.92,
+    dependencies: [],
+    description: "使用动态规划求解多阶段决策问题。",
+    files: { readme: "# Dynamic Programming", config: "{}", script: "def solve_dp(stages, states): return {'policy': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_resource_conflict_detection",
+    name: "资源冲突检测算法",
+    version: "1.0.0",
+    domain: ["rush_order_management"],
+    capability_tags: ["conflict", "resource", "detection", "scheduling"],
+    input_schema: { resource_allocations: "array", resource_capacity: "object", time_windows: "array" },
+    output_schema: { conflicts: "array", conflict_graph: "object", resolution_suggestions: "array", severity: "array" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "检测资源分配中的冲突和重叠，提供解决方案。",
+    files: { readme: "# Resource Conflict Detection", config: "{}", script: "def detect_conflicts(allocations, capacity): return {'conflicts': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_constraint_relaxation",
+    name: "约束松弛算法",
+    version: "1.0.0",
+    domain: ["change_management"],
+    capability_tags: ["relaxation", "constraint", "lagrangian", "optimization"],
+    input_schema: { original_problem: "object", relaxable_constraints: "array", penalty_weights: "object" },
+    output_schema: { relaxed_solution: "object", dual_values: "object", constraint_violations: "object", gap: "number" },
+    cost: 0.5,
+    latency: 800,
+    accuracy_score: 0.88,
+    dependencies: ["atom_linear_programming"],
+    description: "通过松弛约束求解困难优化问题，计算对偶值。",
+    files: { readme: "# Constraint Relaxation", config: "{}", script: "def relax_constraints(problem, relaxable): return {'solution': {}}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_path_impact_propagation",
+    name: "路径影响传播算法",
+    version: "1.0.0",
+    domain: ["change_management"],
+    capability_tags: ["impact", "propagation", "dependency", "graph"],
+    input_schema: { dependency_graph: "object", changed_nodes: "array", impact_weights: "object" },
+    output_schema: { affected_nodes: "array", impact_magnitudes: "object", propagation_paths: "array", critical_paths: "array" },
+    cost: 0.4,
+    latency: 500,
+    accuracy_score: 0.87,
+    dependencies: [],
+    description: "在依赖图中传播变更影响，识别受影响范围和关键路径。",
+    files: { readme: "# Path Impact Propagation", config: "{}", script: "def propagate_impact(graph, changes): return {'affected': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_root_cause_analysis",
+    name: "根因分析算法",
+    version: "1.0.0",
+    domain: ["abnormal_alert"],
+    capability_tags: ["root_cause", "rca", "fishbone", "5_whys"],
+    input_schema: { problem: "object", causal_factors: "array", historical_cases: "array", method: "string" },
+    output_schema: { root_causes: "array", cause_tree: "object", confidence_scores: "object", preventive_actions: "array" },
+    cost: 0.5,
+    latency: 700,
+    accuracy_score: 0.86,
+    dependencies: ["atom_causal_graph"],
+    description: "分析问题的根本原因，支持鱼骨图、5 Whys等方法。",
+    files: { readme: "# Root Cause Analysis", config: "{}", script: "def analyze_root_cause(problem, factors): return {'root_causes': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_event_priority",
+    name: "事件优先级排序",
+    version: "1.0.0",
+    domain: ["abnormal_alert"],
+    capability_tags: ["event", "priority", "urgency", "severity"],
+    input_schema: { events: "array", urgency_weights: "object", impact_matrix: "object", resources: "object" },
+    output_schema: { prioritized_events: "array", priority_scores: "object", sla_compliance: "object", schedule: "array" },
+    cost: 0.2,
+    latency: 100,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "基于紧急程度和影响对事件进行优先级排序。",
+    files: { readme: "# Event Priority", config: "{}", script: "def prioritize_events(events): return {'prioritized': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_performance_probability",
+    name: "履约概率预测",
+    version: "1.0.0",
+    domain: ["supplier_collaboration"],
+    capability_tags: ["performance", "probability", "delivery", "supplier"],
+    input_schema: { supplier_history: "object", order_complexity: "object", external_factors: "object", lead_time: "number" },
+    output_schema: { on_time_prob: "number", delay_risk: "number", expected_delay: "number", mitigation_options: "array" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.88,
+    dependencies: ["atom_probability_distribution_fit"],
+    description: "预测供应商按时履约的概率和延迟风险。",
+    files: { readme: "# Performance Probability", config: "{}", script: "def predict_performance(history, order): return {'on_time_prob': 0.9}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_risk_scoring",
+    name: "风险评分模型",
+    version: "1.0.0",
+    domain: ["supplier_collaboration"],
+    capability_tags: ["risk", "scoring", "supplier", "assessment"],
+    input_schema: { risk_factors: "object", weights: "object", historical_data: "array", industry_benchmarks: "object" },
+    output_schema: { risk_score: "number", risk_rating: "string", risk_breakdown: "object", mitigation_priority: "array" },
+    cost: 0.3,
+    latency: 250,
+    accuracy_score: 0.89,
+    dependencies: [],
+    description: "对供应商进行多维度风险评分和评级。",
+    files: { readme: "# Risk Scoring", config: "{}", script: "def score_risk(factors, weights): return {'risk_score': 50}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_alternative_path",
+    name: "替代路径搜索",
+    version: "1.0.0",
+    domain: ["supplier_collaboration"],
+    capability_tags: ["alternative", "path", "supplier", "sourcing"],
+    input_schema: { supply_network: "object", disrupted_paths: "array", constraints: "object", criteria: "array" },
+    output_schema: { alternative_paths: "array", path_scores: "object", feasibility: "object", switching_costs: "array" },
+    cost: 0.4,
+    latency: 500,
+    accuracy_score: 0.87,
+    dependencies: ["atom_shortest_path"],
+    description: "搜索供应链中的替代路径和备用供应商。",
+    files: { readme: "# Alternative Path", config: "{}", script: "def find_alternatives(network, disrupted): return {'alternatives': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_scenario_generation",
+    name: "多情景生成算法",
+    version: "1.0.0",
+    domain: ["what_if_simulation"],
+    capability_tags: ["scenario", "generation", "combinatorial", "exploration"],
+    input_schema: { variable_ranges: "object", constraints: "array", n_scenarios: "number", diversity_metric: "string" },
+    output_schema: { scenarios: "array", scenario_matrix: "object", coverage_score: "number", extreme_cases: "array" },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "生成多样化的假设情景用于what-if分析。",
+    files: { readme: "# Scenario Generation", config: "{}", script: "def generate_scenarios(ranges, n): return {'scenarios': []}", scriptLang: "python" }
+  },
+  {
+    skill_id: "atom_metric_anomaly_detection",
+    name: "指标异常检测",
+    version: "1.0.0",
+    domain: ["kpi_monitoring"],
+    capability_tags: ["metric", "anomaly", "kpi", "monitoring"],
+    input_schema: { metrics: "object", baselines: "object", thresholds: "object", seasonality: "boolean" },
+    output_schema: { anomalies: "array", anomaly_scores: "object", trend_changes: "array", alerts: "array" },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.89,
+    dependencies: ["atom_anomaly_detection"],
+    description: "监控KPI指标的异常变化，支持多维度和季节性调整。",
+    files: { readme: "# Metric Anomaly Detection", config: "{}", script: "def detect_metric_anomalies(metrics, baselines): return {'anomalies': []}", scriptLang: "python" }
   }
 ];
 
@@ -1554,7 +3019,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'strategic_priority', name: '战略优先级', description: '项目战略重要性评分', dataType: 'number', required: true, unit: '分', defaultValue: 8 },
     ],
     outputMetrics: ['决策得分', '战略匹配度', '投资优先级'],
-    supportedSkills: ['market_forecast_v1', 'npv_calculator_v1', 'risk_assessor_v1']
+    supportedSkills: ['atom_probability_distribution_fit', 'atom_bayesian_update', 'atom_monte_carlo_simulation', 'atom_multi_objective_optimization', 'atom_dcf_calculation']
   },
   {
     nodeId: 'site_selection',
@@ -1569,7 +3034,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'policy_support', name: '政策支持力度', description: '地方政府政策支持评分', dataType: 'number', required: true, unit: '分', defaultValue: 8 },
     ],
     outputMetrics: ['选址综合评分', '成本指数', '供应链效率指数'],
-    supportedSkills: ['site_evaluator_v1', 'logistics_optimizer_v1']
+    supportedSkills: ['atom_clustering', 'atom_shortest_path', 'atom_multi_objective_optimization']
   },
   {
     nodeId: 'financial_profitability',
@@ -1584,7 +3049,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'discount_rate', name: '折现率', description: '项目折现率', dataType: 'number', required: true, unit: '%', defaultValue: 10 },
     ],
     outputMetrics: ['NPV', 'IRR', '投资回收期', 'ROIC'],
-    supportedSkills: ['npv_calculator_v1', 'financial_model_v1']
+    supportedSkills: ['atom_dcf_calculation', 'atom_cost_structure', 'atom_sensitivity_analysis', 'atom_probability_distribution_fit']
   },
   {
     nodeId: 'risk_assessment',
@@ -1599,7 +3064,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'competition_intensity', name: '竞争强度', description: '市场竞争激烈程度', dataType: 'number', required: true, unit: '分', defaultValue: 7 },
     ],
     outputMetrics: ['综合风险指数', '市场风险', '技术风险', '财务风险'],
-    supportedSkills: ['risk_assessor_v1', 'scenario_analyzer_v1']
+    supportedSkills: ['atom_monte_carlo_simulation', 'atom_probability_distribution_fit', 'atom_sensitivity_analysis']
   },
 
   // ========== 产能评估推演预测分析节点 ==========
@@ -1616,7 +3081,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'product_mix', name: '产品组合', description: '各产品型号占比', dataType: 'string', required: true },
     ],
     outputMetrics: ['理论产能', '有效产能', '产能利用率', '瓶颈工序'],
-    supportedSkills: ['oee_analyzer_v1', 'bottleneck_identifier_v1', 'capacity_calculator_v1']
+    supportedSkills: ['atom_load_simulation', 'atom_queuing_theory', 'atom_linear_programming', 'atom_causal_graph', 'atom_bottleneck_detection']
   },
   {
     nodeId: 'supply_capability',
@@ -1630,7 +3095,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'resource_limit', name: '资源限制', description: '关键资源约束', dataType: 'string', required: true },
     ],
     outputMetrics: ['供给能力', '可持续产能', '弹性空间', '质量产能'],
-    supportedSkills: ['capacity_evaluation_v2', 'supply_analyzer_v1']
+    supportedSkills: ['atom_time_series_forecast', 'atom_probability_distribution_fit']
   },
   {
     nodeId: 'capacity_expansion',
@@ -1645,7 +3110,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'demand_growth_scenario', name: '需求增长情景', description: '需求增长预测情景', dataType: 'string', required: true, defaultValue: '基准情景' },
     ],
     outputMetrics: ['扩产潜力', '投资NPV', 'IRR', '投资回收期'],
-    supportedSkills: ['investment_optimizer_v1', 'timeline_planner_v1']
+    supportedSkills: ['atom_dcf_calculation', 'atom_cost_structure']
   },
   {
     nodeId: 'investment_decision',
@@ -1660,7 +3125,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'project_lifecycle', name: '项目周期', description: '项目运营周期', dataType: 'number', required: true, unit: '年', defaultValue: 10 },
     ],
     outputMetrics: ['投资NPV', 'IRR', '投资回收期', '产能达成率'],
-    supportedSkills: ['investment_optimizer_v1', 'timeline_planner_v1']
+    supportedSkills: ['capex_analyzer_v1', 'npv_calculator_v1', 'market_forecast_v2']
   },
   {
     nodeId: 'risk_simulation',
@@ -1674,7 +3139,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'confidence_level', name: '置信水平', description: '统计置信水平', dataType: 'number', required: true, unit: '%', defaultValue: 95 },
     ],
     outputMetrics: ['风险值VaR', '情景概率', '预期损失', '应对建议'],
-    supportedSkills: ['risk_assessor_v1', 'scenario_analyzer_v1']
+    supportedSkills: ['atom_monte_carlo_simulation', 'atom_sensitivity_analysis']
   },
 
   // ========== 产销匹配协同推演节点 ==========
@@ -1691,7 +3156,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'customer_forecast', name: '客户预测', description: '大客户提供的预测数据', dataType: 'file', required: false, source: 'file_import' },
     ],
     outputMetrics: ['预测准确度', '月度需求量', '季度趋势'],
-    supportedSkills: ['demand_forecast_v1', 'seasonality_analyzer_v1']
+    supportedSkills: ['atom_time_series_forecast', 'atom_causal_graph', 'atom_multivariate_regression', 'atom_feature_selection', 'atom_bayesian_update', 'atom_trend_decomposition']
   },
   {
     nodeId: 'capacity_planning',
@@ -1706,7 +3171,7 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'changeover_time', name: '换型时间', description: '产品换型所需时间', dataType: 'number', required: true, unit: '小时', defaultValue: 4 },
     ],
     outputMetrics: ['产能利用率', '订单满足率', '换型次数', '生产计划'],
-    supportedSkills: ['aps_optimizer_v1', 'scheduler_v1']
+    supportedSkills: ['atom_linear_programming', 'atom_mixed_integer_programming', 'atom_multi_objective_optimization', 'atom_network_flow', 'atom_constraint_expression']
   },
   {
     nodeId: 'inventory_management',
@@ -1721,7 +3186,285 @@ export const SIMULATION_NODES: import('./types').SimulationNodeConfig[] = [
       { id: 'stockout_cost', name: '缺货成本', description: '单位缺货成本', dataType: 'number', required: true, unit: '元/件' },
     ],
     outputMetrics: ['最优库存水平', '库存周转天数', '库存成本', '缺货风险'],
-    supportedSkills: ['inventory_optimizer_v1', 'safety_stock_calculator_v1']
+    supportedSkills: ['atom_stochastic_inventory', 'atom_probability_distribution_fit', 'atom_bayesian_update', 'atom_monte_carlo_simulation', 'atom_dynamic_programming']
+  },
+
+  // ========== 设备预测性维护推演节点 ==========
+  {
+    nodeId: 'health_assessment',
+    nodeName: '健康评估推演',
+    scenarioId: 'predictive_maintenance',
+    category: 'capacity_planning',
+    description: '基于传感器数据评估设备健康状态',
+    inputParams: [
+      { id: 'vibration_data', name: '振动数据', description: '设备振动传感器数据', dataType: 'file', required: true, source: 'file_import' },
+      { id: 'temperature_data', name: '温度数据', description: '设备温度监测数据', dataType: 'file', required: true, source: 'file_import' },
+      { id: 'historical_failures', name: '历史故障记录', description: '设备历史故障数据', dataType: 'file', required: false, source: 'file_import' },
+    ],
+    outputMetrics: ['健康指数', '退化趋势', '异常等级'],
+    supportedSkills: ['atom_time_series_forecast', 'atom_anomaly_detection', 'atom_change_point_detection', 'atom_degradation_curve_fitting', 'atom_feature_importance']
+  },
+  {
+    nodeId: 'maintenance_decision',
+    nodeName: '维护决策推演',
+    scenarioId: 'predictive_maintenance',
+    category: 'investment_decision',
+    description: '基于健康评估制定维护策略',
+    inputParams: [
+      { id: 'health_score', name: '健康评分', description: '当前设备健康评分', dataType: 'number', required: true, unit: '分', defaultValue: 80 },
+      { id: 'rul_estimate', name: 'RUL估计', description: '剩余使用寿命估计', dataType: 'number', required: true, unit: '天' },
+      { id: 'maintenance_costs', name: '维护成本', description: '不同维护策略成本', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['最优维护时机', '维护成本', '停机损失'],
+    supportedSkills: ['atom_remaining_useful_life', 'atom_threshold_decision', 'atom_cost_structure', 'atom_monte_carlo_simulation']
+  },
+
+  // ========== 设备故障维修时间预测推演节点 ==========
+  {
+    nodeId: 'failure_classification',
+    nodeName: '故障分类推演',
+    scenarioId: 'breakdown_maintenance',
+    category: 'quality_prediction',
+    description: '对设备故障类型进行分类识别',
+    inputParams: [
+      { id: 'symptoms', name: '故障症状', description: '设备故障症状描述', dataType: 'string', required: true },
+      { id: 'sensor_anomalies', name: '传感器异常', description: '异常传感器数据', dataType: 'array', required: true },
+      { id: 'fault_codes', name: '故障代码', description: '设备故障代码', dataType: 'array', required: false },
+    ],
+    outputMetrics: ['故障类型', '置信度', '严重等级'],
+    supportedSkills: ['atom_classification', 'atom_clustering', 'atom_feature_importance']
+  },
+  {
+    nodeId: 'repair_time_estimation',
+    nodeName: '维修工时预测推演',
+    scenarioId: 'breakdown_maintenance',
+    category: 'demand_forecast',
+    description: '预测故障维修所需时间',
+    inputParams: [
+      { id: 'fault_type', name: '故障类型', description: '已识别的故障类型', dataType: 'string', required: true },
+      { id: 'equipment_model', name: '设备型号', description: '设备型号信息', dataType: 'string', required: true },
+      { id: 'maintenance_history', name: '历史维修数据', description: '类似故障历史维修时间', dataType: 'file', required: false, source: 'file_import' },
+    ],
+    outputMetrics: ['预计维修时间', '置信区间', '工时范围'],
+    supportedSkills: ['atom_multivariate_regression', 'atom_time_series_forecast', 'atom_probability_distribution_fit', 'atom_resource_allocation', 'atom_queuing_theory']
+  },
+  {
+    nodeId: 'resource_scheduling',
+    nodeName: '资源调度推演',
+    scenarioId: 'breakdown_maintenance',
+    category: 'production_scheduling',
+    description: '优化维修资源调度方案',
+    inputParams: [
+      { id: 'required_skills', name: '所需技能', description: '维修所需技能要求', dataType: 'array', required: true },
+      { id: 'available_technicians', name: '可用技师', description: '当前可用维修人员', dataType: 'array', required: true },
+      { id: 'spare_parts_location', name: '备件位置', description: '所需备件存储位置', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['最优调度方案', '等待时间', '总成本'],
+    supportedSkills: ['atom_shortest_path', 'atom_resource_allocation', 'atom_queuing_theory', 'atom_priority_sorting']
+  },
+
+  // ========== 销售与运营计划推演节点 ==========
+  {
+    nodeId: 'sales_planning',
+    nodeName: '销售计划推演',
+    scenarioId: 'production_sales_match',
+    category: 'production_scheduling',
+    description: '基于需求预测制定销售计划',
+    inputParams: [
+      { id: 'forecast_demand', name: '预测需求', description: '需求预测结果', dataType: 'array', required: true },
+      { id: 'sales_targets', name: '销售目标', description: '销售目标设定', dataType: 'object', required: true },
+      { id: 'customer_priorities', name: '客户优先级', description: '客户分级信息', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['销售计划', '目标达成率', '缺口分析'],
+    supportedSkills: ['atom_multi_objective_optimization', 'atom_monte_carlo_simulation', 'atom_linear_programming', 'atom_sensitivity_analysis', 'atom_probability_scoring']
+  },
+  {
+    nodeId: 'production_balance',
+    nodeName: '产销平衡推演',
+    scenarioId: 'production_sales_match',
+    category: 'production_scheduling',
+    description: '平衡销售需求与产能供给',
+    inputParams: [
+      { id: 'sales_plan', name: '销售计划', description: '销售计划数据', dataType: 'array', required: true },
+      { id: 'capacity_available', name: '可用产能', description: '各产线可用产能', dataType: 'array', required: true },
+      { id: 'inventory_policy', name: '库存策略', description: '库存管理策略', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['产销缺口', '平衡方案', '库存建议'],
+    supportedSkills: ['atom_linear_programming', 'atom_mixed_integer_programming', 'atom_multi_objective_optimization', 'atom_inventory_model', 'atom_network_flow']
+  },
+  {
+    nodeId: 'delivery_coordination',
+    nodeName: '交付协同推演',
+    scenarioId: 'production_sales_match',
+    category: 'supply_chain',
+    description: '优化交付计划和物流协同',
+    inputParams: [
+      { id: 'customer_orders', name: '客户订单', description: '客户订单数据', dataType: 'array', required: true },
+      { id: 'logistics_capacity', name: '物流运力', description: '可用物流运力', dataType: 'object', required: true },
+      { id: 'delivery_constraints', name: '交付约束', description: '交付时间和方式约束', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['交付计划', '准时交付率', '物流成本'],
+    supportedSkills: ['atom_network_flow', 'atom_shortest_path', 'atom_resource_allocation', 'atom_constraint_expression']
+  },
+
+  // ========== 需求预测推演节点 ==========
+  {
+    nodeId: 'market_analysis',
+    nodeName: '需求预测推演',
+    scenarioId: 'demand_forecast',
+    category: 'demand_forecast',
+    description: '分析市场趋势预测需求',
+    inputParams: [
+      { id: 'historical_sales', name: '历史销售', description: '历史销售数据', dataType: 'file', required: true, source: 'file_import' },
+      { id: 'market_indicators', name: '市场指标', description: '宏观经济指标', dataType: 'array', required: false },
+      { id: 'seasonality', name: '季节性', description: '季节性因素', dataType: 'boolean', required: true, defaultValue: true },
+    ],
+    outputMetrics: ['需求预测', '置信区间', '趋势分析'],
+    supportedSkills: ['atom_time_series_forecast', 'atom_causal_graph', 'atom_multivariate_regression', 'atom_feature_selection', 'atom_trend_decomposition']
+  },
+
+  // ========== 主生产计划推演节点 ==========
+  {
+    nodeId: 'mps_generation',
+    nodeName: '主生产计划推演',
+    scenarioId: 'master_production_schedule',
+    category: 'production_scheduling',
+    description: '生成优化的主生产计划',
+    inputParams: [
+      { id: 'demand_plan', name: '需求计划', description: '需求预测计划', dataType: 'array', required: true },
+      { id: 'bom_structure', name: 'BOM结构', description: '物料清单结构', dataType: 'object', required: true },
+      { id: 'resource_constraints', name: '资源约束', description: '生产资源约束', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['MPS计划', '资源利用率', '交付达成率'],
+    supportedSkills: ['atom_mixed_integer_programming', 'atom_constraint_programming', 'atom_network_flow', 'atom_graph_path_search', 'atom_rule_engine']
+  },
+
+  // ========== 产能评估/约束规则推演节点 ==========
+  {
+    nodeId: 'capacity_assessment',
+    nodeName: '产能评估推演',
+    scenarioId: 'capacity_constraint_rules',
+    category: 'capacity_planning',
+    description: '评估产能状况和识别约束',
+    inputParams: [
+      { id: 'equipment_status', name: '设备状态', description: '设备运行状态', dataType: 'array', required: true },
+      { id: 'production_orders', name: '生产订单', description: '当前生产订单', dataType: 'array', required: true },
+      { id: 'shift_schedule', name: '班次安排', description: '人员班次安排', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['产能评估', '瓶颈识别', '约束分析'],
+    supportedSkills: ['atom_load_simulation', 'atom_time_series_forecast', 'atom_bottleneck_detection', 'atom_constraint_expression', 'atom_priority_sorting']
+  },
+
+  // ========== 插单管理推演节点 ==========
+  {
+    nodeId: 'rush_order_management',
+    nodeName: '插单管理推演',
+    scenarioId: 'rush_order_management',
+    category: 'production_scheduling',
+    description: '处理紧急插单的影响分析',
+    inputParams: [
+      { id: 'rush_order', name: '插单信息', description: '紧急订单信息', dataType: 'object', required: true },
+      { id: 'current_schedule', name: '当前排程', description: '当前生产排程', dataType: 'array', required: true },
+      { id: 'flexibility_options', name: '柔性选项', description: '可调整的生产选项', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['插单可行性', '影响分析', '调整方案'],
+    supportedSkills: ['atom_mixed_integer_programming', 'atom_multi_objective_optimization', 'atom_causal_graph', 'atom_resource_conflict_detection', 'atom_load_simulation']
+  },
+
+  // ========== 变更管理推演节点 ==========
+  {
+    nodeId: 'change_management',
+    nodeName: '变更管理推演',
+    scenarioId: 'change_management',
+    category: 'risk_assessment',
+    description: '分析生产变更的影响和传播',
+    inputParams: [
+      { id: 'change_request', name: '变更请求', description: '变更内容描述', dataType: 'object', required: true },
+      { id: 'affected_processes', name: '受影响流程', description: '可能受影响的生产流程', dataType: 'array', required: true },
+      { id: 'dependency_map', name: '依赖图', description: '流程依赖关系', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['影响范围', '传播路径', '风险评估'],
+    supportedSkills: ['atom_causal_graph', 'atom_constraint_relaxation', 'atom_path_impact_propagation', 'atom_rule_engine', 'atom_monte_carlo_simulation']
+  },
+
+  // ========== 异常预警推演节点 ==========
+  {
+    nodeId: 'abnormal_alert',
+    nodeName: '异常预警推演',
+    scenarioId: 'abnormal_alert',
+    category: 'quality_prediction',
+    description: '多维度异常检测和预警',
+    inputParams: [
+      { id: 'kpi_metrics', name: 'KPI指标', description: '关键绩效指标', dataType: 'object', required: true },
+      { id: 'threshold_settings', name: '阈值设置', description: '预警阈值配置', dataType: 'object', required: true },
+      { id: 'historical_anomalies', name: '历史异常', description: '历史异常记录', dataType: 'array', required: false },
+    ],
+    outputMetrics: ['预警等级', '根因分析', '处理建议'],
+    supportedSkills: ['atom_anomaly_detection', 'atom_causal_graph', 'atom_root_cause_analysis', 'atom_probability_scoring', 'atom_event_priority']
+  },
+
+  // ========== 供应商协同推演节点 ==========
+  {
+    nodeId: 'supplier_collaboration',
+    nodeName: '供应商协同推演',
+    scenarioId: 'supplier_collaboration',
+    category: 'supply_chain',
+    description: '评估供应商协同风险和优化方案',
+    inputParams: [
+      { id: 'supplier_performance', name: '供应商绩效', description: '供应商历史绩效数据', dataType: 'array', required: true },
+      { id: 'order_commitments', name: '订单承诺', description: '供应商交付承诺', dataType: 'array', required: true },
+      { id: 'risk_factors', name: '风险因素', description: '供应风险因素', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['履约概率', '风险评估', '备选方案'],
+    supportedSkills: ['atom_performance_probability', 'atom_time_series_forecast', 'atom_risk_scoring', 'atom_network_flow', 'atom_alternative_path']
+  },
+
+  // ========== What-if模拟推演节点 ==========
+  {
+    nodeId: 'what_if_simulation',
+    nodeName: 'What-if模拟推演',
+    scenarioId: 'what_if_simulation',
+    category: 'risk_assessment',
+    description: '多情景假设分析和模拟',
+    inputParams: [
+      { id: 'base_scenario', name: '基准情景', description: '当前基准方案', dataType: 'object', required: true },
+      { id: 'variable_changes', name: '变量变更', description: '要测试的变量变化', dataType: 'array', required: true },
+      { id: 'n_simulations', name: '模拟次数', description: '蒙特卡洛模拟次数', dataType: 'number', required: true, defaultValue: 1000 },
+    ],
+    outputMetrics: ['情景结果', '概率分布', '敏感性分析'],
+    supportedSkills: ['atom_monte_carlo_simulation', 'atom_scenario_generation', 'atom_multi_objective_optimization', 'atom_sensitivity_analysis', 'atom_constraint_expression']
+  },
+
+  // ========== 利润模拟推演节点 ==========
+  {
+    nodeId: 'profit_simulation',
+    nodeName: '利润模拟推演',
+    scenarioId: 'profit_simulation',
+    category: 'financial_analysis',
+    description: '多维度利润模拟和优化',
+    inputParams: [
+      { id: 'revenue_model', name: '收入模型', description: '收入构成模型', dataType: 'object', required: true },
+      { id: 'cost_structure', name: '成本结构', description: '成本构成数据', dataType: 'object', required: true },
+      { id: 'volume_scenarios', name: '销量情景', description: '不同销量情景', dataType: 'array', required: true },
+    ],
+    outputMetrics: ['利润预测', '盈亏平衡', '优化建议'],
+    supportedSkills: ['atom_linear_programming', 'atom_multi_objective_optimization', 'atom_dcf_calculation', 'atom_cost_structure', 'atom_resource_allocation']
+  },
+
+  // ========== KPI监控推演节点 ==========
+  {
+    nodeId: 'kpi_monitoring',
+    nodeName: 'KPI监控推演',
+    scenarioId: 'kpi_monitoring',
+    category: 'quality_prediction',
+    description: 'KPI指标监控和趋势分析',
+    inputParams: [
+      { id: 'kpi_definitions', name: 'KPI定义', description: 'KPI指标定义', dataType: 'array', required: true },
+      { id: 'target_values', name: '目标值', description: 'KPI目标值', dataType: 'object', required: true },
+      { id: 'actual_values', name: '实际值', description: 'KPI实际值', dataType: 'object', required: true },
+    ],
+    outputMetrics: ['KPI得分', '趋势预测', '改进建议'],
+    supportedSkills: ['atom_metric_anomaly_detection', 'atom_causal_graph', 'atom_time_series_forecast', 'atom_trend_decomposition', 'atom_rule_engine']
   },
 ];
 

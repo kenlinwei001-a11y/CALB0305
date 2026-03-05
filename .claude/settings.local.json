@@ -13,7 +13,12 @@
       "Bash(tail:*)",
       "Bash(pkill:*)",
       "Bash(sleep 5:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(lsof:*)",
+      "Bash(kill 9514:*)",
+      "Bash(kill 20636:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)"
     ]
   }
 }

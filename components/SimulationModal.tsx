@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   X, Box, FileText, Upload, FileUp, CheckCircle, Zap,
   MessageCircle, ChevronRight, Loader2, Lightbulb, Database,
-  Maximize2, Minimize2, Plus, Search
+  Maximize2, Minimize2, Plus, Search, Cpu, Scale, Layers,
+  Atom, Network, Workflow
 } from 'lucide-react';
 import type { OntologyNode, OntologyLink, SimulationNodeConfig } from '../types';
 import { MOCK_SKILLS, isSimulationNode, getSimulationConfig } from '../constants';
+import { SOLVER_TYPES, DEFAULT_CONSTRAINT_RULES, CONSTRAINT_CATEGORIES } from './MCPTools';
 
 interface SimulationModalProps {
   isOpen: boolean;
@@ -47,13 +49,17 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   const [selectedParamId, setSelectedParamId] = useState<string | null>(null);
   const [paramDataStatus, setParamDataStatus] = useState<Record<string, ParamDataStatus>>({});
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedSolvers, setSelectedSolvers] = useState<string[]>([]);
+  const [selectedConstraints, setSelectedConstraints] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [selectedSolution, setSelectedSolution] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File[]>>({});
-  const [showSkillPanel, setShowSkillPanel] = useState(false);
+  const [showSkillPanel, setShowSkillPanel] = useState(true);
+  const [showSolverPanel, setShowSolverPanel] = useState(false);
+  const [showConstraintPanel, setShowConstraintPanel] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [showSolutionChat, setShowSolutionChat] = useState(false);
   const [solutionChatInput, setSolutionChatInput] = useState('');
@@ -182,6 +188,40 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
         ? prev.filter(id => id !== skillId)
         : [...prev, skillId]
     );
+  };
+
+  const toggleSolver = (solverId: string) => {
+    setSelectedSolvers(prev =>
+      prev.includes(solverId)
+        ? prev.filter(id => id !== solverId)
+        : [...prev, solverId]
+    );
+  };
+
+  const toggleConstraint = (constraintId: string) => {
+    setSelectedConstraints(prev =>
+      prev.includes(constraintId)
+        ? prev.filter(id => id !== constraintId)
+        : [...prev, constraintId]
+    );
+  };
+
+  // 技能分类辅助函数
+  const getSkillCategory = (skillId: string): 'atomic' | 'domain' | 'scenario' => {
+    if (skillId.startsWith('atom_')) return 'atomic';
+    if (skillId.startsWith('domain_')) return 'domain';
+    if (skillId.startsWith('scenario_')) return 'scenario';
+    // 根据依赖关系或其他特征判断
+    const skill = MOCK_SKILLS.find(s => s.skill_id === skillId);
+    if (skill?.dependencies?.some(d => d.startsWith('scenario_'))) return 'scenario';
+    if (skill?.dependencies?.some(d => d.startsWith('domain_'))) return 'domain';
+    return 'atomic';
+  };
+
+  const skillCategories = {
+    atomic: { label: '原子层', icon: Atom, color: 'blue', desc: '基础算法技能' },
+    domain: { label: '领域层', icon: Network, color: 'indigo', desc: '领域语义技能' },
+    scenario: { label: '场景层', icon: Workflow, color: 'purple', desc: '业务场景技能' }
   };
 
   // 发送方案级对话消息
@@ -854,55 +894,164 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                 )}
               </div>
 
-              {/* Right Panel: Skills + Chat + Run */}
+              {/* Right Panel: Tools Selection (Skills + MCP) + Chat */}
               <div className="flex-1 flex flex-col bg-slate-50">
-                <div className="border-b border-slate-200 bg-white">
-                  <button onClick={() => setShowSkillPanel(!showSkillPanel)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50">
-                    <div className="flex items-center gap-2">
-                      <Zap size={16} className="text-amber-500" />
-                      <span className="text-sm font-medium text-slate-700">技能选择</span>
-                      {selectedSkills.length > 0 && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">已选 {selectedSkills.length} 个</span>}
-                    </div>
-                    <ChevronRight size={16} className={`text-slate-400 transition-transform ${showSkillPanel ? 'rotate-90' : ''}`} />
-                  </button>
-                  {showSkillPanel && (
-                    <div className="px-4 pb-4 border-t border-slate-100">
-                      <p className="text-xs text-slate-500 mt-3 mb-2">推荐技能（可多选）</p>
-                      <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                        {config.supportedSkills.map(skillId => {
-                          const skill = MOCK_SKILLS.find(s => s.skill_id === skillId);
-                          if (!skill) return null;
+                {/* Tools Selection Panel - Redesigned */}
+                <div className="border-b border-slate-200 bg-white max-h-[45vh] overflow-y-auto">
+                  {/* Section 1: Skills by Category */}
+                  <div className="border-b border-slate-100">
+                    <button onClick={() => setShowSkillPanel(!showSkillPanel)} className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Layers size={16} className="text-indigo-500" />
+                        <span className="text-sm font-medium text-slate-700">技能中心</span>
+                        {selectedSkills.length > 0 && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">{selectedSkills.length}</span>}
+                      </div>
+                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${showSkillPanel ? 'rotate-90' : ''}`} />
+                    </button>
+
+                    {showSkillPanel && (
+                      <div className="px-3 pb-3">
+                        {/* 三层架构技能选择 */}
+                        {Object.entries(skillCategories).map(([category, categoryConfig]) => {
+                          const CategoryIcon = categoryConfig.icon;
+                          const skillsInCategory = MOCK_SKILLS.filter(s => {
+                            const isSupported = config.supportedSkills?.includes(s.skill_id) ?? false;
+                            return getSkillCategory(s.skill_id) === category;
+                          });
+
+                          if (skillsInCategory.length === 0) return null;
+
                           return (
-                            <div
-                              key={skillId}
-                              onClick={() => toggleSkill(skillId)}
-                              className={`p-2 rounded-lg border cursor-pointer transition-all ${selectedSkills.includes(skillId) ? 'border-amber-500 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                            >
-                              <div className="flex items-start justify-between">
-                                <h4 className="text-xs font-medium text-slate-900 truncate flex-1">{skill.name}</h4>
-                                {selectedSkills.includes(skillId) && <CheckCircle size={12} className="text-amber-500 ml-1" />}
+                            <div key={category} className="mb-3">
+                              <div className="flex items-center gap-2 mb-2 px-1">
+                                <CategoryIcon size={14} className={`text-${categoryConfig.color}-500`} />
+                                <span className={`text-xs font-semibold text-${categoryConfig.color}-700`}>{categoryConfig.label}</span>
+                                <span className="text-[10px] text-slate-400">{categoryConfig.desc}</span>
                               </div>
-                              <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{skill.description}</p>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {skillsInCategory.map(skill => (
+                                  <div
+                                    key={skill.skill_id}
+                                    onClick={() => toggleSkill(skill.skill_id)}
+                                    className={`p-2 rounded border cursor-pointer transition-all ${
+                                      selectedSkills.includes(skill.skill_id)
+                                        ? `border-${categoryConfig.color}-500 bg-${categoryConfig.color}-50`
+                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <h4 className={`text-[11px] font-medium text-slate-900 truncate flex-1 ${selectedSkills.includes(skill.skill_id) ? `text-${categoryConfig.color}-700` : ''}`}>
+                                        {skill.name}
+                                      </h4>
+                                      {selectedSkills.includes(skill.skill_id) && <CheckCircle size={10} className={`text-${categoryConfig.color}-500 ml-1 flex-shrink-0`} />}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           );
                         })}
-                        {/* Other available skills */}
-                        {MOCK_SKILLS.filter(s => !config.supportedSkills.includes(s.skill_id)).map(skill => (
-                          <div
-                            key={skill.skill_id}
-                            onClick={() => toggleSkill(skill.skill_id)}
-                            className={`p-2 rounded-lg border cursor-pointer transition-all opacity-60 ${selectedSkills.includes(skill.skill_id) ? 'border-amber-500 bg-amber-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <h4 className="text-xs font-medium text-slate-900 truncate flex-1">{skill.name}</h4>
-                              {selectedSkills.includes(skill.skill_id) && <CheckCircle size={12} className="text-amber-500 ml-1" />}
-                            </div>
-                            <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{skill.description}</p>
-                          </div>
-                        ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Section 2: Solvers */}
+                  <div className="border-b border-slate-100">
+                    <button
+                      onClick={() => setShowSolverPanel(!showSolverPanel)}
+                      className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Cpu size={16} className="text-amber-500" />
+                        <span className="text-sm font-medium text-slate-700">求解器</span>
+                        {selectedSolvers.length > 0 && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">{selectedSolvers.length}</span>}
+                      </div>
+                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${showSolverPanel ? 'rotate-90' : ''}`} />
+                    </button>
+
+                    {showSolverPanel && (
+                      <div className="px-3 pb-3">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {SOLVER_TYPES.map(solver => (
+                            <div
+                              key={solver.id}
+                              onClick={() => toggleSolver(solver.id)}
+                              className={`p-2 rounded border cursor-pointer transition-all ${
+                                selectedSolvers.includes(solver.id)
+                                  ? 'border-amber-500 bg-amber-50'
+                                  : 'border-slate-200 bg-white hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <h4 className={`text-[11px] font-medium truncate flex-1 ${selectedSolvers.includes(solver.id) ? 'text-amber-700' : 'text-slate-900'}`}>
+                                  {solver.name}
+                                </h4>
+                                {selectedSolvers.includes(solver.id) && <CheckCircle size={10} className="text-amber-500 ml-1 flex-shrink-0" />}
+                              </div>
+                              <p className="text-[9px] text-slate-500 mt-0.5 truncate">{solver.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section 3: Constraint Rules */}
+                  <div>
+                    <button
+                      onClick={() => setShowConstraintPanel(!showConstraintPanel)}
+                      className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Scale size={16} className="text-emerald-500" />
+                        <span className="text-sm font-medium text-slate-700">约束规则</span>
+                        {selectedConstraints.length > 0 && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">{selectedConstraints.length}</span>}
+                      </div>
+                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${showConstraintPanel ? 'rotate-90' : ''}`} />
+                    </button>
+
+                    {showConstraintPanel && (
+                      <div className="px-3 pb-3">
+                        {Object.entries(CONSTRAINT_CATEGORIES).map(([category, categoryConfig]) => {
+                          const rulesInCategory = DEFAULT_CONSTRAINT_RULES.filter(r => r.category === category);
+                          if (rulesInCategory.length === 0) return null;
+
+                          return (
+                            <div key={category} className="mb-2">
+                              <div className="flex items-center gap-2 mb-1.5 px-1">
+                                <span className="text-[10px] font-medium text-slate-600">{categoryConfig.label}</span>
+                              </div>
+                              <div className="grid grid-cols-1 gap-1">
+                                {rulesInCategory.slice(0, 3).map(rule => (
+                                  <div
+                                    key={rule.id}
+                                    onClick={() => toggleConstraint(rule.id)}
+                                    className={`p-1.5 rounded border cursor-pointer transition-all ${
+                                      selectedConstraints.includes(rule.id)
+                                        ? 'border-emerald-500 bg-emerald-50'
+                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className={`text-[11px] truncate flex-1 ${selectedConstraints.includes(rule.id) ? 'text-emerald-700 font-medium' : 'text-slate-700'}`}>
+                                        {rule.name}
+                                      </span>
+                                      {selectedConstraints.includes(rule.id) && <CheckCircle size={10} className="text-emerald-500 ml-1 flex-shrink-0" />}
+                                    </div>
+                                  </div>
+                                ))}
+                                {rulesInCategory.length > 3 && (
+                                  <div className="text-[9px] text-slate-400 px-1">
+                                    还有 {rulesInCategory.length - 3} 条规则...
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 下级推演节点 */}

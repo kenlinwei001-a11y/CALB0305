@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
+import { useNavigate } from 'react-router-dom';
 import {
   X, Database, Zap, Scale, GitBranch, Layers, Grid3X3, Search,
   TrendingUp, Factory, Package, CheckCircle, DollarSign, Truck, Users, Calendar,
   Maximize2, Minimize2, ZoomIn, ZoomOut, RefreshCw, Info, ChevronRight,
-  Table, Play, Scale as ScaleIcon, Workflow, ArrowRight
+  Table, Play, Scale as ScaleIcon, Workflow, ArrowRight, Cpu, BookOpen, Plus, Link2, Network
 } from 'lucide-react';
+// 导入MCP工具的约束规则和求解器数据
+import { DEFAULT_CONSTRAINT_RULES, CONSTRAINT_CATEGORIES, SOLVER_TYPES, ConstraintRule } from './MCPTools';
 
 // ==================== 类型定义 ====================
 
@@ -337,303 +340,521 @@ const CATEGORY_CONFIG: Record<SemanticCategory, { label: string; color: string; 
 // ==================== 原子业务语义数据 ====================
 
 const ATOMIC_SEMANTICS: AtomicSemantic[] = [
-  // 销售订单预测与排产
+  // ==================== 场景1: 设备预测性维护 ====================
   {
-    id: 'sem_sales_forecast',
-    code: 'SALES_FORECAST_SCHEDULING',
-    name: '销售订单预测与排产',
-    englishName: 'Sales Forecast & Production Scheduling',
-    description: '基于历史销售数据和市场趋势，预测未来订单需求并生成生产计划',
-    category: 'sales',
+    id: 'sem_equipment_health_monitor',
+    code: 'EQUIP_HEALTH_MONITOR',
+    name: '设备健康度监测',
+    englishName: 'Equipment Health Monitoring',
+    description: '设备预测性维护场景的第1个子链条：实时采集设备传感器数据，计算健康度指标',
+    category: 'production',
     dataEntities: [
       {
-        id: 'de_sales_history',
-        name: '历史销售数据',
-        description: '过去3年的销售记录，用于预测模型训练',
+        id: 'de_sensor_realtime',
+        name: '传感器实时数据',
+        description: '设备振动、温度、电流等传感器实时数据流',
         entityType: 'businessObject' as EntityType,
-        subtype: 'transaction_record',
+        subtype: 'iot_data_stream',
         fields: [
-          { name: 'record_id', dataType: 'string', required: true, description: '记录唯一标识' },
-          { name: 'sale_date', dataType: 'datetime', required: true, description: '销售日期' },
-          { name: 'product_model', dataType: 'string', required: true, description: '产品型号' },
-          { name: 'quantity', dataType: 'number', required: true, description: '销售数量' },
-          { name: 'customer_id', dataType: 'string', required: true, description: '客户编码' },
-          { name: 'region', dataType: 'string', required: true, description: '销售区域' },
-          { name: 'unit_price', dataType: 'number', required: true, description: '单价' },
-          { name: 'total_amount', dataType: 'number', required: true, description: '总金额' }
+          { name: 'sensor_id', dataType: 'string', required: true, description: '传感器唯一标识' },
+          { name: 'equipment_id', dataType: 'string', required: true, description: '设备编码' },
+          { name: 'metric_type', dataType: 'string', required: true, description: '指标类型：vibration/temperature/current' },
+          { name: 'metric_value', dataType: 'number', required: true, description: '指标值' },
+          { name: 'timestamp', dataType: 'datetime', required: true, description: '采集时间戳' },
+          { name: 'status', dataType: 'string', required: true, description: '传感器状态' }
         ],
         relations: [
-          { targetEntityId: 'de_market_trend', relationType: 'references', description: '参考市场趋势' },
-          { targetEntityId: 'de_capacity', relationType: 'triggers', description: '触发产能评估' }
+          { targetEntityId: 'de_equipment_profile', relationType: 'references', description: '关联设备档案' }
         ],
-        lifecycleStates: ['draft', 'active', 'archived'],
+        lifecycleStates: ['active', 'inactive', 'fault'],
         currentState: 'active',
-        source: 'ERP系统',
-        updateFrequency: '每日',
-        relatedEntities: ['de_market_trend', 'de_capacity'],
-        businessCode: 'SALE_HISTORY',
-        owner: '销售部',
-        tags: ['销售', '历史数据', '预测']
-      },
-      {
-        id: 'de_market_trend',
-        name: '市场趋势数据',
-        description: '市场行情和竞争对手价格信息',
-        entityType: 'businessObject' as EntityType,
-        subtype: 'market_analysis',
-        fields: [
-          { name: 'trend_id', dataType: 'string', required: true, description: '趋势ID' },
-          { name: 'month', dataType: 'string', required: true, description: '月份' },
-          { name: 'growth_rate', dataType: 'number', required: true, description: '增长率' },
-          { name: 'season_index', dataType: 'number', required: true, description: '季节性指数' },
-          { name: 'competitor_price', dataType: 'number', required: false, description: '竞品价格' },
-          { name: 'market_share', dataType: 'number', required: true, description: '市场份额' }
-        ],
-        relations: [
-          { targetEntityId: 'de_sales_history', relationType: 'derived_from', description: '从历史销售数据派生' }
-        ],
-        lifecycleStates: ['draft', 'active', 'archived'],
-        currentState: 'active',
-        source: '市场调研',
-        updateFrequency: '每周',
-        relatedEntities: ['de_sales_history'],
-        businessCode: 'MKT_TREND',
-        owner: '市场部',
-        tags: ['市场', '趋势', '分析']
-      },
-      {
-        id: 'de_capacity',
-        name: '产能数据',
-        description: '各产线的产能配置和利用率',
-        entityType: 'asset' as EntityType,
-        subtype: 'production_line',
-        fields: [
-          { name: 'line_id', dataType: 'string', required: true, description: '产线编码' },
-          { name: 'line_name', dataType: 'string', required: true, description: '产线名称' },
-          { name: 'max_capacity', dataType: 'number', required: true, description: '最大产能' },
-          { name: 'current_load', dataType: 'number', required: true, description: '当前负荷' },
-          { name: 'utilization', dataType: 'number', required: true, description: '利用率' },
-          { name: 'available_hours', dataType: 'number', required: true, description: '可用工时' }
-        ],
-        relations: [
-          { targetEntityId: 'de_sales_history', relationType: 'references', description: '参考销售预测' },
-          { targetEntityId: 'de_market_trend', relationType: 'references', description: '参考市场趋势' }
-        ],
-        lifecycleStates: ['active', 'maintenance', 'offline'],
-        currentState: 'active',
-        source: 'MES系统',
+        source: 'IoT平台',
         updateFrequency: '实时',
-        relatedEntities: ['de_sales_history', 'de_market_trend'],
-        businessCode: 'CAP_DATA',
-        owner: '生产部',
-        tags: ['产能', '产线', '资产']
+        relatedEntities: ['de_equipment_profile'],
+        businessCode: 'SENSOR_RT',
+        owner: '设备管理部',
+        tags: ['IoT', '传感器', '实时数据']
+      },
+      {
+        id: 'de_equipment_profile',
+        name: '设备档案',
+        description: '设备基础信息、技术参数、维护历史',
+        entityType: 'asset' as EntityType,
+        subtype: 'production_equipment',
+        fields: [
+          { name: 'equipment_id', dataType: 'string', required: true, description: '设备唯一编码' },
+          { name: 'equipment_name', dataType: 'string', required: true, description: '设备名称' },
+          { name: 'model', dataType: 'string', required: true, description: '设备型号' },
+          { name: 'install_date', dataType: 'datetime', required: true, description: '安装日期' },
+          { name: 'warranty_period', dataType: 'number', required: true, description: '保修期(月)' },
+          { name: 'critical_level', dataType: 'string', required: true, description: '关键等级：A/B/C' }
+        ],
+        relations: [
+          { targetEntityId: 'de_sensor_realtime', relationType: 'triggers', description: '触发传感器监控' }
+        ],
+        lifecycleStates: ['new', 'running', 'maintenance', 'retired'],
+        currentState: 'running',
+        source: 'EAM系统',
+        updateFrequency: '每日',
+        relatedEntities: ['de_sensor_realtime'],
+        businessCode: 'EQ_PROFILE',
+        owner: '设备管理部',
+        tags: ['设备', '资产', '档案']
+      },
+      {
+        id: 'de_health_indicator',
+        name: '健康度指标',
+        description: '设备健康度评估结果',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'calculated_metric',
+        fields: [
+          { name: 'indicator_id', dataType: 'string', required: true, description: '指标ID' },
+          { name: 'equipment_id', dataType: 'string', required: true, description: '设备编码' },
+          { name: 'health_score', dataType: 'number', required: true, description: '健康度评分0-100' },
+          { name: 'assessment_time', dataType: 'datetime', required: true, description: '评估时间' },
+          { name: 'trend_direction', dataType: 'string', required: true, description: '趋势：上升/下降/平稳' }
+        ],
+        relations: [
+          { targetEntityId: 'de_equipment_profile', relationType: 'derived_from', description: '从设备数据计算' }
+        ],
+        lifecycleStates: ['draft', 'confirmed', 'archived'],
+        currentState: 'confirmed',
+        source: 'AI计算引擎',
+        updateFrequency: '每小时',
+        relatedEntities: ['de_equipment_profile', 'de_sensor_realtime'],
+        businessCode: 'HEALTH_IND',
+        owner: '设备管理部',
+        tags: ['健康度', '评估', 'AI计算']
       }
     ],
     behaviors: [
       {
-        id: 'bh_generate_forecast',
-        name: '生成销售预测',
-        description: '使用时间序列算法生成未来3个月销售预测',
-        actionType: 'batchCalculation' as ActionType,
-        batchConfig: {
-          targetEntities: ['de_sales_history', 'de_market_trend'],
-          calculationFormula: 'ARIMA(历史数据) + 趋势因子',
-          triggerCondition: '每月1日或手动触发'
-        },
-        inputParams: [
-          { name: 'history_months', dataType: 'number', required: true, description: '历史月份数' },
-          { name: 'forecast_months', dataType: 'number', required: true, description: '预测月份数' }
-        ],
-        outputParams: [
-          { name: 'forecast_result', dataType: 'object', required: true, description: '预测结果' },
-          { name: 'confidence', dataType: 'number', required: true, description: '置信度' }
-        ],
-        impactedEntities: [
-          { entityId: 'de_sales_history', impactType: 'read', description: '读取历史销售数据' },
-          { entityId: 'de_market_trend', impactType: 'read', description: '读取市场趋势数据' }
-        ],
-        relatedDataEntities: ['de_sales_history', 'de_market_trend'],
-        requiredRoles: ['销售分析师', '计划员'],
-        enableAudit: true,
-        tags: ['预测', '批量计算', '算法']
-      },
-      {
-        id: 'bh_evaluate_capacity',
-        name: '评估产能匹配度',
-        description: '对比预测需求与可用产能',
-        actionType: 'businessAction' as ActionType,
-        businessActionType: 'analyze',
-        inputParams: [
-          { name: 'forecast_demand', dataType: 'number', required: true, description: '预测需求量' },
-          { name: 'available_capacity', dataType: 'number', required: true, description: '可用产能' }
-        ],
-        outputParams: [
-          { name: 'match_ratio', dataType: 'number', required: true, description: '匹配率' },
-          { name: 'gap_analysis', dataType: 'object', required: true, description: '缺口分析' }
-        ],
-        impactedEntities: [
-          { entityId: 'de_capacity', impactType: 'read', description: '读取产能数据' },
-          { entityId: 'bh_generate_forecast', impactType: 'trigger', description: '使用预测结果' }
-        ],
-        relatedDataEntities: ['de_capacity'],
-        requiredRoles: ['计划员', '生产经理'],
-        enableAudit: true,
-        tags: ['产能', '评估', '分析']
-      },
-      {
-        id: 'bh_create_workorder',
-        name: '生成生产工单',
-        description: '根据排产计划创建生产工单',
+        id: 'bh_collect_sensor_data',
+        name: '采集传感器数据',
+        description: '从IoT平台实时采集设备传感器数据',
         actionType: 'crud' as ActionType,
         crudOperation: 'create',
         inputParams: [
-          { name: 'product_model', dataType: 'string', required: true, description: '产品型号' },
-          { name: 'quantity', dataType: 'number', required: true, description: '生产数量' },
-          { name: 'target_date', dataType: 'datetime', required: true, description: '目标日期' }
+          { name: 'equipment_ids', dataType: 'array', required: true, description: '设备编码列表' },
+          { name: 'metric_types', dataType: 'array', required: true, description: '指标类型列表' }
         ],
         outputParams: [
-          { name: 'work_order_id', dataType: 'string', required: true, description: '工单号' },
-          { name: 'status', dataType: 'string', required: true, description: '工单状态' }
+          { name: 'collected_count', dataType: 'number', required: true, description: '采集数据条数' },
+          { name: 'data_quality', dataType: 'string', required: true, description: '数据质量评估' }
         ],
         impactedEntities: [
-          { entityId: 'de_capacity', impactType: 'write', description: '更新产能负荷' }
+          { entityId: 'de_sensor_realtime', impactType: 'write', description: '写入传感器数据' }
         ],
-        relatedDataEntities: ['de_capacity'],
-        requiredRoles: ['计划员'],
+        relatedDataEntities: ['de_sensor_realtime'],
+        requiredRoles: ['IoT运维工程师'],
         enableAudit: true,
-        tags: ['工单', '创建', 'CRUD']
+        tags: ['数据采集', 'IoT', '实时']
+      },
+      {
+        id: 'bh_calc_health_score',
+        name: '计算健康度评分',
+        description: '基于传感器数据计算设备健康度',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_sensor_realtime', 'de_equipment_profile'],
+          calculationFormula: 'ML模型：f(vibration, temperature, current, age)',
+          triggerCondition: '每小时或手动触发'
+        },
+        inputParams: [
+          { name: 'time_window', dataType: 'number', required: true, description: '时间窗口(小时)' },
+          { name: 'algorithm_params', dataType: 'object', required: false, description: '算法参数' }
+        ],
+        outputParams: [
+          { name: 'health_scores', dataType: 'array', required: true, description: '健康度评分列表' },
+          { name: 'anomalies', dataType: 'array', required: true, description: '异常检测结果' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_sensor_realtime', impactType: 'read', description: '读取传感器数据' },
+          { entityId: 'de_health_indicator', impactType: 'write', description: '写入健康度结果' }
+        ],
+        relatedDataEntities: ['de_sensor_realtime', 'de_equipment_profile'],
+        requiredRoles: ['数据科学家', '设备工程师'],
+        enableAudit: true,
+        tags: ['健康度', 'AI计算', '批量']
       }
     ],
     businessRules: [
       {
-        id: 'br_forecast_accuracy',
-        name: '预测精度验证规则',
-        description: '验证预测模型的准确性',
+        id: 'br_sensor_data_quality',
+        name: '传感器数据质量规则',
+        description: '验证传感器数据的完整性和准确性',
         ruleType: 'validation' as const,
         ruleSubtype: 'validation' as RuleSubtype,
-        condition: '预测偏差率 > 20%',
-        conditionExpression: 'ABS(actual - forecast) / actual > 0.2',
-        action: '标记预测结果不可靠，触发人工审核',
+        condition: '数据缺失率>5% 或 异常值比例>10%',
+        conditionExpression: 'missing_rate > 0.05 OR outlier_rate > 0.1',
+        action: '标记数据质量异常，触发传感器检修',
         ruleAction: {
           actionType: 'warn',
-          actionConfig: { notifyChannels: ['email', 'sms'], approverRoles: ['销售经理'] },
-          actionDescription: '发送预警通知，要求人工审核预测结果'
-        },
-        priority: 1,
-        trigger: { triggerType: 'event', triggerEvent: 'forecast_completed' },
-        applicableEntities: ['de_sales_history', 'de_market_trend'],
-        enabled: true,
-        relatedBehaviors: ['bh_generate_forecast'],
-        tags: ['预测', '验证', '精度']
-      },
-      {
-        id: 'br_capacity_balance',
-        name: '产能平衡规则',
-        description: '确保各产线负荷均衡',
-        ruleType: 'constraint' as const,
-        ruleSubtype: 'constraint' as RuleSubtype,
-        condition: '单产线负荷率 > 90% 或 < 50%',
-        conditionExpression: 'utilization > 0.9 OR utilization < 0.5',
-        action: '触发产能重新分配',
-        ruleAction: {
-          actionType: 'autoProcess',
-          actionConfig: { autoRebalance: true, maxDeviation: 0.1 },
-          actionDescription: '自动重新分配产能负荷'
+          actionConfig: { severity: 'medium', notify: '设备维护组' },
+          actionDescription: '发送数据质量告警'
         },
         priority: 2,
-        trigger: { triggerType: 'threshold', thresholdValue: 0.9 },
-        applicableEntities: ['de_capacity'],
+        trigger: { triggerType: 'event', triggerEvent: 'data_collection_completed' },
+        applicableEntities: ['de_sensor_realtime'],
         enabled: true,
-        relatedBehaviors: ['bh_evaluate_capacity'],
-        tags: ['产能', '约束', '平衡']
+        relatedBehaviors: ['bh_collect_sensor_data'],
+        tags: ['数据质量', '验证', '传感器']
       },
       {
-        id: 'br_urgent_order',
-        name: '紧急插单规则',
-        description: 'VIP客户紧急订单处理规则',
-        ruleType: 'decision' as const,
-        ruleSubtype: 'risk' as RuleSubtype,
-        condition: '客户等级 = S级 AND 交期 < 3天',
-        conditionExpression: 'customer_level == "S" AND delivery_days < 3',
-        action: '暂停低优先级订单，优先排产',
+        id: 'br_health_threshold',
+        name: '健康度阈值规则',
+        description: '健康度低于阈值时触发预警',
+        ruleType: 'constraint' as const,
+        ruleSubtype: 'constraint' as RuleSubtype,
+        condition: '健康度评分<60分',
+        conditionExpression: 'health_score < 60',
+        action: '触发设备预警，生成检修建议',
         ruleAction: {
           actionType: 'autoProcess',
-          actionConfig: { suspendLowerPriority: true, escalationLevel: 'high' },
-          actionDescription: '自动暂停低优先级订单，触发紧急排产流程'
+          actionConfig: { workflow: 'maintenance_alert' },
+          actionDescription: '自动创建维护工单'
         },
         priority: 1,
-        trigger: { triggerType: 'event', triggerEvent: 'urgent_order_received' },
-        applicableEntities: ['de_sales_history', 'de_capacity'],
-        riskLevel: 'critical',
+        trigger: { triggerType: 'threshold', thresholdValue: 60 },
+        applicableEntities: ['de_health_indicator'],
+        riskLevel: 'high',
+        thresholdConfig: {
+          warningThreshold: 70,
+          criticalThreshold: 60,
+          autoActionThreshold: 50
+        },
         enabled: true,
-        relatedBehaviors: ['bh_create_workorder'],
-        tags: ['紧急', 'VIP', '风险']
+        relatedBehaviors: ['bh_calc_health_score'],
+        tags: ['健康度', '阈值', '预警']
       }
     ],
     businessProcesses: [
       {
-        id: 'bp_demand_forecast',
-        name: '需求预测流程',
-        description: '从数据收集到预测生成的完整流程',
-        nodes: [
-          { nodeId: 'start', nodeName: '开始', description: '流程启动', nodeType: 'start', order: 1 },
-          { nodeId: 'node1', nodeName: '数据清洗', description: '清洗历史销售数据', nodeType: 'system', order: 2, referencedEntityId: 'de_sales_history', entityType: 'dataEntity' },
-          { nodeId: 'node2', nodeName: '特征工程', description: '提取时间序列特征', nodeType: 'system', order: 3, referencedEntityId: 'de_market_trend', entityType: 'dataEntity' },
-          { nodeId: 'node3', nodeName: '模型训练', description: '训练预测模型', nodeType: 'system', order: 4, referencedEntityId: 'bh_generate_forecast', entityType: 'behavior' },
-          { nodeId: 'decision1', nodeName: '精度检查', description: '检查预测精度', nodeType: 'decision', order: 5, referencedEntityId: 'br_forecast_accuracy', entityType: 'businessRule', conditionalBranches: [{ branchId: 'b1', branchName: '通过', condition: '精度>=80%', conditionExpression: 'accuracy>=0.8', targetStepId: 'node5', isDefault: false }, { branchId: 'b2', branchName: '不通过', condition: '精度<80%', conditionExpression: 'accuracy<0.8', targetStepId: 'node3', isDefault: true }] },
-          { nodeId: 'node5', nodeName: '预测生成', description: '生成未来3个月预测', nodeType: 'human', order: 6, referencedEntityId: 'bh_generate_forecast', entityType: 'behavior', humanMachineConfig: { requiresHumanApproval: true, approverRoles: ['销售经理'], timeoutMinutes: 120, escalationRule: '自动升级至总监' } },
-          { nodeId: 'end', nodeName: '结束', description: '流程结束', nodeType: 'end', order: 7 }
+        id: 'bp_health_monitoring',
+        name: '设备健康监测流程',
+        description: '设备实时健康监测的完整流程',
+        processType: 'monitoring',
+        trigger: { type: 'schedule', scheduleExpression: '0 * * * *', description: '每小时执行' },
+        steps: [
+          { stepId: 's1', stepName: '采集数据', description: '从传感器采集数据', order: 1, nodeTypes: ['dataEntity'] },
+          { stepId: 's2', stepName: '质量检查', description: '验证数据质量', order: 2, nodeTypes: ['businessRule'] },
+          { stepId: 's3', stepName: '计算健康度', description: '执行AI模型计算', order: 3, nodeTypes: ['behavior'] },
+          { stepId: 's4', stepName: '阈值判断', description: '判断是否需要预警', order: 4, nodeTypes: ['businessRule'] }
         ],
-        trigger: '每月1日自动触发',
-        triggers: [{ type: 'schedule', scheduleExpression: '0 0 1 * *', description: '每月1日0点执行' }],
-        result: '生成月度销售预测报告',
-        resultDefinition: { successCriteria: '预测精度>=80%', outputEntities: ['de_sales_history'], failureHandling: '退回重新训练模型' },
-        relatedNodes: ['de_sales_history', 'de_market_trend', 'bh_generate_forecast', 'br_forecast_accuracy'],
-        enabled: true,
-        monitoringConfig: { slaMinutes: 240, alertThreshold: 0.8, keyMetrics: ['预测精度', '执行时间'] },
-        tags: ['预测', '月度', '自动化']
-      },
-      {
-        id: 'bp_scheduling',
-        name: '排产优化流程',
-        description: '基于预测结果生成最优排产计划',
-        nodes: [
-          { nodeId: 'start', nodeName: '开始', description: '流程启动', nodeType: 'start', order: 1 },
-          { nodeId: 'node1', nodeName: '需求汇总', description: '汇总各产品预测需求', nodeType: 'system', order: 2, referencedEntityId: 'de_sales_history', entityType: 'dataEntity' },
-          { nodeId: 'node2', nodeName: '产能评估', description: '评估可用产能', nodeType: 'system', order: 3, referencedEntityId: 'de_capacity', entityType: 'dataEntity' },
-          { nodeId: 'node3', nodeName: '缺口分析', description: '分析供需缺口', nodeType: 'system', order: 4, referencedEntityId: 'bh_evaluate_capacity', entityType: 'behavior' },
-          { nodeId: 'decision1', nodeName: '产能平衡检查', description: '检查产能平衡', nodeType: 'decision', order: 5, referencedEntityId: 'br_capacity_balance', entityType: 'businessRule', conditionalBranches: [{ branchId: 'b1', branchName: '平衡', condition: '负荷率50-90%', conditionExpression: 'utilization>=0.5 AND utilization<=0.9', targetStepId: 'node5', isDefault: false }, { branchId: 'b2', branchName: '不平衡', condition: '其他情况', conditionExpression: 'true', targetStepId: 'node6', isDefault: true }] },
-          { nodeId: 'node5', nodeName: '排产计算', description: '运行排产优化算法', nodeType: 'system', order: 6, referencedEntityId: 'bh_create_workorder', entityType: 'behavior' },
-          { nodeId: 'node6', nodeName: '重新分配', description: '重新分配产能', nodeType: 'system', order: 7 },
-          { nodeId: 'node7', nodeName: '计划发布', description: '发布排产计划', nodeType: 'human', order: 8, humanMachineConfig: { requiresHumanApproval: true, approverRoles: ['生产经理'], timeoutMinutes: 60 } },
-          { nodeId: 'end', nodeName: '结束', description: '流程结束', nodeType: 'end', order: 9 }
-        ],
-        trigger: '预测完成后',
-        triggers: [{ type: 'event', eventName: 'forecast_completed', eventSource: 'bp_demand_forecast', description: '预测流程完成后触发' }],
-        result: '生成周/日排产计划',
-        resultDefinition: { successCriteria: '所有订单有产能分配', outputEntities: ['de_capacity'], failureHandling: '标记缺货并通知销售' },
-        relatedNodes: ['de_capacity', 'bh_evaluate_capacity', 'bh_create_workorder', 'br_capacity_balance'],
-        enabled: true,
-        monitoringConfig: { slaMinutes: 120, alertThreshold: 0.9, keyMetrics: ['产能利用率', '订单满足率'] },
-        tags: ['排产', '优化', '产能']
+        result: '健康度评估报告',
+        resultDefinition: {
+          successCriteria: '数据完整且健康度计算成功',
+          failureHandling: '记录日志并通知运维'
+        },
+        tags: ['监测', '实时', '健康度']
       }
     ],
     relationships: [
-      { from: 'bh_generate_forecast', to: 'de_sales_history', type: 'uses', description: '读取历史数据' },
-      { from: 'bh_generate_forecast', to: 'de_market_trend', type: 'uses', description: '读取市场趋势' },
-      { from: 'bh_evaluate_capacity', to: 'de_capacity', type: 'uses', description: '读取产能数据' },
-      { from: 'bh_evaluate_capacity', to: 'bh_generate_forecast', type: 'uses', description: '使用预测结果' },
-      { from: 'br_forecast_accuracy', to: 'bh_generate_forecast', type: 'triggers', description: '验证预测' },
-      { from: 'br_capacity_balance', to: 'bh_evaluate_capacity', type: 'triggers', description: '检查产能' },
-      { from: 'br_urgent_order', to: 'bh_create_workorder', type: 'triggers', description: '影响工单' },
-      { from: 'bp_demand_forecast', to: 'bh_generate_forecast', type: 'implements', description: '实现预测' },
-      { from: 'bp_scheduling', to: 'bh_create_workorder', type: 'implements', description: '实现排产' },
-      { from: 'bp_scheduling', to: 'bp_demand_forecast', type: 'part_of', description: '依赖预测' }
+      // 数据实体之间的关系
+      { from: 'de_sensor_realtime', to: 'de_equipment_profile', type: 'belongs_to', description: '传感器数据属于设备' },
+      { from: 'de_health_indicator', to: 'de_equipment_profile', type: 'derived_from', description: '健康度从设备档案派生' },
+      { from: 'de_health_indicator', to: 'de_sensor_realtime', type: 'derived_from', description: '健康度从传感器数据计算' },
+      // 行为与数据实体的关系
+      { from: 'bh_collect_sensor_data', to: 'de_sensor_realtime', type: 'implements', description: '实现数据采集' },
+      { from: 'bh_collect_sensor_data', to: 'de_equipment_profile', type: 'uses', description: '使用设备配置' },
+      { from: 'bh_calc_health_score', to: 'de_sensor_realtime', type: 'uses', description: '读取传感器数据' },
+      { from: 'bh_calc_health_score', to: 'de_equipment_profile', type: 'uses', description: '读取设备信息' },
+      { from: 'bh_calc_health_score', to: 'de_health_indicator', type: 'implements', description: '生成健康度指标' },
+      // 规则与数据实体的关系
+      { from: 'br_sensor_data_quality', to: 'de_sensor_realtime', type: 'validates', description: '验证传感器数据' },
+      { from: 'br_sensor_data_quality', to: 'bh_collect_sensor_data', type: 'triggers', description: '触发重采' },
+      { from: 'br_health_threshold', to: 'de_health_indicator', type: 'triggers', description: '监控健康度' },
+      { from: 'br_health_threshold', to: 'bh_calc_health_score', type: 'depends_on', description: '依赖健康度计算' },
+      // 流程与行为/规则的关系
+      { from: 'bp_health_monitoring', to: 'bh_collect_sensor_data', type: 'implements', description: '流程实现采集' },
+      { from: 'bp_health_monitoring', to: 'br_sensor_data_quality', type: 'implements', description: '流程实现质检' },
+      { from: 'bp_health_monitoring', to: 'bh_calc_health_score', type: 'implements', description: '流程实现计算' },
+      { from: 'bp_health_monitoring', to: 'br_health_threshold', type: 'implements', description: '流程实现阈值判断' }
     ]
   },
-  // 库存优化与补货决策
+
+  // 场景1子链条2: RUL预测
   {
-    id: 'sem_inventory',
+    id: 'sem_rul_prediction',
+    code: 'RUL_PREDICTION',
+    name: '设备RUL预测',
+    englishName: 'Remaining Useful Life Prediction',
+    description: '设备预测性维护场景的第2个子链条：基于健康度趋势预测设备剩余使用寿命',
+    category: 'production',
+    dataEntities: [
+      {
+        id: 'de_health_history',
+        name: '健康度历史',
+        description: '设备健康度变化历史记录',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'time_series_data',
+        fields: [
+          { name: 'history_id', dataType: 'string', required: true, description: '记录ID' },
+          { name: 'equipment_id', dataType: 'string', required: true, description: '设备编码' },
+          { name: 'health_score', dataType: 'number', required: true, description: '健康度' },
+          { name: 'record_time', dataType: 'datetime', required: true, description: '记录时间' }
+        ],
+        relations: [],
+        lifecycleStates: ['active', 'archived'],
+        currentState: 'active',
+        source: '健康度计算',
+        updateFrequency: '每小时',
+        relatedEntities: [],
+        businessCode: 'HEALTH_HIST',
+        owner: '设备管理部',
+        tags: ['历史', '健康度', '时序']
+      },
+      {
+        id: 'de_rul_prediction',
+        name: 'RUL预测结果',
+        description: '设备剩余使用寿命预测',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'prediction_result',
+        fields: [
+          { name: 'prediction_id', dataType: 'string', required: true, description: '预测ID' },
+          { name: 'equipment_id', dataType: 'string', required: true, description: '设备编码' },
+          { name: 'rul_days', dataType: 'number', required: true, description: '剩余寿命天数' },
+          { name: 'confidence', dataType: 'number', required: true, description: '置信度' },
+          { name: 'predicted_at', dataType: 'datetime', required: true, description: '预测时间' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'confirmed'],
+        currentState: 'confirmed',
+        source: 'RUL预测模型',
+        updateFrequency: '每日',
+        relatedEntities: [],
+        businessCode: 'RUL_PRED',
+        owner: '设备管理部',
+        tags: ['RUL', '预测', '寿命']
+      }
+    ],
+    behaviors: [
+      {
+        id: 'bh_predict_rul',
+        name: 'RUL预测计算',
+        description: '使用生存分析模型预测设备剩余寿命',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_health_history'],
+          calculationFormula: 'Weibull生存分析 + LSTM趋势预测',
+          triggerCondition: '每日凌晨2点'
+        },
+        inputParams: [
+          { name: 'history_days', dataType: 'number', required: true, description: '历史数据天数' }
+        ],
+        outputParams: [
+          { name: 'rul_days', dataType: 'number', required: true, description: '剩余寿命' },
+          { name: 'confidence', dataType: 'number', required: true, description: '置信度' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_health_history', impactType: 'read', description: '读取历史' },
+          { entityId: 'de_rul_prediction', impactType: 'write', description: '写入预测' }
+        ],
+        relatedDataEntities: ['de_health_history'],
+        requiredRoles: ['数据科学家'],
+        enableAudit: true,
+        tags: ['RUL', '预测', 'AI']
+      }
+    ],
+    businessRules: [
+      {
+        id: 'br_rul_critical',
+        name: 'RUL临界值规则',
+        description: 'RUL低于30天时触发紧急维护',
+        ruleType: 'constraint' as const,
+        ruleSubtype: 'constraint' as RuleSubtype,
+        condition: 'RUL<30天',
+        conditionExpression: 'rul_days < 30',
+        action: '触发紧急维护流程',
+        ruleAction: {
+          actionType: 'autoProcess',
+          actionConfig: { priority: 'high' },
+          actionDescription: '创建紧急维护工单'
+        },
+        priority: 1,
+        trigger: { triggerType: 'threshold', thresholdValue: 30 },
+        applicableEntities: ['de_rul_prediction'],
+        riskLevel: 'critical',
+        enabled: true,
+        relatedBehaviors: ['bh_predict_rul'],
+        tags: ['RUL', '临界', '紧急']
+      }
+    ],
+    businessProcesses: [
+      {
+        id: 'bp_rul_prediction',
+        name: 'RUL预测流程',
+        description: '设备剩余寿命预测流程',
+        processType: 'calculation',
+        trigger: { type: 'schedule', scheduleExpression: '0 2 * * *', description: '每日凌晨2点' },
+        steps: [
+          { stepId: 's1', stepName: '获取历史', description: '读取健康度历史', order: 1, nodeTypes: ['dataEntity'] },
+          { stepId: 's2', stepName: 'RUL预测', description: '执行预测模型', order: 2, nodeTypes: ['behavior'] },
+          { stepId: 's3', stepName: '临界判断', description: '判断是否需维护', order: 3, nodeTypes: ['businessRule'] }
+        ],
+        result: 'RUL预测报告',
+        resultDefinition: { successCriteria: '预测完成', failureHandling: '重试' },
+        tags: ['RUL', '预测']
+      }
+    ],
+    relationships: [
+      // 数据实体之间的关系
+      { from: 'de_rul_prediction', to: 'de_health_history', type: 'derived_from', description: 'RUL从历史健康度派生' },
+      // 行为与数据实体的关系
+      { from: 'bh_predict_rul', to: 'de_health_history', type: 'uses', description: '读取历史数据' },
+      { from: 'bh_predict_rul', to: 'de_rul_prediction', type: 'implements', description: '生成预测结果' },
+      // 规则与数据实体的关系
+      { from: 'br_rul_critical', to: 'de_rul_prediction', type: 'triggers', description: '监控RUL临界值' },
+      { from: 'br_rul_critical', to: 'bh_predict_rul', type: 'depends_on', description: '依赖预测结果' },
+      // 流程与行为/规则的关系
+      { from: 'bp_rul_prediction', to: 'de_health_history', type: 'uses', description: '流程使用历史数据' },
+      { from: 'bp_rul_prediction', to: 'bh_predict_rul', type: 'implements', description: '流程实现预测' },
+      { from: 'bp_rul_prediction', to: 'br_rul_critical', type: 'implements', description: '流程实现临界判断' }
+    ]
+  },
+
+  // ==================== 场景2: 设备故障维修时间预测 ====================
+  {
+    id: 'sem_repair_time_pred',
+    code: 'REPAIR_TIME_PRED',
+    name: '维修工时预测',
+    englishName: 'Repair Time Prediction',
+    description: '设备故障维修时间预测场景的第1个子链条：基于故障类型和历史数据预测维修工时',
+    category: 'production',
+    dataEntities: [
+      {
+        id: 'de_failure_record',
+        name: '故障记录',
+        description: '设备故障历史记录',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'failure_record',
+        fields: [
+          { name: 'failure_id', dataType: 'string', required: true, description: '故障ID' },
+          { name: 'equipment_id', dataType: 'string', required: true, description: '设备编码' },
+          { name: 'failure_type', dataType: 'string', required: true, description: '故障类型' },
+          { name: 'severity', dataType: 'string', required: true, description: '严重程度' },
+          { name: 'occurrence_time', dataType: 'datetime', required: true, description: '发生时间' }
+        ],
+        relations: [],
+        lifecycleStates: ['open', 'processing', 'closed'],
+        currentState: 'open',
+        source: '设备管理系统',
+        updateFrequency: '实时',
+        relatedEntities: [],
+        businessCode: 'FAIL_REC',
+        owner: '维修部',
+        tags: ['故障', '记录']
+      },
+      {
+        id: 'de_repair_history',
+        name: '维修历史',
+        description: '历史维修工单记录',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'maintenance_record',
+        fields: [
+          { name: 'repair_id', dataType: 'string', required: true, description: '维修ID' },
+          { name: 'failure_type', dataType: 'string', required: true, description: '故障类型' },
+          { name: 'actual_hours', dataType: 'number', required: true, description: '实际工时' },
+          { name: 'technician_level', dataType: 'string', required: true, description: '技师等级' }
+        ],
+        relations: [],
+        lifecycleStates: ['archived'],
+        currentState: 'archived',
+        source: 'EAM系统',
+        updateFrequency: '每日',
+        relatedEntities: [],
+        businessCode: 'REP_HIST',
+        owner: '维修部',
+        tags: ['维修', '历史']
+      }
+    ],
+    behaviors: [
+      {
+        id: 'bh_predict_repair_time',
+        name: '预测维修工时',
+        description: '基于故障类型预测维修所需工时',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_failure_record', 'de_repair_history'],
+          calculationFormula: '回归模型：f(故障类型, 严重程度, 设备年龄)',
+          triggerCondition: '故障发生时'
+        },
+        inputParams: [
+          { name: 'failure_id', dataType: 'string', required: true, description: '故障记录ID' }
+        ],
+        outputParams: [
+          { name: 'predicted_hours', dataType: 'number', required: true, description: '预测工时' },
+          { name: 'confidence', dataType: 'number', required: true, description: '置信度' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_failure_record', impactType: 'read', description: '读取故障' },
+          { entityId: 'de_repair_history', impactType: 'read', description: '读取历史' }
+        ],
+        relatedDataEntities: ['de_failure_record', 'de_repair_history'],
+        requiredRoles: ['维修工程师'],
+        enableAudit: true,
+        tags: ['预测', '工时', '维修']
+      }
+    ],
+    businessRules: [
+      {
+        id: 'br_long_repair',
+        name: '长工时预警规则',
+        description: '预测工时超过8小时触发预警',
+        ruleType: 'constraint' as const,
+        ruleSubtype: 'constraint' as RuleSubtype,
+        condition: '预测工时>8小时',
+        conditionExpression: 'predicted_hours > 8',
+        action: '安排备用设备，协调多人维修',
+        ruleAction: {
+          actionType: 'warn',
+          actionConfig: { notify: '生产经理' },
+          actionDescription: '长工时预警'
+        },
+        priority: 2,
+        trigger: { triggerType: 'threshold', thresholdValue: 8 },
+        applicableEntities: ['de_failure_record'],
+        enabled: true,
+        relatedBehaviors: ['bh_predict_repair_time'],
+        tags: ['工时', '预警', '维修']
+      }
+    ],
+    businessProcesses: [
+      {
+        id: 'bp_repair_planning',
+        name: '维修计划流程',
+        description: '故障维修计划制定流程',
+        processType: 'planning',
+        trigger: { type: 'event', eventName: 'failure_reported', eventSource: '设备系统', description: '故障上报时' },
+        steps: [
+          { stepId: 's1', stepName: '故障登记', description: '记录故障信息', order: 1, nodeTypes: ['dataEntity'] },
+          { stepId: 's2', stepName: '工时预测', description: '预测维修工时', order: 2, nodeTypes: ['behavior'] },
+          { stepId: 's3', stepName: '资源调配', description: '安排人员和备件', order: 3, nodeTypes: ['businessRule'] }
+        ],
+        result: '维修计划',
+        resultDefinition: { successCriteria: '计划制定完成', failureHandling: '升级处理' },
+        tags: ['维修', '计划']
+      }
+    ],
+    relationships: [
+      // 数据实体之间的关系
+      { from: 'de_failure_record', to: 'de_repair_history', type: 'references', description: '故障关联历史' },
+      // 行为与数据实体的关系
+      { from: 'bh_predict_repair_time', to: 'de_failure_record', type: 'uses', description: '读取故障信息' },
+      { from: 'bh_predict_repair_time', to: 'de_repair_history', type: 'uses', description: '使用历史数据' },
+      // 规则与数据实体的关系
+      { from: 'br_long_repair', to: 'de_failure_record', type: 'triggers', description: '监控故障工时' },
+      { from: 'br_long_repair', to: 'bh_predict_repair_time', type: 'depends_on', description: '依赖预测结果' },
+      // 流程与行为/规则的关系
+      { from: 'bp_repair_planning', to: 'de_failure_record', type: 'uses', description: '流程使用故障记录' },
+      { from: 'bp_repair_planning', to: 'bh_predict_repair_time', type: 'implements', description: '流程实现工时预测' },
+      { from: 'bp_repair_planning', to: 'br_long_repair', type: 'implements', description: '流程实现资源调配' }
+    ]
+  },
+
+  // ==================== 场景3: 产销匹配协同 ====================
+  {
+    id: 'sem_inventory_optimization',
     code: 'INVENTORY_OPTIMIZATION',
     name: '库存优化与补货决策',
     englishName: 'Inventory Optimization & Replenishment',
@@ -865,12 +1086,22 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     relationships: [
       { from: 'bh_calculate_replenishment', to: 'de_inventory', type: 'uses', description: '读取库存' },
       { from: 'bh_calculate_replenishment', to: 'de_turnover', type: 'uses', description: '读取周转率' },
+      { from: 'bh_calculate_replenishment', to: 'de_supplier', type: 'uses', description: '获取供应商信息' },
       { from: 'bh_create_pr', to: 'de_supplier', type: 'uses', description: '选择供应商' },
+      { from: 'bh_create_pr', to: 'de_inventory', type: 'uses', description: '检查库存' },
       { from: 'br_safety_warning', to: 'de_inventory', type: 'triggers', description: '监控库存' },
       { from: 'br_safety_warning', to: 'bh_calculate_replenishment', type: 'triggers', description: '触发补货' },
+      { from: 'br_overstock', to: 'de_inventory', type: 'triggers', description: '监控积压' },
+      { from: 'br_overstock', to: 'bh_create_pr', type: 'blocks', description: '阻止采购' },
+      { from: 'br_eoq', to: 'de_turnover', type: 'uses', description: '使用ABC分类' },
       { from: 'br_eoq', to: 'bh_create_pr', type: 'triggers', description: '影响采购量' },
+      { from: 'bp_replenishment', to: 'de_inventory', type: 'uses', description: '使用库存数据' },
+      { from: 'bp_replenishment', to: 'de_supplier', type: 'uses', description: '使用供应商' },
       { from: 'bp_replenishment', to: 'bh_calculate_replenishment', type: 'implements', description: '实现补货' },
-      { from: 'bp_replenishment', to: 'br_safety_warning', type: 'implements', description: '实现预警' }
+      { from: 'bp_replenishment', to: 'bh_create_pr', type: 'implements', description: '实现采购' },
+      { from: 'bp_replenishment', to: 'br_safety_warning', type: 'implements', description: '实现预警' },
+      { from: 'bp_replenishment', to: 'br_overstock', type: 'implements', description: '实现积压检查' },
+      { from: 'bp_replenishment', to: 'br_eoq', type: 'implements', description: '实现经济批量' }
     ]
   },
   // 客户信用与风险评估
@@ -1110,9 +1341,23 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
       { from: 'bh_calc_credit', to: 'de_ar', type: 'uses', description: '读取应收款' },
       { from: 'bh_calc_credit', to: 'de_transaction', type: 'uses', description: '读取交易' },
       { from: 'bh_adjust_limit', to: 'de_customer', type: 'uses', description: '更新额度' },
+      { from: 'bh_adjust_limit', to: 'de_ar', type: 'uses', description: '参考应收款' },
+      { from: 'br_credit_adjust', to: 'de_customer', type: 'triggers', description: '监控客户' },
+      { from: 'br_credit_adjust', to: 'de_ar', type: 'triggers', description: '监控应收款' },
       { from: 'br_credit_adjust', to: 'bh_calc_credit', type: 'triggers', description: '基于评分' },
+      { from: 'br_credit_adjust', to: 'bh_adjust_limit', type: 'triggers', description: '触发调整' },
+      { from: 'br_new_customer', to: 'de_customer', type: 'triggers', description: '监控新客户' },
+      { from: 'br_new_customer', to: 'bh_adjust_limit', type: 'triggers', description: '触发授信' },
+      { from: 'br_high_risk', to: 'de_customer', type: 'triggers', description: '监控客户' },
       { from: 'br_high_risk', to: 'de_ar', type: 'triggers', description: '监控逾期' },
-      { from: 'bp_credit_assess', to: 'bh_calc_credit', type: 'implements', description: '实现评估' }
+      { from: 'br_high_risk', to: 'bh_calc_credit', type: 'triggers', description: '触发评估' },
+      { from: 'bp_credit_assess', to: 'de_customer', type: 'uses', description: '使用客户数据' },
+      { from: 'bp_credit_assess', to: 'de_ar', type: 'uses', description: '使用应收款' },
+      { from: 'bp_credit_assess', to: 'bh_calc_credit', type: 'implements', description: '实现评估' },
+      { from: 'bp_credit_assess', to: 'bh_adjust_limit', type: 'implements', description: '实现调整' },
+      { from: 'bp_credit_assess', to: 'br_credit_adjust', type: 'implements', description: '实现评级调整' },
+      { from: 'bp_credit_assess', to: 'br_high_risk', type: 'implements', description: '实现风险检查' },
+      { from: 'bp_credit_assess', to: 'br_new_customer', type: 'implements', description: '实现新客户授信' }
     ]
   },
   // 更多业务释义...
@@ -1320,10 +1565,22 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     relationships: [
       { from: 'bh_gen_trace_report', to: 'de_batch_trace', type: 'uses', description: '读取批次' },
       { from: 'bh_gen_trace_report', to: 'de_qc_record', type: 'uses', description: '读取检测' },
+      { from: 'bh_gen_trace_report', to: 'de_defect', type: 'uses', description: '使用不良记录' },
       { from: 'bh_create_ticket', to: 'de_defect', type: 'uses', description: '记录不良' },
+      { from: 'bh_create_ticket', to: 'de_qc_record', type: 'uses', description: '使用检测数据' },
       { from: 'br_quality_alert', to: 'de_qc_record', type: 'triggers', description: '监控检测' },
+      { from: 'br_quality_alert', to: 'de_defect', type: 'triggers', description: '监控不良' },
+      { from: 'br_quality_alert', to: 'bh_gen_trace_report', type: 'triggers', description: '触发追溯' },
       { from: 'br_batch_isolation', to: 'de_batch_trace', type: 'triggers', description: '冻结批次' },
-      { from: 'bp_quality_handle', to: 'bh_gen_trace_report', type: 'implements', description: '实现追溯' }
+      { from: 'br_batch_isolation', to: 'de_qc_record', type: 'triggers', description: '监控检测' },
+      { from: 'br_batch_isolation', to: 'bh_create_ticket', type: 'triggers', description: '触发工单' },
+      { from: 'bp_quality_handle', to: 'de_qc_record', type: 'uses', description: '使用检测数据' },
+      { from: 'bp_quality_handle', to: 'de_batch_trace', type: 'uses', description: '使用批次数据' },
+      { from: 'bp_quality_handle', to: 'de_defect', type: 'uses', description: '使用不良记录' },
+      { from: 'bp_quality_handle', to: 'bh_gen_trace_report', type: 'implements', description: '实现追溯' },
+      { from: 'bp_quality_handle', to: 'bh_create_ticket', type: 'implements', description: '实现工单创建' },
+      { from: 'bp_quality_handle', to: 'br_quality_alert', type: 'implements', description: '实现警报' },
+      { from: 'bp_quality_handle', to: 'br_batch_isolation', type: 'implements', description: '实现隔离' }
     ]
   },
   // 生产排程与产能优化
@@ -1538,10 +1795,19 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     relationships: [
       { from: 'bh_schedule_optimize', to: 'de_production_order', type: 'uses', description: '读取订单' },
       { from: 'bh_schedule_optimize', to: 'de_work_center', type: 'uses', description: '读取产能' },
+      { from: 'bh_schedule_optimize', to: 'de_equipment', type: 'uses', description: '读取设备' },
       { from: 'bh_capacity_adjust', to: 'de_work_center', type: 'uses', description: '调整产能' },
+      { from: 'bh_capacity_adjust', to: 'de_equipment', type: 'uses', description: '调整设备' },
       { from: 'br_oee_threshold', to: 'de_equipment', type: 'triggers', description: '监控OEE' },
+      { from: 'br_oee_threshold', to: 'bh_capacity_adjust', type: 'triggers', description: '触发调整' },
       { from: 'br_delivery_constraint', to: 'de_production_order', type: 'triggers', description: '检查交付' },
-      { from: 'bp_daily_scheduling', to: 'bh_schedule_optimize', type: 'implements', description: '实现排程' }
+      { from: 'br_delivery_constraint', to: 'bh_schedule_optimize', type: 'triggers', description: '触发排程调整' },
+      { from: 'bp_daily_scheduling', to: 'de_production_order', type: 'uses', description: '使用订单' },
+      { from: 'bp_daily_scheduling', to: 'de_work_center', type: 'uses', description: '使用产能' },
+      { from: 'bp_daily_scheduling', to: 'bh_schedule_optimize', type: 'implements', description: '实现排程' },
+      { from: 'bp_daily_scheduling', to: 'bh_capacity_adjust', type: 'implements', description: '实现调整' },
+      { from: 'bp_daily_scheduling', to: 'br_oee_threshold', type: 'implements', description: '实现OEE监控' },
+      { from: 'bp_daily_scheduling', to: 'br_delivery_constraint', type: 'implements', description: '实现交付检查' }
     ]
   },
   // 物流交付追踪
@@ -1760,10 +2026,23 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     ],
     relationships: [
       { from: 'bh_track_shipment', to: 'de_shipment', type: 'uses', description: '读取发货单' },
+      { from: 'bh_track_shipment', to: 'de_delivery_event', type: 'uses', description: '读取交付事件' },
+      { from: 'bh_track_shipment', to: 'de_carrier', type: 'uses', description: '使用承运商' },
       { from: 'bh_carrier_eval', to: 'de_carrier', type: 'uses', description: '读取承运商' },
+      { from: 'bh_carrier_eval', to: 'de_shipment', type: 'uses', description: '读取发货历史' },
       { from: 'br_delay_alert', to: 'de_shipment', type: 'triggers', description: '监控交付' },
+      { from: 'br_delay_alert', to: 'de_delivery_event', type: 'triggers', description: '监控事件' },
+      { from: 'br_delay_alert', to: 'bh_track_shipment', type: 'triggers', description: '触发追踪' },
       { from: 'br_carrier_select', to: 'de_carrier', type: 'triggers', description: '选择承运商' },
-      { from: 'bp_delivery_mgmt', to: 'bh_track_shipment', type: 'implements', description: '实现追踪' }
+      { from: 'br_carrier_select', to: 'de_shipment', type: 'triggers', description: '监控发货' },
+      { from: 'br_carrier_select', to: 'bh_carrier_eval', type: 'triggers', description: '触发评估' },
+      { from: 'bp_delivery_mgmt', to: 'de_shipment', type: 'uses', description: '使用发货单' },
+      { from: 'bp_delivery_mgmt', to: 'de_carrier', type: 'uses', description: '使用承运商' },
+      { from: 'bp_delivery_mgmt', to: 'de_delivery_event', type: 'uses', description: '使用交付事件' },
+      { from: 'bp_delivery_mgmt', to: 'bh_track_shipment', type: 'implements', description: '实现追踪' },
+      { from: 'bp_delivery_mgmt', to: 'bh_carrier_eval', type: 'implements', description: '实现评估' },
+      { from: 'bp_delivery_mgmt', to: 'br_delay_alert', type: 'implements', description: '实现延迟预警' },
+      { from: 'bp_delivery_mgmt', to: 'br_carrier_select', type: 'implements', description: '实现承运商选择' }
     ]
   },
   // 财务成本核算
@@ -1981,10 +2260,23 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     ],
     relationships: [
       { from: 'bh_calc_std_cost', to: 'de_product_cost', type: 'uses', description: '读取产品成本' },
+      { from: 'bh_calc_std_cost', to: 'de_cost_item', type: 'uses', description: '读取成本项目' },
+      { from: 'bh_calc_std_cost', to: 'de_cost_center', type: 'uses', description: '读取成本中心' },
       { from: 'bh_cost_allocation', to: 'de_cost_item', type: 'uses', description: '读取成本项目' },
+      { from: 'bh_cost_allocation', to: 'de_cost_center', type: 'uses', description: '读取成本中心' },
+      { from: 'bh_cost_allocation', to: 'de_product_cost', type: 'uses', description: '更新产品成本' },
       { from: 'br_cost_variance', to: 'de_product_cost', type: 'triggers', description: '监控差异' },
+      { from: 'br_cost_variance', to: 'bh_calc_std_cost', type: 'triggers', description: '触发成本计算' },
       { from: 'br_budget_control', to: 'de_cost_center', type: 'triggers', description: '控制预算' },
-      { from: 'bp_monthly_closing', to: 'bh_cost_allocation', type: 'implements', description: '实现分摊' }
+      { from: 'br_budget_control', to: 'de_cost_item', type: 'triggers', description: '监控支出' },
+      { from: 'br_budget_control', to: 'bh_cost_allocation', type: 'triggers', description: '触发分摊检查' },
+      { from: 'bp_monthly_closing', to: 'de_cost_center', type: 'uses', description: '使用成本中心' },
+      { from: 'bp_monthly_closing', to: 'de_cost_item', type: 'uses', description: '使用成本项目' },
+      { from: 'bp_monthly_closing', to: 'de_product_cost', type: 'uses', description: '使用产品成本' },
+      { from: 'bp_monthly_closing', to: 'bh_calc_std_cost', type: 'implements', description: '实现成本计算' },
+      { from: 'bp_monthly_closing', to: 'bh_cost_allocation', type: 'implements', description: '实现分摊' },
+      { from: 'bp_monthly_closing', to: 'br_cost_variance', type: 'implements', description: '实现差异检查' },
+      { from: 'bp_monthly_closing', to: 'br_budget_control', type: 'implements', description: '实现预算控制' }
     ]
   },
   // 需求计划与MRP
@@ -2197,10 +2489,20 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     relationships: [
       { from: 'bh_mrp_calc', to: 'de_demand_plan', type: 'uses', description: '读取需求' },
       { from: 'bh_mrp_calc', to: 'de_bom', type: 'uses', description: '读取BOM' },
+      { from: 'bh_mrp_calc', to: 'de_mrp_result', type: 'implements', description: '生成MRP结果' },
       { from: 'bh_plan_adjust', to: 'de_demand_plan', type: 'uses', description: '调整计划' },
+      { from: 'bh_plan_adjust', to: 'de_mrp_result', type: 'uses', description: '调整MRP结果' },
       { from: 'br_shortage_alert', to: 'de_mrp_result', type: 'triggers', description: '监控短缺' },
+      { from: 'br_shortage_alert', to: 'bh_mrp_calc', type: 'triggers', description: '触发MRP重算' },
       { from: 'br_plan_freeze', to: 'de_demand_plan', type: 'triggers', description: '控制变更' },
-      { from: 'bp_demand_to_supply', to: 'bh_mrp_calc', type: 'implements', description: '实现MRP' }
+      { from: 'br_plan_freeze', to: 'bh_plan_adjust', type: 'triggers', description: '触发冻结检查' },
+      { from: 'bp_demand_to_supply', to: 'de_demand_plan', type: 'uses', description: '使用需求计划' },
+      { from: 'bp_demand_to_supply', to: 'de_bom', type: 'uses', description: '使用BOM' },
+      { from: 'bp_demand_to_supply', to: 'de_mrp_result', type: 'uses', description: '使用MRP结果' },
+      { from: 'bp_demand_to_supply', to: 'bh_mrp_calc', type: 'implements', description: '实现MRP' },
+      { from: 'bp_demand_to_supply', to: 'bh_plan_adjust', type: 'implements', description: '实现计划调整' },
+      { from: 'bp_demand_to_supply', to: 'br_shortage_alert', type: 'implements', description: '实现短缺预警' },
+      { from: 'bp_demand_to_supply', to: 'br_plan_freeze', type: 'implements', description: '实现冻结控制' }
     ]
   },
   // 客户满意度管理
@@ -2386,10 +2688,19 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     ],
     relationships: [
       { from: 'bh_calc_csat', to: 'de_satisfaction_survey', type: 'uses', description: '读取调研' },
+      { from: 'bh_calc_csat', to: 'de_complaint', type: 'uses', description: '使用投诉数据' },
       { from: 'bh_handle_complaint', to: 'de_complaint', type: 'uses', description: '处理投诉' },
+      { from: 'bh_handle_complaint', to: 'de_satisfaction_survey', type: 'uses', description: '更新满意度' },
       { from: 'br_csat_drop', to: 'de_satisfaction_survey', type: 'triggers', description: '监控满意度' },
+      { from: 'br_csat_drop', to: 'bh_calc_csat', type: 'triggers', description: '触发满意度计算' },
       { from: 'br_complaint_escalation', to: 'de_complaint', type: 'triggers', description: '监控投诉' },
-      { from: 'bp_complaint_handling', to: 'bh_handle_complaint', type: 'implements', description: '实现处理' }
+      { from: 'br_complaint_escalation', to: 'bh_handle_complaint', type: 'triggers', description: '触发处理' },
+      { from: 'bp_complaint_handling', to: 'de_complaint', type: 'uses', description: '使用投诉' },
+      { from: 'bp_complaint_handling', to: 'de_satisfaction_survey', type: 'uses', description: '使用调研' },
+      { from: 'bp_complaint_handling', to: 'bh_handle_complaint', type: 'implements', description: '实现处理' },
+      { from: 'bp_complaint_handling', to: 'bh_calc_csat', type: 'implements', description: '实现满意度计算' },
+      { from: 'bp_complaint_handling', to: 'br_complaint_escalation', type: 'implements', description: '实现升级' },
+      { from: 'bp_complaint_handling', to: 'br_csat_drop', type: 'implements', description: '实现满意度监控' }
     ]
   },
   // 设备预测性维护
@@ -2604,13 +2915,653 @@ const ATOMIC_SEMANTICS: AtomicSemantic[] = [
     ],
     relationships: [
       { from: 'bh_predict_failure', to: 'de_sensor_data', type: 'uses', description: '读取传感器' },
+      { from: 'bh_predict_failure', to: 'de_failure_prediction', type: 'implements', description: '生成预测' },
       { from: 'bh_create_maintenance', to: 'de_failure_prediction', type: 'uses', description: '读取预测' },
+      { from: 'bh_create_maintenance', to: 'de_maintenance_task', type: 'implements', description: '创建维护任务' },
+      { from: 'bh_create_maintenance', to: 'de_sensor_data', type: 'uses', description: '参考传感器数据' },
       { from: 'br_failure_risk', to: 'de_failure_prediction', type: 'triggers', description: '监控风险' },
+      { from: 'br_failure_risk', to: 'de_sensor_data', type: 'triggers', description: '监控传感器' },
+      { from: 'br_failure_risk', to: 'bh_predict_failure', type: 'triggers', description: '触发预测' },
       { from: 'br_preventive_action', to: 'de_failure_prediction', type: 'triggers', description: '触发维护' },
-      { from: 'bp_predictive_maintenance', to: 'bh_predict_failure', type: 'implements', description: '实现预测' }
+      { from: 'br_preventive_action', to: 'bh_create_maintenance', type: 'triggers', description: '创建任务' },
+      { from: 'bp_predictive_maintenance', to: 'de_sensor_data', type: 'uses', description: '使用传感器' },
+      { from: 'bp_predictive_maintenance', to: 'de_failure_prediction', type: 'uses', description: '使用预测' },
+      { from: 'bp_predictive_maintenance', to: 'de_maintenance_task', type: 'uses', description: '使用维护任务' },
+      { from: 'bp_predictive_maintenance', to: 'bh_predict_failure', type: 'implements', description: '实现预测' },
+      { from: 'bp_predictive_maintenance', to: 'bh_create_maintenance', type: 'implements', description: '实现任务创建' },
+      { from: 'bp_predictive_maintenance', to: 'br_failure_risk', type: 'implements', description: '实现风险监控' },
+      { from: 'bp_predictive_maintenance', to: 'br_preventive_action', type: 'implements', description: '实现预防维护' }
+    ]
+  },
+
+  // ==================== 场景3: 产销匹配协同 ====================
+  {
+    id: 'sem_demand_forecast',
+    code: 'DEMAND_FORECAST',
+    name: '需求预测分析',
+    englishName: 'Demand Forecast Analysis',
+    description: '产销匹配协同场景的第1个子链条：基于历史订单和市场趋势预测未来需求',
+    category: 'sales',
+    dataEntities: [
+      {
+        id: 'de_order_history',
+        name: '订单历史数据',
+        description: '历史销售订单记录',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'order_record',
+        fields: [
+          { name: 'order_id', dataType: 'string', required: true, description: '订单号' },
+          { name: 'customer_id', dataType: 'string', required: true, description: '客户编码' },
+          { name: 'product_model', dataType: 'string', required: true, description: '产品型号' },
+          { name: 'quantity', dataType: 'number', required: true, description: '数量' },
+          { name: 'order_date', dataType: 'datetime', required: true, description: '订单日期' },
+          { name: 'delivery_date', dataType: 'datetime', required: true, description: '交付日期' }
+        ],
+        relations: [
+          { targetEntityId: 'de_customer_profile', relationType: 'references', description: '关联客户' }
+        ],
+        lifecycleStates: ['active', 'archived'],
+        currentState: 'active',
+        source: 'ERP系统',
+        updateFrequency: '实时',
+        relatedEntities: ['de_customer_profile'],
+        businessCode: 'ORD_HIST',
+        owner: '销售部',
+        tags: ['订单', '历史', '销售']
+      },
+      {
+        id: 'de_customer_profile',
+        name: '客户档案',
+        description: '客户基础信息和分级',
+        entityType: 'organization' as EntityType,
+        subtype: 'customer',
+        fields: [
+          { name: 'customer_id', dataType: 'string', required: true, description: '客户编码' },
+          { name: 'customer_name', dataType: 'string', required: true, description: '客户名称' },
+          { name: 'customer_level', dataType: 'string', required: true, description: '客户等级：A/B/C' },
+          { name: 'industry', dataType: 'string', required: true, description: '所属行业' },
+          { name: 'credit_limit', dataType: 'number', required: true, description: '信用额度' }
+        ],
+        relations: [
+          { targetEntityId: 'de_order_history', relationType: 'triggers', description: '触发订单分析' }
+        ],
+        lifecycleStates: ['active', 'suspended'],
+        currentState: 'active',
+        source: 'CRM系统',
+        updateFrequency: '每日',
+        relatedEntities: ['de_order_history'],
+        businessCode: 'CUST_PROF',
+        owner: '销售部',
+        tags: ['客户', '档案', 'CRM']
+      },
+      {
+        id: 'de_demand_forecast_result',
+        name: '需求预测结果',
+        description: '销售需求预测结果',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'forecast_result',
+        fields: [
+          { name: 'forecast_id', dataType: 'string', required: true, description: '预测ID' },
+          { name: 'product_model', dataType: 'string', required: true, description: '产品型号' },
+          { name: 'forecast_qty', dataType: 'number', required: true, description: '预测数量' },
+          { name: 'forecast_month', dataType: 'string', required: true, description: '预测月份' },
+          { name: 'confidence', dataType: 'number', required: true, description: '置信度' }
+        ],
+        relations: [
+          { targetEntityId: 'de_order_history', relationType: 'derived_from', description: '从订单派生' }
+        ],
+        lifecycleStates: ['draft', 'confirmed', 'archived'],
+        currentState: 'draft',
+        source: 'AI预测引擎',
+        updateFrequency: '每月',
+        relatedEntities: ['de_order_history'],
+        businessCode: 'DEM_FORECAST',
+        owner: '计划部',
+        tags: ['预测', '需求', 'AI']
+      }
+    ],
+    behaviors: [
+      {
+        id: 'bh_forecast_demand',
+        name: '需求预测计算',
+        description: '使用时间序列和ML模型预测需求',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_order_history', 'de_customer_profile'],
+          calculationFormula: 'ARIMA + Prophet + XGBoost集成',
+          triggerCondition: '每月1日'
+        },
+        inputParams: [
+          { name: 'history_months', dataType: 'number', required: true, description: '历史月数' },
+          { name: 'forecast_months', dataType: 'number', required: true, description: '预测月数' }
+        ],
+        outputParams: [
+          { name: 'forecast_results', dataType: 'array', required: true, description: '预测结果列表' },
+          { name: 'accuracy_metrics', dataType: 'object', required: true, description: '准确度指标' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_order_history', impactType: 'read', description: '读取历史' },
+          { entityId: 'de_demand_forecast_result', impactType: 'write', description: '写入预测' }
+        ],
+        relatedDataEntities: ['de_order_history', 'de_customer_profile'],
+        requiredRoles: ['需求计划员', '数据分析师'],
+        enableAudit: true,
+        tags: ['预测', '需求', 'AI']
+      }
+    ],
+    businessRules: [
+      {
+        id: 'br_forecast_accuracy_check',
+        name: '预测准确度检查',
+        description: '验证预测模型的MAPE是否达标',
+        ruleType: 'validation' as const,
+        ruleSubtype: 'validation' as RuleSubtype,
+        condition: 'MAPE>20%',
+        conditionExpression: 'mape > 0.20',
+        action: '触发模型重训练',
+        ruleAction: {
+          actionType: 'warn',
+          actionConfig: { notify: '计划经理' },
+          actionDescription: '准确度告警'
+        },
+        priority: 1,
+        trigger: { triggerType: 'event', triggerEvent: 'forecast_completed' },
+        applicableEntities: ['de_demand_forecast_result'],
+        enabled: true,
+        relatedBehaviors: ['bh_forecast_demand'],
+        tags: ['预测', '准确度', '验证']
+      }
+    ],
+    businessProcesses: [
+      {
+        id: 'bp_demand_planning',
+        name: '需求计划流程',
+        description: '月度需求预测制定流程',
+        processType: 'planning',
+        trigger: { type: 'schedule', scheduleExpression: '0 2 1 * *', description: '每月1日凌晨2点' },
+        steps: [
+          { stepId: 's1', stepName: '数据采集', description: '采集订单历史', order: 1, nodeTypes: ['dataEntity'] },
+          { stepId: 's2', stepName: '需求预测', description: '执行预测模型', order: 2, nodeTypes: ['behavior'] },
+          { stepId: 's3', stepName: '结果审核', description: '人工审核预测', order: 3, nodeTypes: ['businessRule'] }
+        ],
+        result: '需求预测报告',
+        resultDefinition: { successCriteria: '预测完成并通过审核', failureHandling: '重新预测' },
+        tags: ['需求', '预测', '计划']
+      }
+    ],
+    relationships: [
+      // 数据实体之间的关系
+      { from: 'de_order_history', to: 'de_customer_profile', type: 'belongs_to', description: '订单属于客户' },
+      { from: 'de_demand_forecast_result', to: 'de_order_history', type: 'derived_from', description: '预测从订单派生' },
+      // 行为与数据实体的关系
+      { from: 'bh_forecast_demand', to: 'de_order_history', type: 'uses', description: '使用历史订单' },
+      { from: 'bh_forecast_demand', to: 'de_customer_profile', type: 'uses', description: '使用客户信息' },
+      { from: 'bh_forecast_demand', to: 'de_demand_forecast_result', type: 'implements', description: '生成预测结果' },
+      // 规则与数据实体的关系
+      { from: 'br_forecast_accuracy_check', to: 'de_demand_forecast_result', type: 'validates', description: '验证预测准确度' },
+      { from: 'br_forecast_accuracy_check', to: 'bh_forecast_demand', type: 'depends_on', description: '依赖预测行为' },
+      // 流程与行为/规则的关系
+      { from: 'bp_demand_planning', to: 'de_order_history', type: 'uses', description: '流程使用订单数据' },
+      { from: 'bp_demand_planning', to: 'bh_forecast_demand', type: 'implements', description: '流程实现预测' },
+      { from: 'bp_demand_planning', to: 'br_forecast_accuracy_check', type: 'implements', description: '流程实现结果审核' }
+    ]
+  },
+
+  // 场景3子链条2: 产能匹配
+  {
+    id: 'sem_capacity_matching',
+    code: 'CAPACITY_MATCHING',
+    name: '产能供需匹配',
+    englishName: 'Capacity Supply-Demand Matching',
+    description: '产销匹配协同场景的第2个子链条：对比需求预测与可用产能，识别缺口',
+    category: 'production',
+    dataEntities: [
+      {
+        id: 'de_production_capacity',
+        name: '生产能力数据',
+        description: '各产线月度生产能力',
+        entityType: 'asset' as EntityType,
+        subtype: 'capacity_plan',
+        fields: [
+          { name: 'capacity_id', dataType: 'string', required: true, description: '产能ID' },
+          { name: 'line_id', dataType: 'string', required: true, description: '产线编码' },
+          { name: 'month', dataType: 'string', required: true, description: '月份' },
+          { name: 'max_capacity', dataType: 'number', required: true, description: '最大产能' },
+          { name: 'committed_capacity', dataType: 'number', required: true, description: '已承诺产能' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'confirmed'],
+        currentState: 'confirmed',
+        source: 'MES系统',
+        updateFrequency: '每周',
+        relatedEntities: [],
+        businessCode: 'PROD_CAP',
+        owner: '生产部',
+        tags: ['产能', '生产', '计划']
+      },
+      {
+        id: 'de_capacity_gap',
+        name: '产能缺口分析',
+        description: '需求与产能的缺口分析结果',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'gap_analysis',
+        fields: [
+          { name: 'gap_id', dataType: 'string', required: true, description: '缺口ID' },
+          { name: 'product_model', dataType: 'string', required: true, description: '产品型号' },
+          { name: 'month', dataType: 'string', required: true, description: '月份' },
+          { name: 'demand_qty', dataType: 'number', required: true, description: '需求数量' },
+          { name: 'supply_qty', dataType: 'number', required: true, description: '供应数量' },
+          { name: 'gap_qty', dataType: 'number', required: true, description: '缺口数量' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'confirmed'],
+        currentState: 'draft',
+        source: '供需匹配计算',
+        updateFrequency: '每日',
+        relatedEntities: [],
+        businessCode: 'CAP_GAP',
+        owner: '计划部',
+        tags: ['缺口', '分析', '供需']
+      }
+    ],
+    behaviors: [
+      {
+        id: 'bh_match_capacity',
+        name: '产能供需匹配',
+        description: '对比需求和产能，计算缺口',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_demand_forecast_result', 'de_production_capacity'],
+          calculationFormula: '缺口 = 需求 - 可用产能',
+          triggerCondition: '需求预测更新后'
+        },
+        inputParams: [
+          { name: 'forecast_id', dataType: 'string', required: true, description: '预测ID' }
+        ],
+        outputParams: [
+          { name: 'gap_analysis', dataType: 'array', required: true, description: '缺口分析' },
+          { name: 'constraint_violations', dataType: 'array', required: true, description: '约束冲突' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_demand_forecast_result', impactType: 'read', description: '读取预测' },
+          { entityId: 'de_production_capacity', impactType: 'read', description: '读取产能' },
+          { entityId: 'de_capacity_gap', impactType: 'write', description: '写入缺口' }
+        ],
+        relatedDataEntities: ['de_demand_forecast_result', 'de_production_capacity'],
+        requiredRoles: ['计划员'],
+        enableAudit: true,
+        tags: ['匹配', '产能', '缺口']
+      }
+    ],
+    businessRules: [
+      {
+        id: 'br_capacity_shortage',
+        name: '产能短缺预警',
+        description: '产能缺口超过阈值时预警',
+        ruleType: 'constraint' as const,
+        ruleSubtype: 'constraint' as RuleSubtype,
+        condition: '缺口率>10%',
+        conditionExpression: 'gap_rate > 0.10',
+        action: '触发产能调整或需求协商',
+        ruleAction: {
+          actionType: 'warn',
+          actionConfig: { notify: '生产经理' },
+          actionDescription: '产能短缺告警'
+        },
+        priority: 1,
+        trigger: { triggerType: 'threshold', thresholdValue: 0.1 },
+        applicableEntities: ['de_capacity_gap'],
+        riskLevel: 'high',
+        enabled: true,
+        relatedBehaviors: ['bh_match_capacity'],
+        tags: ['产能', '短缺', '预警']
+      }
+    ],
+    businessProcesses: [
+      {
+        id: 'bp_sop_process',
+        name: 'S&OP产销协同流程',
+        description: '销售与运营计划协同流程',
+        processType: 'planning',
+        trigger: { type: 'schedule', scheduleExpression: '0 9 5 * *', description: '每月5日上午9点' },
+        steps: [
+          { stepId: 's1', stepName: '需求确认', description: '确认需求预测', order: 1, nodeTypes: ['dataEntity'] },
+          { stepId: 's2', stepName: '产能评估', description: '评估可用产能', order: 2, nodeTypes: ['behavior'] },
+          { stepId: 's3', stepName: '缺口分析', description: '计算供需缺口', order: 3, nodeTypes: ['businessRule'] },
+          { stepId: 's4', stepName: '协同会议', description: '产销协同会议', order: 4, nodeTypes: ['businessProcess'] }
+        ],
+        result: '产销协同决议',
+        resultDefinition: { successCriteria: '达成产销一致', failureHandling: '升级至总监' },
+        tags: ['S&OP', '产销', '协同']
+      }
+    ],
+    relationships: [
+      // 数据实体之间的关系
+      { from: 'de_capacity_gap', to: 'de_production_capacity', type: 'derived_from', description: '缺口从产能数据派生' },
+      // 行为与数据实体的关系
+      { from: 'bh_match_capacity', to: 'de_production_capacity', type: 'uses', description: '读取产能数据' },
+      { from: 'bh_match_capacity', to: 'de_capacity_gap', type: 'implements', description: '生成缺口分析' },
+      // 规则与数据实体的关系
+      { from: 'br_capacity_shortage', to: 'de_capacity_gap', type: 'triggers', description: '监控产能缺口' },
+      { from: 'br_capacity_shortage', to: 'bh_match_capacity', type: 'depends_on', description: '依赖匹配结果' },
+      // 流程与行为/规则的关系
+      { from: 'bp_sop_process', to: 'de_production_capacity', type: 'uses', description: '流程使用产能数据' },
+      { from: 'bp_sop_process', to: 'bh_match_capacity', type: 'implements', description: '流程实现产能评估' },
+      { from: 'bp_sop_process', to: 'br_capacity_shortage', type: 'implements', description: '流程实现缺口分析' }
+    ]
+  },
+
+  // ==================== 场景4: 新项目落地推演分析 ====================
+  {
+    id: 'sem_new_project_eval',
+    code: 'NEW_PROJECT_EVAL',
+    name: '新项目投资评估',
+    englishName: 'New Project Investment Evaluation',
+    description: '新项目落地推演分析场景的第1个子链条：评估新产线投资的经济可行性',
+    category: 'finance',
+    dataEntities: [
+      {
+        id: 'de_investment_plan',
+        name: '投资计划',
+        description: '新产线投资方案',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'investment_plan',
+        fields: [
+          { name: 'plan_id', dataType: 'string', required: true, description: '计划ID' },
+          { name: 'project_name', dataType: 'string', required: true, description: '项目名称' },
+          { name: 'investment_amount', dataType: 'number', required: true, description: '投资金额' },
+          { name: 'construction_period', dataType: 'number', required: true, description: '建设周期(月)' },
+          { name: 'capacity_after_completion', dataType: 'number', required: true, description: '建成后产能' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'approved', 'rejected'],
+        currentState: 'draft',
+        source: '战略部',
+        updateFrequency: '按需',
+        relatedEntities: [],
+        businessCode: 'INV_PLAN',
+        owner: '战略部',
+        tags: ['投资', '计划', '项目']
+      },
+      {
+        id: 'de_financial_projection',
+        name: '财务测算',
+        description: '项目财务预测数据',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'financial_model',
+        fields: [
+          { name: 'projection_id', dataType: 'string', required: true, description: '测算ID' },
+          { name: 'year', dataType: 'number', required: true, description: '年份' },
+          { name: 'revenue', dataType: 'number', required: true, description: '收入' },
+          { name: 'cost', dataType: 'number', required: true, description: '成本' },
+          { name: 'profit', dataType: 'number', required: true, description: '利润' },
+          { name: 'npv', dataType: 'number', required: true, description: '净现值' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'confirmed'],
+        currentState: 'draft',
+        source: '财务模型',
+        updateFrequency: '按需',
+        relatedEntities: [],
+        businessCode: 'FIN_PROJ',
+        owner: '财务部',
+        tags: ['财务', '测算', 'NPV']
+      }
+    ],
+    behaviors: [
+      {
+        id: 'bh_calculate_npv',
+        name: 'NPV财务测算',
+        description: '计算项目净现值和投资回报',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_investment_plan'],
+          calculationFormula: 'NPV = ∑(CF_t / (1+r)^t)',
+          triggerCondition: '投资方案提交'
+        },
+        inputParams: [
+          { name: 'plan_id', dataType: 'string', required: true, description: '投资计划ID' },
+          { name: 'discount_rate', dataType: 'number', required: true, description: '折现率' }
+        ],
+        outputParams: [
+          { name: 'npv', dataType: 'number', required: true, description: '净现值' },
+          { name: 'irr', dataType: 'number', required: true, description: '内部收益率' },
+          { name: 'payback_period', dataType: 'number', required: true, description: '回收期' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_investment_plan', impactType: 'read', description: '读取计划' },
+          { entityId: 'de_financial_projection', impactType: 'write', description: '写入测算' }
+        ],
+        relatedDataEntities: ['de_investment_plan'],
+        requiredRoles: ['财务分析师'],
+        enableAudit: true,
+        tags: ['NPV', '财务', '测算']
+      }
+    ],
+    businessRules: [
+      {
+        id: 'br_investment_criteria',
+        name: '投资标准规则',
+        description: '验证项目是否符合投资标准',
+        ruleType: 'validation' as const,
+        ruleSubtype: 'validation' as RuleSubtype,
+        condition: 'NPV<0 或 IRR<10%',
+        conditionExpression: 'npv < 0 OR irr < 0.10',
+        action: '拒绝投资方案',
+        ruleAction: {
+          actionType: 'block',
+          actionConfig: { reason: '不满足投资回报要求' },
+          actionDescription: '阻止投资'
+        },
+        priority: 1,
+        trigger: { triggerType: 'event', triggerEvent: 'calculation_completed' },
+        applicableEntities: ['de_financial_projection'],
+        enabled: true,
+        relatedBehaviors: ['bh_calculate_npv'],
+        tags: ['投资', '标准', 'NPV']
+      }
+    ],
+    businessProcesses: [
+      {
+        id: 'bp_investment_decision',
+        name: '投资决策流程',
+        description: '新产线投资决策审批流程',
+        processType: 'approval',
+        trigger: { type: 'manual', initiator: '战略部', description: '投资方案提交' },
+        steps: [
+          { stepId: 's1', stepName: '财务测算', description: '财务模型计算', order: 1, nodeTypes: ['behavior'] },
+          { stepId: 's2', stepName: '标准审核', description: '检查投资标准', order: 2, nodeTypes: ['businessRule'] },
+          { stepId: 's3', stepName: '委员会审批', description: '投委会审批', order: 3, nodeTypes: ['businessProcess'] }
+        ],
+        result: '投资决策',
+        resultDefinition: { successCriteria: '获得批准', failureHandling: '修改方案重提' },
+        tags: ['投资', '决策', '审批']
+      }
+    ],
+    relationships: [
+      // 数据实体之间的关系
+      { from: 'de_financial_projection', to: 'de_investment_plan', type: 'derived_from', description: '财务测算从投资计划派生' },
+      // 行为与数据实体的关系
+      { from: 'bh_calculate_npv', to: 'de_investment_plan', type: 'uses', description: '读取投资计划' },
+      { from: 'bh_calculate_npv', to: 'de_financial_projection', type: 'implements', description: '生成财务测算' },
+      // 规则与数据实体的关系
+      { from: 'br_investment_criteria', to: 'de_financial_projection', type: 'validates', description: '验证投资标准' },
+      { from: 'br_investment_criteria', to: 'bh_calculate_npv', type: 'depends_on', description: '依赖财务测算' },
+      // 流程与行为/规则的关系
+      { from: 'bp_investment_decision', to: 'de_investment_plan', type: 'uses', description: '流程使用投资计划' },
+      { from: 'bp_investment_decision', to: 'bh_calculate_npv', type: 'implements', description: '流程实现财务测算' },
+      { from: 'bp_investment_decision', to: 'br_investment_criteria', type: 'implements', description: '流程实现标准审核' }
+    ]
+  },
+
+  // ==================== 场景5: 产能评估推演预测分析 ====================
+  {
+    id: 'sem_capacity_simulation',
+    code: 'CAPACITY_SIMULATION',
+    name: '产能瓶颈模拟',
+    englishName: 'Capacity Bottleneck Simulation',
+    description: '产能评估推演预测分析场景的第1个子链条：模拟不同需求情景下的产能瓶颈',
+    category: 'planning',
+    dataEntities: [
+      {
+        id: 'de_simulation_scenario',
+        name: '模拟情景',
+        description: '产能模拟的情景定义',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'simulation_config',
+        fields: [
+          { name: 'scenario_id', dataType: 'string', required: true, description: '情景ID' },
+          { name: 'scenario_name', dataType: 'string', required: true, description: '情景名称' },
+          { name: 'demand_growth_rate', dataType: 'number', required: true, description: '需求增长率' },
+          { name: 'time_horizon', dataType: 'number', required: true, description: '时间跨度(月)' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'active'],
+        currentState: 'active',
+        source: '计划部',
+        updateFrequency: '按需',
+        relatedEntities: [],
+        businessCode: 'SIM_SCEN',
+        owner: '计划部',
+        tags: ['模拟', '情景', '推演']
+      },
+      {
+        id: 'de_bottleneck_result',
+        name: '瓶颈分析结果',
+        description: '产能瓶颈识别结果',
+        entityType: 'businessObject' as EntityType,
+        subtype: 'bottleneck_analysis',
+        fields: [
+          { name: 'result_id', dataType: 'string', required: true, description: '结果ID' },
+          { name: 'scenario_id', dataType: 'string', required: true, description: '情景ID' },
+          { name: 'bottleneck_line', dataType: 'string', required: true, description: '瓶颈产线' },
+          { name: 'bottleneck_time', dataType: 'string', required: true, description: '瓶颈时段' },
+          { name: 'impact_orders', dataType: 'number', required: true, description: '影响订单数' }
+        ],
+        relations: [],
+        lifecycleStates: ['draft', 'confirmed'],
+        currentState: 'draft',
+        source: '模拟引擎',
+        updateFrequency: '每次模拟',
+        relatedEntities: [],
+        businessCode: 'BOT_RESULT',
+        owner: '计划部',
+        tags: ['瓶颈', '结果', '分析']
+      }
+    ],
+    behaviors: [
+      {
+        id: 'bh_run_simulation',
+        name: '执行产能模拟',
+        description: '使用离散事件仿真模拟产能瓶颈',
+        actionType: 'batchCalculation' as ActionType,
+        batchConfig: {
+          targetEntities: ['de_simulation_scenario', 'de_production_capacity'],
+          calculationFormula: 'DES离散事件仿真',
+          triggerCondition: '情景定义完成'
+        },
+        inputParams: [
+          { name: 'scenario_id', dataType: 'string', required: true, description: '情景ID' }
+        ],
+        outputParams: [
+          { name: 'utilization_curve', dataType: 'array', required: true, description: '利用率曲线' },
+          { name: 'bottleneck_points', dataType: 'array', required: true, description: '瓶颈点' }
+        ],
+        impactedEntities: [
+          { entityId: 'de_simulation_scenario', impactType: 'read', description: '读取情景' },
+          { entityId: 'de_production_capacity', impactType: 'read', description: '读取产能' },
+          { entityId: 'de_bottleneck_result', impactType: 'write', description: '写入结果' }
+        ],
+        relatedDataEntities: ['de_simulation_scenario', 'de_production_capacity'],
+        requiredRoles: ['计划工程师'],
+        enableAudit: true,
+        tags: ['模拟', '产能', 'DES']
+      }
+    ],
+    businessRules: [
+      {
+        id: 'br_bottleneck_alert',
+        name: '瓶颈预警规则',
+        description: '识别严重产能瓶颈',
+        ruleType: 'constraint' as const,
+        ruleSubtype: 'constraint' as RuleSubtype,
+        condition: '利用率>95% 且 持续时间>1周',
+        conditionExpression: 'utilization > 0.95 AND duration_days > 7',
+        action: '触发产能扩充评估',
+        ruleAction: {
+          actionType: 'warn',
+          actionConfig: { notify: '生产总监' },
+          actionDescription: '严重瓶颈预警'
+        },
+        priority: 1,
+        trigger: { triggerType: 'threshold', thresholdValue: 0.95 },
+        applicableEntities: ['de_bottleneck_result'],
+        riskLevel: 'high',
+        enabled: true,
+        relatedBehaviors: ['bh_run_simulation'],
+        tags: ['瓶颈', '预警', '产能']
+      }
+    ],
+    businessProcesses: [
+      {
+        id: 'bp_capacity_evaluation',
+        name: '产能评估推演流程',
+        description: '产能情景推演分析流程',
+        processType: 'simulation',
+        trigger: { type: 'manual', initiator: '计划部', description: '季度产能规划' },
+        steps: [
+          { stepId: 's1', stepName: '定义情景', description: '定义模拟情景', order: 1, nodeTypes: ['dataEntity'] },
+          { stepId: 's2', stepName: '运行模拟', description: '执行仿真计算', order: 2, nodeTypes: ['behavior'] },
+          { stepId: 's3', stepName: '瓶颈识别', description: '识别产能瓶颈', order: 3, nodeTypes: ['businessRule'] },
+          { stepId: 's4', stepName: '方案制定', description: '制定应对方案', order: 4, nodeTypes: ['businessProcess'] }
+        ],
+        result: '产能评估报告',
+        resultDefinition: { successCriteria: '完成推演', failureHandling: '调整情景重算' },
+        tags: ['产能', '推演', '模拟']
+      }
+    ],
+    relationships: [
+      // 数据实体之间的关系
+      { from: 'de_bottleneck_result', to: 'de_simulation_scenario', type: 'derived_from', description: '瓶颈结果从情景派生' },
+      // 行为与数据实体的关系
+      { from: 'bh_run_simulation', to: 'de_simulation_scenario', type: 'uses', description: '读取模拟情景' },
+      { from: 'bh_run_simulation', to: 'de_bottleneck_result', type: 'implements', description: '生成瓶颈分析' },
+      // 规则与数据实体的关系
+      { from: 'br_bottleneck_alert', to: 'de_bottleneck_result', type: 'triggers', description: '监控瓶颈结果' },
+      { from: 'br_bottleneck_alert', to: 'bh_run_simulation', type: 'depends_on', description: '依赖模拟结果' },
+      // 流程与行为/规则的关系
+      { from: 'bp_capacity_evaluation', to: 'de_simulation_scenario', type: 'uses', description: '流程使用情景定义' },
+      { from: 'bp_capacity_evaluation', to: 'bh_run_simulation', type: 'implements', description: '流程实现模拟运行' },
+      { from: 'bp_capacity_evaluation', to: 'br_bottleneck_alert', type: 'implements', description: '流程实现瓶颈识别' }
     ]
   }
 ];
+
+// ==================== 业务语义与业务场景推演映射 ====================
+// 将业务语义ID映射到对应的业务场景推演场景ID
+const SEMANTIC_TO_SCENARIO_MAP: Record<string, string> = {
+  // 场景1: 设备预测性维护
+  'sem_equipment_health_monitor': 'predictive_maintenance',
+  'sem_rul_prediction': 'predictive_maintenance',
+  // 场景2: 设备故障维修时间预测
+  'sem_repair_time_pred': 'breakdown_maintenance',
+  // 场景3: 产销匹配协同
+  'sem_demand_forecast': 'production_sales_match',
+  'sem_capacity_matching': 'production_sales_match',
+  // 场景4: 新项目落地推演分析
+  'sem_new_project_eval': 'new_project_planning',
+  // 场景5: 产能评估推演预测分析
+  'sem_capacity_simulation': 'capacity_assessment_prediction'
+};
+
+// 场景名称映射
+const SCENARIO_NAMES: Record<string, string> = {
+  'predictive_maintenance': '设备预测性维护',
+  'breakdown_maintenance': '设备故障维修时间预测',
+  'production_sales_match': '产销匹配协同',
+  'new_project_planning': '新项目落地推演分析',
+  'capacity_assessment_prediction': '产能评估推演预测分析'
+};
 
 // ==================== 组件 ====================
 
@@ -2843,6 +3794,7 @@ const SemanticDetailGraph: React.FC<{
 }> = ({ semantic, isMaximized }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const navigate = useNavigate();
   const [filteredType, setFilteredType] = useState<NodeType | 'all'>('all');
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [zoom, setZoom] = useState(1);
@@ -2850,6 +3802,17 @@ const SemanticDetailGraph: React.FC<{
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+  // 获取当前业务语义对应的业务场景推演场景ID
+  const relatedScenarioId = SEMANTIC_TO_SCENARIO_MAP[semantic.id];
+  const relatedScenarioName = relatedScenarioId ? SCENARIO_NAMES[relatedScenarioId] : null;
+
+  // 处理节点更新（如关联MCP规则）
+  const handleUpdateNode = useCallback((updatedNode: any) => {
+    setSelectedNode(updatedNode);
+    // 这里可以添加逻辑将更新同步到语义数据
+    console.log('节点已更新:', updatedNode);
+  }, []);
 
   // 军队/科研严谨风格配色
   const typeColors: Record<NodeType, { fill: string; stroke: string; border: string; label: string }> = {
@@ -3194,9 +4157,21 @@ const SemanticDetailGraph: React.FC<{
           </div>
         </div>
 
-        {/* 缩放比例 */}
-        <div className="absolute top-4 right-4 z-10 bg-white border border-slate-300 rounded px-3 py-1.5">
-          <span className="text-xs text-slate-600 font-mono">{Math.round(zoom * 100)}%</span>
+        {/* 缩放比例和场景跳转 */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <div className="bg-white border border-slate-300 rounded px-3 py-1.5">
+            <span className="text-xs text-slate-600 font-mono">{Math.round(zoom * 100)}%</span>
+          </div>
+          {relatedScenarioId && (
+            <button
+              onClick={() => navigate(`/ontology?scenario=${relatedScenarioId}`)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm"
+              title={`查看${relatedScenarioName}的业务场景推演图谱`}
+            >
+              <Network size={14} />
+              <span>查看场景推演</span>
+            </button>
+          )}
         </div>
 
         {/* 图例 */}
@@ -3248,8 +4223,175 @@ const SemanticDetailGraph: React.FC<{
         <NodeInfoPanel
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
+          onUpdateNode={handleUpdateNode}
         />
       )}
+    </div>
+  );
+};
+
+// MCP规则选择器组件
+const MCPRuleSelector: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectRule: (rule: ConstraintRule) => void;
+}> = ({ isOpen, onClose, onSelectRule }) => {
+  const [activeTab, setActiveTab] = useState<'constraints' | 'solvers'>('constraints');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const filteredRules = selectedCategory
+    ? DEFAULT_CONSTRAINT_RULES.filter(r => r.category === selectedCategory)
+    : DEFAULT_CONSTRAINT_RULES;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-[800px] max-h-[80vh] flex flex-col">
+        {/* 头部 */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">从MCP工具选择规则</h3>
+            <p className="text-sm text-gray-500">关联约束规则或求解器到当前业务规则</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        {/* 标签切换 */}
+        <div className="flex gap-1 p-3 border-b bg-gray-50">
+          <button
+            onClick={() => setActiveTab('constraints')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'constraints'
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <BookOpen size={16} />
+            约束规则 ({DEFAULT_CONSTRAINT_RULES.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('solvers')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'solvers'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Cpu size={16} />
+            求解器 ({SOLVER_TYPES.length})
+          </button>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-auto p-4">
+          {activeTab === 'constraints' ? (
+            <div className="space-y-4">
+              {/* 分类筛选 */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedCategory === null
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  全部
+                </button>
+                {CONSTRAINT_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      selectedCategory === cat.id
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* 规则列表 */}
+              <div className="grid grid-cols-1 gap-3">
+                {filteredRules.map(rule => (
+                  <div
+                    key={rule.id}
+                    onClick={() => onSelectRule(rule)}
+                    className="p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-md cursor-pointer transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          rule.constraintType === 'Hard'
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-amber-100 text-amber-600'
+                        }`}>
+                          {rule.constraintType}
+                        </span>
+                        <span className="text-xs text-gray-500">{rule.ontologyObject}</span>
+                      </div>
+                      <button className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-100">
+                        选择
+                      </button>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1">{rule.name}</h4>
+                    <p className="text-xs text-gray-500 mb-2">{rule.description}</p>
+                    <div className="text-xs font-mono text-gray-400 bg-gray-50 p-2 rounded">
+                      {rule.expression}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {SOLVER_TYPES.map(solver => (
+                <div
+                  key={solver.id}
+                  onClick={() => onSelectRule({
+                    id: solver.id,
+                    name: solver.fullName,
+                    category: 'solver',
+                    ontologyObject: 'Solver',
+                    constraintType: 'Hard',
+                    expression: solver.description,
+                    parameters: [],
+                    enabled: true,
+                    version: '1.0.0',
+                    applicableScope: solver.applicableScenarios,
+                    riskWeight: 0.8,
+                    description: solver.description
+                  } as ConstraintRule)}
+                  className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md cursor-pointer transition-all"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${solver.bgColor} ${solver.color}`}>
+                      {solver.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{solver.name}</h4>
+                      <span className="text-xs text-gray-500">{solver.fullName}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{solver.description}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {solver.applicableScenarios.slice(0, 3).map((scenario, idx) => (
+                      <span key={idx} className="text-[10px] px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                        {scenario}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -3258,8 +4400,11 @@ const SemanticDetailGraph: React.FC<{
 const NodeInfoPanel: React.FC<{
   node: any;
   onClose: () => void;
-}> = ({ node, onClose }) => {
+  onUpdateNode?: (updatedNode: any) => void;
+}> = ({ node, onClose, onUpdateNode }) => {
   const config = NODE_TYPE_CONFIG[node.type];
+  const [showMCPSelector, setShowMCPSelector] = useState(false);
+  const [linkedMCPRule, setLinkedMCPRule] = useState<ConstraintRule | null>(null);
 
   const renderContent = () => {
     switch (node.type) {
@@ -3519,6 +4664,37 @@ const NodeInfoPanel: React.FC<{
         };
         return (
           <div className="space-y-4">
+            {/* MCP规则关联状态 */}
+            {linkedMCPRule && (
+              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-semibold text-indigo-700 flex items-center gap-1">
+                    <Link2 size={12} />
+                    已关联MCP规则
+                  </h4>
+                  <button
+                    onClick={() => setLinkedMCPRule(null)}
+                    className="text-[10px] text-indigo-600 hover:text-indigo-800"
+                  >
+                    解除关联
+                  </button>
+                </div>
+                <p className="text-xs font-medium text-indigo-900">{linkedMCPRule.name}</p>
+                <p className="text-[10px] text-indigo-600 mt-1">{linkedMCPRule.description}</p>
+              </div>
+            )}
+
+            {/* 关联MCP规则按钮 */}
+            {!linkedMCPRule && (
+              <button
+                onClick={() => setShowMCPSelector(true)}
+                className="w-full p-3 border-2 border-dashed border-indigo-200 rounded-lg text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={16} />
+                <span className="text-xs font-medium">关联MCP规则</span>
+              </button>
+            )}
+
             <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
               <h4 className="text-xs font-semibold text-orange-700 mb-1">定义</h4>
               <p className="text-xs text-slate-700">{node.data.description}</p>
@@ -3724,9 +4900,16 @@ const NodeInfoPanel: React.FC<{
                     <span className="ml-2 text-slate-600">{trigger.description}</span>
                   </div>
                 )) || (
-                  <div className="text-xs p-2 bg-slate-50 rounded text-slate-600">
-                    {node.data.trigger}
-                  </div>
+                  node.data.trigger && (
+                    <div className="text-xs p-2 bg-slate-50 rounded">
+                      <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
+                        {node.data.trigger.type === 'schedule' ? '⏰ 定时' :
+                         node.data.trigger.type === 'event' ? '🔔 事件' :
+                         node.data.trigger.type === 'manual' ? '👤 手动' : '📊 阈值'}
+                      </span>
+                      <span className="ml-2 text-slate-600">{node.data.trigger.description}</span>
+                    </div>
+                  )
                 )}
               </div>
             </div>
@@ -3767,25 +4950,51 @@ const NodeInfoPanel: React.FC<{
   };
 
   return (
-    <div className="w-80 bg-white border-l border-slate-200 overflow-y-auto">
-      <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: config.bgColor }}>
-            <config.icon size={16} style={{ color: config.color }} />
+    <>
+      <div className="w-80 bg-white border-l border-slate-200 overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: config.bgColor }}>
+              <config.icon size={16} style={{ color: config.color }} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm">{node.name}</h3>
+              <p className="text-[10px] text-slate-500">{config.label}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">{node.name}</h3>
-            <p className="text-[10px] text-slate-500">{config.label}</p>
-          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
-          <X size={18} className="text-slate-500" />
-        </button>
+        <div className="p-4">
+          {renderContent()}
+        </div>
       </div>
-      <div className="p-4">
-        {renderContent()}
-      </div>
-    </div>
+
+      {/* MCP规则选择器弹窗 */}
+      {node.type === 'businessRule' && (
+        <MCPRuleSelector
+          isOpen={showMCPSelector}
+          onClose={() => setShowMCPSelector(false)}
+          onSelectRule={(rule) => {
+            setLinkedMCPRule(rule);
+            setShowMCPSelector(false);
+            // 更新节点数据
+            if (onUpdateNode) {
+              onUpdateNode({
+                ...node,
+                data: {
+                  ...node.data,
+                  mcpRuleRef: rule.id,
+                  mcpRuleName: rule.name,
+                  mcpRuleType: rule.category === 'solver' ? 'solver' : 'constraint'
+                }
+              });
+            }
+          }}
+        />
+      )}
+    </>
   );
 };
 

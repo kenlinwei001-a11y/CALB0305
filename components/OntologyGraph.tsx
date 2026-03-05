@@ -496,7 +496,7 @@ const OntologyGraph: React.FC = () => {
     <div className="h-full flex flex-col space-y-4">
       <div className="flex justify-between items-center">
         <div>
-            <h2 className="text-2xl font-bold text-slate-900">业务流程图谱</h2>
+            <h2 className="text-2xl font-bold text-slate-900">业务场景推演</h2>
             <p className="text-slate-500 text-sm">全景展示推演节点与数据节点的量化关联。</p>
         </div>
         <div className="flex items-center gap-3">
