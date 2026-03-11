@@ -1502,7 +1502,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`px-1.5 py-0.5 text-[10px] rounded border ${getNodeLevelColor(nodeItem.group)}`}>
+                              <span className={`px-1.5 py-0.5 text-[10px] rounded border ${getNodeLevelBadgeColor(nodeItem.group)}`}>
                                 {getNodeLevelName(nodeItem.group)}
                               </span>
                             </div>
