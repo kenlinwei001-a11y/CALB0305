@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MOCK_SKILLS, SCENARIOS } from '../constants';
-import { ArrowLeft, FileText, Settings, Code, Copy, Check, Network } from 'lucide-react';
+import { ArrowLeft, FileText, Settings, Code, Copy, Check, Network, BookOpen, FolderOpen } from 'lucide-react';
 
 const SkillDetail: React.FC = () => {
   const { skillId } = useParams<{ skillId: string }>();
   const navigate = useNavigate();
   const skill = MOCK_SKILLS.find(s => s.skill_id === skillId);
-  const [activeTab, setActiveTab] = useState<'readme' | 'config' | 'script'>('readme');
+  const [activeTab, setActiveTab] = useState<'readme' | 'config' | 'script' | 'references' | 'assets'>('readme');
   const [copied, setCopied] = useState(false);
 
   if (!skill) {
@@ -32,6 +32,8 @@ const SkillDetail: React.FC = () => {
       case 'readme': return skill.files.readme;
       case 'config': return skill.files.config;
       case 'script': return skill.files.script;
+      case 'references': return skill.files.references?.join('\n') || '暂无知识库文档';
+      case 'assets': return skill.files.assets?.join('\n') || '暂无静态资源';
       default: return '';
     }
   };
@@ -98,20 +100,81 @@ const SkillDetail: React.FC = () => {
             <Code size={16} />
             <span>Script ({skill.files.scriptLang})</span>
           </button>
+          <button
+            onClick={() => setActiveTab('references')}
+            className={`flex items-center space-x-2 px-6 py-3 text-sm font-medium transition-colors border-r border-slate-200 ${
+              activeTab === 'references' ? 'bg-white text-indigo-600 border-t-2 border-t-indigo-600' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <BookOpen size={16} />
+            <span>references/ ({skill.files.references?.length || 0})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('assets')}
+            className={`flex items-center space-x-2 px-6 py-3 text-sm font-medium transition-colors border-r border-slate-200 ${
+              activeTab === 'assets' ? 'bg-white text-indigo-600 border-t-2 border-t-indigo-600' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <FolderOpen size={16} />
+            <span>assets/ ({skill.files.assets?.length || 0})</span>
+          </button>
         </div>
 
-        {/* Code View */}
+        {/* Content View */}
         <div className="flex-1 relative bg-slate-900 overflow-auto">
-          <button
-            onClick={() => handleCopy(getActiveContent())}
-            className="absolute top-4 right-4 bg-slate-700/50 hover:bg-slate-700 text-slate-300 p-2 rounded transition-colors z-10"
-            title="Copy content"
-          >
-            {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
-          </button>
-          <pre className="p-6 text-sm font-mono text-slate-300 leading-relaxed min-h-full">
-            <code>{getActiveContent()}</code>
-          </pre>
+          {activeTab !== 'references' && activeTab !== 'assets' && (
+            <button
+              onClick={() => handleCopy(getActiveContent())}
+              className="absolute top-4 right-4 bg-slate-700/50 hover:bg-slate-700 text-slate-300 p-2 rounded transition-colors z-10"
+              title="Copy content"
+            >
+              {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+            </button>
+          )}
+
+          {activeTab === 'references' ? (
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                <BookOpen size={20} className="text-indigo-400" />
+                知识库文档 (references/)
+              </h3>
+              {skill.files.references && skill.files.references.length > 0 ? (
+                <ul className="space-y-2">
+                  {skill.files.references.map((ref, idx) => (
+                    <li key={idx} className="flex items-center gap-3 text-slate-300 bg-slate-800/50 p-3 rounded">
+                      <span className="text-xs text-slate-500 font-mono">{String(idx + 1).padStart(2, '0')}</span>
+                      <span className="text-sm">{ref}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-slate-500 italic">暂无知识库文档</p>
+              )}
+            </div>
+          ) : activeTab === 'assets' ? (
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                <FolderOpen size={20} className="text-indigo-400" />
+                静态资源文件 (assets/)
+              </h3>
+              {skill.files.assets && skill.files.assets.length > 0 ? (
+                <ul className="space-y-2">
+                  {skill.files.assets.map((asset, idx) => (
+                    <li key={idx} className="flex items-center gap-3 text-slate-300 bg-slate-800/50 p-3 rounded">
+                      <span className="text-xs text-slate-500 font-mono">{String(idx + 1).padStart(2, '0')}</span>
+                      <span className="text-sm font-mono text-green-400">{asset}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-slate-500 italic">暂无静态资源</p>
+              )}
+            </div>
+          ) : (
+            <pre className="p-6 text-sm font-mono text-slate-300 leading-relaxed min-h-full">
+              <code>{getActiveContent()}</code>
+            </pre>
+          )}
         </div>
       </div>
     </div>
