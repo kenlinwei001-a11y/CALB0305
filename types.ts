@@ -217,10 +217,12 @@ export interface Skill {
   dependencies: string[];
   description: string;
   files: {
-    readme: string;
-    config: string;
-    script: string;
-    scriptLang: string;
+    readme: string;        // SKILL.md - 核心规则文档
+    config: string;        // 配置参数
+    script: string;        // scripts/ - 确定性执行脚本
+    scriptLang: string;    // 脚本语言
+    references?: string[]; // references/ - 知识库文档列表
+    assets?: string[];     // assets/ - 静态模板文件列表
   };
   // 新增：场景绑定
   scenarioBindings?: ScenarioBinding[];
