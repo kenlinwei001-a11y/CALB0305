@@ -46,7 +46,7 @@ export const CONSTRAINT_CATEGORIES = [
   { id: 'strategy', name: '经营目标与策略权重', icon: Target, color: 'purple', count: 5 }
 ];
 
-// 本体建模工具定义
+// 推理模型工具定义
 export interface OntologyModelingTool {
   id: string;
   name: string;
@@ -58,7 +58,7 @@ export interface OntologyModelingTool {
   icon: React.ReactNode;
 }
 
-// 本体建模域分类
+// 推理模型域分类
 export const ONTOLOGY_DOMAINS = [
   { id: 'order', name: '订单域建模', icon: FileText, color: 'blue', desc: '订单结构、生命周期、拆分规则' },
   { id: 'customer', name: '客户域建模', icon: Box, color: 'cyan', desc: '客户分层、弹性、风险评分' },
@@ -74,7 +74,7 @@ export const ONTOLOGY_DOMAINS = [
   { id: 'governance', name: '执行与治理', icon: Lock, color: 'slate', desc: '冻结变更、审计版本、组织协同' }
 ];
 
-// 本体建模工具数据
+// 推理模型工具数据
 export const ONTOLOGY_MODELING_TOOLS: OntologyModelingTool[] = [
   // ① 订单域建模工具
   {
@@ -2998,7 +2998,7 @@ const ConstraintRulesLibrary: React.FC = () => {
   );
 };
 
-// 本体建模工具库组件
+// 推理模型工具库组件
 const OntologyModelingLibrary: React.FC<{ onSelectTool?: (toolId: string) => void }> = ({ onSelectTool }) => {
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -3135,7 +3135,7 @@ const OntologyModelingLibrary: React.FC<{ onSelectTool?: (toolId: string) => voi
   );
 };
 
-// 本体建模工具配置页面
+// 推理模型工具配置页面
 interface OntologyToolConfigPageProps {
   toolId: string;
   onBack: () => void;
@@ -3638,7 +3638,7 @@ const MCPTools: React.FC = () => {
     return <SolverConfigPage solverType={solverType} onBack={handleBack} />;
   }
 
-  // 如果选中了本体建模工具，显示配置页面
+  // 如果选中了推理模型工具，显示配置页面
   if (ontologyToolId) {
     return <OntologyToolConfigPage toolId={ontologyToolId} onBack={handleBack} />;
   }
@@ -3649,7 +3649,7 @@ const MCPTools: React.FC = () => {
       {/* 页面标题 */}
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">MCP工具</h2>
-        <p className="text-gray-500 mt-1">数学规划、约束管理与本体建模工具集，支持锂电制造产销协同优化</p>
+        <p className="text-gray-500 mt-1">数学规划、约束管理与推理模型工具集，支持锂电制造产销协同优化</p>
       </div>
 
       {/* 标签栏 */}
@@ -3695,7 +3695,7 @@ const MCPTools: React.FC = () => {
           }`}
         >
           <Grid3X3 size={18} />
-          本体建模
+          推理模型
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
             activeTab === 'ontology' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500'
           }`}>
