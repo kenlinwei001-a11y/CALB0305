@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Network, Zap, Settings, Menu, Box, Atom, Layers, Plus, TrendingUp, Factory, Package, CheckCircle, DollarSign, Truck, Users, Calendar, Info, Cpu } from 'lucide-react';
+import { LayoutDashboard, Network, Zap, Settings, Menu, Box, Atom, Layers, Plus, TrendingUp, Factory, Package, CheckCircle, DollarSign, Truck, Users, Calendar, Info, Cpu, Database } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SkillsRegistry from './components/SkillsRegistry';
 import SkillDetail from './components/SkillDetail';
@@ -10,6 +10,7 @@ import AtomicOntologyModule from './components/AtomicOntologyModule';
 import ScenarioAtomsModule from './components/ScenarioAtomsModule';
 import BusinessSemanticCreator from './components/BusinessSemanticCreator';
 import MCPTools from './components/MCPTools';
+import DataSourceManager from './components/DataSourceManager';
 
 const NavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; active: boolean; onClick?: () => void }> = ({ to, icon, label, active, onClick }) => (
   <Link
@@ -167,6 +168,7 @@ const AppContent: React.FC = () => {
           <NavLink to="/atoms" icon={<Atom size={20} />} label={sidebarOpen ? "业务释义库" : ""} active={isActive('/atoms')} />
           <NavLink to="/ontology" icon={<Network size={20} />} label={sidebarOpen ? "业务场景推演" : ""} active={isActive('/ontology')} />
           <NavLink to="/business-semantic" icon={<Layers size={20} />} label={sidebarOpen ? "业务语义" : ""} active={isActive('/business-semantic')} />
+          <NavLink to="/data-sources" icon={<Database size={20} />} label={sidebarOpen ? "数据源" : ""} active={isActive('/data-sources')} />
         </nav>
 
         <div className="p-4 border-t border-gray-200/50">
@@ -209,6 +211,7 @@ const AppContent: React.FC = () => {
               <Route path="/mcp-tools/:solverType" element={<MCPTools />} />
               <Route path="/mcp-tools/constraints/:view?" element={<MCPTools />} />
               <Route path="/mcp-tools/ontology/:ontologyToolId" element={<MCPTools />} />
+              <Route path="/data-sources" element={<DataSourceManager />} />
               <Route path="*" element={<div className="p-10 text-center"><h1 className="text-2xl text-[#FF3B30]">404 - Page Not Found</h1><p className="text-gray-500">Path: {location.pathname}</p></div>} />
             </Routes>
           </div>
