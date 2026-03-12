@@ -23,7 +23,89 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "基于光谱数据的原材料杂质含量快速分析。",
     files: {
-      readme: "# Material Purity AI Check\n\n分析拉曼光谱数据以检测正极材料中的磁性异物。",
+      readme: `# 原料纯度AI检测 (Material Purity AI Check) v2.1.0
+
+## 1. 技能概述
+
+### 1.1 业务价值
+本技能基于深度学习光谱分析技术，实现对锂电池正极材料（NCM/LFP）原料纯度的实时、无损检测。相比传统化学滴定法（耗时4-6小时），AI检测可在120秒内完成，检测精度达98%以上，显著降低因原料杂质导致的批次报废风险。
+
+### 1.2 技术原理
+采用卷积神经网络(CNN)对拉曼光谱数据进行特征提取，结合迁移学习技术，能够有效识别磁性异物（Fe、Cu、Zn等）、水分含量及碳酸盐杂质。模型通过FDA 21 CFR Part 11验证，符合锂电行业质量标准。
+
+### 1.3 应用场景
+- **来料检验**: 原料入库前的快速质量筛查
+- **生产过程监控**: 搅拌工序中的实时纯度监测
+- **出货检验**: 成品极片的质量确认
+
+## 2. 输入规范
+
+| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+|--------|------|------|------|--------|
+| batch_id | string | 是 | 原料批次号，用于追溯 | "RAW-NCM-20240315-001" |
+| spectrum_data | array[float] | 是 | 拉曼光谱数据，波长范围200-2000cm⁻¹ | [1024, 2048, 4096, ...] |
+| material_type | string | 否 | 材料类型：NCM/LFP/LCO | "NCM811" |
+| test_temperature | float | 否 | 检测环境温度(°C) | 25.0 |
+
+## 3. 输出规范
+
+| 参数名 | 类型 | 说明 | 示例值 |
+|--------|------|------|--------|
+| purity_score | float | 纯度评分(0-1)，≥0.99为合格 | 0.9992 |
+| impurities | array | 检测到的杂质列表 | [{"type": "Fe", "ppm": 12.5}, ...] |
+| confidence | float | 模型置信度 | 0.987 |
+| test_duration_ms | int | 检测耗时(毫秒) | 118 |
+| next_check_time | string | 建议下次检测时间(ISO8601) | "2024-03-15T14:30:00Z" |
+
+## 4. 性能指标
+
+- **准确率**: 98.5% (基于10万+样本验证)
+- **召回率**: 99.2% (对关键杂质)
+- **延迟**: P99 < 120ms
+- **成本**: 0.3元/次
+- **吞吐量**: 300次/分钟
+
+## 5. 使用示例
+
+### 示例1：来料检验
+\`\`\`python
+response = skill.invoke({
+    "batch_id": "RAW-NCM-20240315-001",
+    "spectrum_data": load_spectrum("batch_001.rmn"),
+    "material_type": "NCM811"
+})
+
+if response["purity_score"] >= 0.99:
+    approve_batch(response["batch_id"])
+else:
+    quarantine_batch(response["batch_id"], response["impurities"])
+\`\`\`
+
+## 6. 故障处理
+
+| 错误码 | 描述 | 解决方案 |
+|--------|------|----------|
+| E1001 | 光谱数据格式错误 | 检查输入数组长度是否为1024或2048 |
+| E1002 | 材料类型不支持 | 确认material_type为NCM/LFP/LCO之一 |
+| E1003 | 模型推理超时 | 检查网络连接或联系管理员 |
+| E1004 | 光谱信号弱 | 清洁检测设备镜头，重新采样 |
+
+## 7. 版本历史
+
+| 版本 | 日期 | 变更说明 |
+|------|------|----------|
+| v2.1.0 | 2024-03 | 新增LFP材料支持，优化Fe杂质检测 |
+| v2.0.0 | 2024-01 | 升级至CNN架构，准确率提升至98.5% |
+| v1.0.0 | 2023-08 | 初始版本，支持NCM材料检测 |
+
+## 8. 依赖与前置条件
+
+- 拉曼光谱仪（波长分辨率≤2cm⁻¹）
+- 标准样品库（已通过ISO认证）
+- 网络带宽≥10Mbps
+
+---
+*本技能由锂电行业AI实验室开发，符合IATF 16949质量标准*`,
       config: "{\"model\": \"purity_net_v2\", \"threshold\": 0.99}",
       script: "def handler(event):\n    return {\"purity_score\": 0.999, \"impurities\": []}",
       scriptLang: "python"
@@ -43,7 +125,94 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "根据搅拌工艺参数实时预测浆料粘度趋势。",
     files: {
-      readme: "# Viscosity Prediction\n\n基于搅拌转速、温度和固含量预测浆料粘度，减少停机取样次数。",
+      readme: `# 浆料粘度预测 (Slurry Viscosity Prediction) v3.0.1
+
+## 1. 技能概述
+
+### 1.1 业务价值
+锂电池浆料粘度是决定涂布质量的关键工艺参数。传统人工取样检测存在滞后性（30-60分钟），导致批量不良。本技能通过实时预测粘度趋势，提前15-30分钟预警异常，减少涂布缺陷率30%以上，年节约报废成本超500万元。
+
+### 1.2 技术原理
+基于LSTM长短期记忆网络，融合搅拌转速、温度、固含量、分散剂用量等多维时序数据。模型考虑浆料老化的非线性特性，采用Attention机制捕捉关键时间窗口特征。引入物理约束层，确保预测结果符合流体力学规律。
+
+### 1.3 应用场景
+- **涂布前预警**: 预测浆料是否适合上机涂布
+- **搅拌终点判断**: 确定最佳搅拌停止时间
+- **库存管理**: 预测浆料可用时间窗口
+- **工艺优化**: 分析不同配方对粘度的影响
+
+## 2. 输入规范
+
+| 参数名 | 类型 | 必填 | 范围 | 说明 |
+|--------|------|------|------|------|
+| solid_content | float | 是 | 40-75% | 浆料固含量(%) |
+| temperature | float | 是 | 15-35°C | 浆料温度 |
+| mixing_speed | float | 是 | 50-200rpm | 搅拌转速 |
+| mixing_time | float | 否 | 0-240min | 已搅拌时长 |
+| dispersant_ratio | float | 否 | 0.5-3% | 分散剂比例 |
+| solvent_type | string | 否 | - | 溶剂类型：NMP/水 |
+
+## 3. 输出规范
+
+| 参数名 | 类型 | 说明 | 单位 |
+|--------|------|------|------|
+| predicted_viscosity | float | 预测粘度值 | mPa·s |
+| confidence_interval | array | 95%置信区间 [下限, 上限] | mPa·s |
+| trend | string | 趋势：rising/stable/falling | - |
+| suitable_for_coating | boolean | 是否适合涂布 | - |
+| recommended_action | string | 建议操作 | - |
+| estimated_shelf_life | float | 预计可用时长 | 小时 |
+
+## 4. 性能指标
+
+- **准确率**: MAPE < 5%（粘度范围1000-15000 mPa·s）
+- **R²得分**: 0.94
+- **预测提前量**: 15-30分钟
+- **延迟**: P99 < 50ms
+- **成本**: 0.5元/次
+
+## 5. 使用示例
+
+### 示例1：涂布前粘度检查
+\`\`\`python
+result = skill.invoke({
+    "solid_content": 65.5,
+    "temperature": 25.0,
+    "mixing_speed": 120,
+    "mixing_time": 180
+})
+
+if result["suitable_for_coating"]:
+    start_coating_process()
+else:
+    if result["trend"] == "rising":
+        add_solvent()
+    else:
+        extend_mixing_time()
+\`\`\`
+
+## 6. 故障处理
+
+| 错误码 | 描述 | 解决方案 |
+|--------|------|----------|
+| E2001 | 固含量超出范围 | 检查固体投料量，确认在40-75%范围内 |
+| E2002 | 温度异常 | 检查温控系统，确保15-35°C |
+| E2003 | 模型漂移警告 | 建议重新采集样本进行模型校准 |
+
+## 7. 版本历史
+
+| 版本 | 日期 | 变更说明 |
+|------|------|----------|
+| v3.0.1 | 2024-02 | 修复高固含量(>70%)预测偏差问题 |
+| v3.0.0 | 2024-01 | 引入Attention机制，支持240分钟长时预测 |
+| v2.0.0 | 2023-10 | 增加溶剂类型参数，支持水系浆料 |
+
+## 8. 依赖与前置条件
+
+- 搅拌罐温度传感器（精度±0.5°C）
+- 转速传感器（精度±1rpm）
+- 固含量在线检测仪
+- 历史样本≥1000批次用于模型训练`,
       config: "{\"model\": \"visc_lstm_v3\"}",
       script: "def predict_viscosity(params):\n    # Mock logic\n    return params['solid_content'] * 50 + params['temperature'] * -2",
       scriptLang: "python"
@@ -63,11 +232,21 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "基于β射线测厚仪数据的模头间隙自动调节算法。",
     files: {
-      readme: "# Coating Thickness Loop\n\n实时读取β射线扫描数据，计算横向厚度偏差，输出模头螺栓调整量。",
-      config: "{\"target_thickness\": 150, \"control_period\": \"100ms\"}",
-      script: "exports.control = (data) => {\n  const error = 150 - data.beta_ray_reading[0];\n  return { adjustment_microns: error * 0.8 };\n}",
-      scriptLang: "javascript"
-    }
+      readme: `# 涂布厚度闭环控制 (Coating Thickness Closed-Loop Control) v1.5.0
+
+## 1. 技能概述
+
+### 1.1 业务价值
+锂电池极片涂布厚度均匀性直接影响电芯容量一致性和安全性。本技能实现β射线测厚仪数据的实时闭环控制，将横向厚度偏差控制在±2μm以内（行业平均水平±5μm）。通过自动调节模头螺栓，减少人工干预频次90%，提升涂布良率至99.5%，年节约成本超800万元。
+
+### 1.2 技术原理
+采用自适应PID控制算法结合前馈补偿：实时分析β射线扫描的横向厚度分布（通常512个扫描点），识别厚度异常区域。通过卡尔曼滤波消除测量噪声，运用二次规划算法计算最优螺栓调整量，实现多螺栓协同控制。控制周期100ms，确保快速响应。
+
+### 1.3 应用场景
+- **涂布过程控制**: 实时厚度闭环调节
+- **换型快速调试**: 新规格产品快速达到目标厚度
+- **异常恢复**: 厚度偏离后的自动修正
+- **横向均匀性优化**: 消除
   },
   {
     skill_id: "roller_pressure_opt_v2",
@@ -83,7 +262,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "根据来料厚度波动调整辊压压力以保证压实密度一致性。",
     files: {
-      readme: "# Roller Pressure Optimization\n\n维持极片压实密度恒定。",
+      readme: `# 辊压压力自适应优化 (Roller Pressure Adaptive Optimization)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n辊压工序是锂电池极片制造的核心环节，直接影响电池的能量密度和循环寿命。本技能通过实时分析极片材料特性、目标密度和产线速度，动态优化辊压压力参数，实现：\n- 极片密度均匀性提升15-20%\n- 辊压缺陷率降低30%\n- 材料损耗减少8-12%\n- 产线换型时间缩短25%\n\n### 1.2 技术原理\n基于物理机理模型与数据驱动算法融合：\n- **弹性-塑性变形模型**：描述极片在辊压过程中的力学行为\n- **自适应PID控制**：实时调节压力响应\n- **数字孪生仿真**：预测不同压力下的密度分布\n- **强化学习优化**：持续学习最优控制策略\n\n### 1.3 应用场景\n- 正负极极片辊压工序\n- 新材料的辊压工艺开发\n- 多规格产品的快速换型\n- 辊压质量异常自动修正\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| target_density | number | 是 | 1.5-3.8 | 目标压实密度，单位：g/cm³ |\n| incoming_thickness | number | 是 | 100-400 | 来料厚度，单位：μm |\n| current_pressure | number | 否 | 50-500 | 当前辊压压力，单位：吨 |\n| line_speed | number | 否 | 5-80 | 产线速度，单位：m/min |\n| material_type | string | 否 | NCM/LFP/Graphite | 材料类型 |\n| roller_diameter | number | 否 | 400-800 | 轧辊直径，单位：mm |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| hydraulic_pressure | number | 推荐液压压力值 | bar |\n| optimal_pressure | number | 推荐最优辊压压力 | 吨 |\n| adjustment | number | 压力调整量 | 吨 |\n| confidence | number | 优化建议置信度 | 0-1 |\n| predicted_density | number | 预测压实密度 | g/cm³ |\n| density_uniformity | number | 密度均匀性评分 | 0-100 |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 密度预测准确率 | >=92% | 与实测值对比 |\n| 压力优化响应时间 | <=200ms | 单次推理延迟 |\n| 密度均匀性提升 | 15-20% | 相比人工设定 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.40 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/roller_pressure_opt_v2",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "target_density": 2.65,\n        "incoming_thickness": 180,\n        "current_pressure": 280,\n        "line_speed": 35,\n        "material_type": "NCM"\n    }\n)\n\nresult = response.json()\nprint(f"推荐压力: {result['hydraulic_pressure']}bar")\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "hydraulic_pressure": 295.5,\n  "optimal_pressure": 295.5,\n  "adjustment": 15.5,\n  "confidence": 0.94,\n  "predicted_density": 2.64,\n  "density_uniformity": 88.5\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| ROLLER_001 | 输入压力超出安全范围 | 检查压力传感器，确认数值在50-500吨范围内 |\n| ROLLER_002 | 目标密度不可达 | 调整目标密度或检查材料配方 |\n| ROLLER_003 | 速度-厚度组合超限 | 降低速度或调整厚度参数 |\n| ROLLER_004 | 模型置信度不足 | 增加历史数据训练或人工确认 |\n| ROLLER_005 | 传感器数据异常 | 检查厚度传感器连接 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v2.0.0 | 2024-01 | 新增自适应控制算法，支持多材料类型 |\n| v1.5.0 | 2023-09 | 优化响应速度，增加置信度输出 |\n| v1.0.0 | 2023-06 | 初始版本，基础压力优化功能 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 辊压机配备压力传感器（精度±0.5%）\n- 边缘计算节点：CPU 4核/内存8GB/存储100GB\n- 网络：工业以太网，延迟<10ms\n\n### 8.2 软件要求\n- MES系统接口版本>=3.2\n- 数据采集频率>=10Hz\n- 历史数据存储>=6个月\n\n### 8.3 数据要求\n- 至少1000组历史辊压数据用于模型训练\n- 包含压力-密度-厚度的完整对应关系\n- 质量检测数据（面密度、厚度分布）`,
       config: "{\"target_density\": 1.5}",
       script: "def optimize(target, current):\n    return target * 2000 # bar",
       scriptLang: "python"
@@ -103,7 +282,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "高速卷绕过程中的动态张力补偿算法。",
     files: {
-      readme: "# Tension Control\n\nPID + 前馈控制算法，用于消除卷针非圆效应引起的张力波动。",
+      readme: `# 卷绕张力波动抑制 (Tension Control Algorithm)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n卷绕工序是电芯制造的关键环节，张力控制直接影响电芯的循环寿命和安全性能。本技能通过实时监测和动态补偿，实现：\n- 张力波动降低60%以上\n- 卷绕缺陷率降低40%\n- 电芯循环寿命提升10-15%\n- 高速卷绕稳定性提升（支持≥800mm/s）\n\n### 1.2 技术原理\n采用多层级控制策略：\n- **PID反馈控制**：基础张力闭环控制\n- **前馈补偿**：消除卷针非圆效应引起的周期性波动\n- **自适应滤波**：实时抑制高频振动\n- **模型预测控制(MPC)**：预测张力变化趋势，提前补偿\n\n### 1.3 应用场景\n- 圆柱/方形电芯卷绕工序\n- 高速卷绕产线（≥60ppm）\n- 超薄极片卷绕（≤100μm）\n- 多层极片同步卷绕\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| real_time_tension | array | 是 | - | 实时张力数据序列，采样频率≥1kHz |\n| speed | number | 是 | 10-100 | 卷绕线速度，单位：mm/s |\n| target_tension | number | 否 | 50-500 | 目标张力值，单位：N |\n| spool_diameter | number | 否 | 50-300 | 当前卷针直径，单位：mm |\n| material_width | number | 否 | 50-300 | 极片宽度，单位：mm |\n| acceleration | number | 否 | 0-50 | 当前加速度，单位：mm/s² |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| torque_compensation | number | 扭矩补偿值 | N·m |\n| tension_error | number | 当前张力误差 | N |\n| control_output | number | 控制器输出 | % |\n| stability_index | number | 张力稳定性指数 | 0-100 |\n| vibration_amplitude | number | 振动幅值 | N |\n| compensation_mode | string | 补偿模式：PID/Feedforward/MPC | - |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 控制响应时间 | ≤10ms | 单次控制周期 |\n| 张力波动抑制率 | ≥60% | 相比开环控制 |\n| 稳态误差 | ≤±2% | 目标张力范围内 |\n| 超调量 | ≤5% | 动态响应过程 |\n| 系统可用性 | ≥99.9% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.20 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 JavaScript调用示例\n\`\`\`javascript\nconst response = await fetch('https://api.battery-ai.com/skills/tension_control_algo_v1', {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer YOUR_API_KEY' },\n  body: JSON.stringify({\n    real_time_tension: [120.5, 121.2, 119.8, 122.1, ...],\n    speed: 65,\n    target_tension: 120,\n    spool_diameter: 180,\n    material_width: 150,\n    acceleration: 5\n  })\n});\n\nconst result = await response.json();\nconsole.log(\`扭矩补偿: \${result.torque_compensation} N·m\`);\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "torque_compensation": 2.35,\n  "tension_error": -1.2,\n  "control_output": 52.5,\n  "stability_index": 94.8,\n  "vibration_amplitude": 3.2,\n  "compensation_mode": "MPC"\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| TENSION_001 | 张力数据采样频率不足 | 检查传感器采样设置，确保≥1kHz |\n| TENSION_002 | 速度超出控制范围 | 调整卷绕速度至10-100mm/s范围内 |\n| TENSION_003 | 张力偏差过大 | 检查极片路径，确认无卡滞或打滑 |\n| TENSION_004 | 控制器饱和 | 降低加速度或检查机械传动 |\n| TENSION_005 | 传感器信号异常 | 检查张力传感器连接和校准 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v1.1.0 | 2024-02 | 新增MPC预测控制，提升高速稳定性 |\n| v1.0.1 | 2023-11 | 优化PID参数自适应 |\n| v1.0.0 | 2023-08 | 初始版本，基础PID+前馈控制 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 张力传感器：精度±0.5%，采样率≥1kHz\n- 伺服驱动器：响应时间≤5ms\n- 边缘计算节点：CPU 2核/内存4GB\n\n### 8.2 软件要求\n- 运动控制系统版本≥2.5\n- 实时操作系统：周期≤1ms\n- 与MES系统时间同步\n\n### 8.3 数据要求\n- 历史张力数据≥10000条\n- 包含正常/异常工况样本\n- 标定数据：张力-扭矩对应关系`,
       config: "{\"kp\": 0.5, \"ki\": 0.1}",
       script: "const pid = new PID(0.5, 0.1, 0);\nreturn pid.update(target - current);",
       scriptLang: "javascript"
@@ -123,7 +302,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "预测电解液在电芯内部的浸润程度。",
     files: {
-      readme: "# Soaking Prediction\n\n基于注液量和真空静置时间，预测电解液浸润质量。",
+      readme: `# 注液浸润效果预测 (Electrolyte Soaking Prediction)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n电解液浸润质量直接影响电池的倍率性能和循环寿命。本技能通过分析注液工艺参数，预测浸润效果，实现：\n- 浸润不良品检出率提升35%\n- 静置时间优化，产能提升15%\n- 电解液用量精准控制，成本降低8%\n- 首效和循环性能一致性提升\n\n### 1.2 技术原理\n融合多物理场仿真与机器学习：\n- **毛细流动模型**：模拟电解液在多孔电极中的渗透\n- **浸润动力学**：考虑粘度、表面张力和孔隙结构\n- **真空扩散模型**：预测真空静置阶段的浸润加速效果\n- **深度学习**：基于历史数据建立浸润质量预测模型\n\n### 1.3 应用场景\n- 圆柱/方形/软包电芯注液工序\n- 新型电解液配方验证\n- 极片孔隙结构优化\n- 注液工艺参数窗口确定\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| injection_amount | number | 是 | 2-10 | 注液量，单位：g |\n| vacuum_time | number | 是 | 30-300 | 真空静置时间，单位：秒 |\n| cell_weight | number | 是 | 50-500 | 电芯重量，单位：g |\n| porosity | number | 否 | 30-50 | 极片孔隙率，单位：% |\n| electrolyte_viscosity | number | 否 | 2-10 | 电解液粘度，单位：mPa·s |\n| temperature | number | 否 | 20-45 | 环境温度，单位：℃ |\n| pressure | number | 否 | -95~-50 | 真空度，单位：kPa |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| soaking_score | number | 浸润质量评分 | 0-100 |\n| soaking_uniformity | number | 浸润均匀性 | 0-100 |\n| predicted_time | number | 建议静置时间 | 秒 |\n| risk_level | string | 风险等级：high/medium/low | - |\n| confidence | number | 预测置信度 | 0-1 |\n| recommendations | array | 工艺优化建议 | - |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 浸润质量预测准确率 | >=89% | 与解剖验证对比 |\n| 不良品检出率 | >=92% | 浸润不良电芯 |\n| 预测响应时间 | <=600ms | 单次推理延迟 |\n| 静置时间优化效果 | 10-20% | 缩短静置时间 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.40 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 JavaScript调用示例\n\`\`\`javascript\nconst response = await fetch('https://api.battery-ai.com/skills/electrolyte_soaking_pred_v1', {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer YOUR_API_KEY' },\n  body: JSON.stringify({\n    injection_amount: 5.2,\n    vacuum_time: 120,\n    cell_weight: 180,\n    porosity: 38,\n    electrolyte_viscosity: 4.5,\n    temperature: 25,\n    pressure: -85\n  })\n});\n\nconst result = await response.json();\nconsole.log(\`浸润评分: \${result.soaking_score}\`);\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "soaking_score": 87.5,\n  "soaking_uniformity": 91.2,\n  "predicted_time": 135,\n  "risk_level": "low",\n  "confidence": 0.91,\n  "recommendations": [\n    "建议延长静置时间至135秒",\n    "可适当提高真空度以加速浸润"\n  ]\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| SOAK_001 | 注液量超出正常范围 | 检查注液泵校准和计量精度 |\n| SOAK_002 | 真空度不足 | 检查真空系统密封性和泵性能 |\n| SOAK_003 | 孔隙率数据缺失 | 输入极片孔隙率或连接极片检测数据 |\n| SOAK_004 | 预测置信度低 | 增加历史数据或检查工艺稳定性 |\n| SOAK_005 | 温度超出工艺窗口 | 调整环境温度至20-45℃范围 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v1.0.0 | 2024-01 | 初始版本，支持基础浸润预测 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 注液机配备流量计（精度±0.5%）\n- 真空传感器：精度±1kPa\n- 边缘计算节点：CPU 4核/内存8GB\n\n### 8.2 软件要求\n- 注液机控制系统接口\n- MES系统数据对接\n- 历史数据存储>=3个月\n\n### 8.3 数据要求\n- 历史注液数据>=5000组\n- 包含浸润质量验证结果\n- 不同电芯型号和电解液配方数据`,
       config: "{}",
       script: "return injection_amount / cell_weight * 0.8",
       scriptLang: "javascript"
@@ -143,7 +322,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "基于化成阶段的电压电流曲线预测最终分容容量，缩短分容时间。",
     files: {
-      readme: "# Capacity Prediction v5\n\n利用充电曲线特征（dV/dQ）预测电池容量。",
+      readme: `# 化成容量预测模型 (Capacity Prediction Model)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n化成容量预测是电池制造的关键质量控制点。本技能通过分析化成曲线特征，提前预测电池容量，实现：\n- 分容时间缩短30-50%\n- 容量预测准确率≥96%\n- 提前识别异常电池，降低后工序损耗\n- 优化化成工艺参数，提升首效\n\n### 1.2 技术原理\n融合电化学机理与深度学习：\n- **dV/dQ曲线分析**：识别锂化/脱锂特征峰\n- **增量容量分析(ICA)**：提取容量衰减特征\n- **OCV-SOC关系**：建立开路电压与容量关联\n- **时序神经网络**：捕捉化成过程的动态特性\n\n### 1.3 应用场景\n- 动力电池化成容量预测\n- 储能电池分容筛选\n- 化成工艺优化\n- 异常电池早期识别\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| formation_curve | array | 是 | - | 化成电压-电流-时间曲线数据 |\n| ocv_drop | number | 是 | 0-500 | OCV压降，单位：mV |\n| initial_ocv | number | 否 | 2000-4000 | 初始开路电压，单位：mV |\n| temperature | number | 否 | 25-60 | 化成温度，单位：℃ |\n| cell_type | string | 否 | NCM/LFP/LCO | 电池类型 |\n| nominal_capacity | number | 否 | 50-300 | 标称容量，单位：Ah |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| predicted_capacity | number | 预测容量 | Ah |\n| grade | string | 等级：A/B/C/D | - |\n| confidence | number | 预测置信度 | 0-1 |\n| deviation | number | 与标称容量偏差 | % |\n| ic_peaks | array | ICA特征峰位置 | mAh/V |\n| estimated_cycle_life | number | 预估循环寿命 | 次 |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 容量预测准确率 | ≥96% | 与实测分容对比 |\n| 等级判定准确率 | ≥94% | A/B/C/D等级 |\n| 预测响应时间 | ≤1000ms | 单次推理延迟 |\n| 异常检出率 | ≥98% | 低容量/异常电池 |\n| 系统可用性 | ≥99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.90 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/capacity_prediction_v5",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "formation_curve": [\n            {"time": 0, "voltage": 3200, "current": 0.5},\n            {"time": 60, "voltage": 3300, "current": 0.5},\n            ...\n        ],\n        "ocv_drop": 45,\n        "initial_ocv": 3200,\n        "temperature": 45,\n        "cell_type": "NCM",\n        "nominal_capacity": 100\n    }\n)\n\nresult = response.json()\nprint(f"预测容量: {result['predicted_capacity']}Ah, 等级: {result['grade']}")\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "predicted_capacity": 102.3,\n  "grade": "A",\n  "confidence": 0.97,\n  "deviation": 2.3,\n  "ic_peaks": [3.65, 3.72, 4.05],\n  "estimated_cycle_life": 2500\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| CAP_001 | 化成曲线数据不完整 | 检查数据采集系统，确保曲线完整 |\n| CAP_002 | OCV压降异常 | 检查电池连接，排除接触不良 |\n| CAP_003 | 预测置信度低 | 检查化成工艺稳定性或重新训练模型 |\n| CAP_004 | 电池类型不支持 | 确认cell_type为NCM/LFP/LCO之一 |\n| CAP_005 | 温度超出范围 | 调整化成温度至25-60℃范围 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v5.0.0 | 2024-01 | 新增ICA特征提取，准确率提升至96% |\n| v4.2.0 | 2023-09 | 支持多类型电池预测 |\n| v4.0.0 | 2023-06 | 引入时序神经网络架构 |\n| v3.0.0 | 2023-03 | 基础版本，dV/dQ分析方法 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 化成设备：电压精度±1mV，电流精度±0.1%\n- 数据采集系统：采样频率≥1Hz\n- 计算节点：GPU支持，CUDA显存≥8GB\n\n### 8.2 软件要求\n- 化成系统数据接口\n- MES系统对接\n- 历史数据存储≥6个月\n\n### 8.3 数据要求\n- 历史化成数据≥10000组\n- 包含完整分容结果\n- 覆盖不同批次和工艺参数`,
       config: "{\"feature_extraction\": \"standard\"}",
       script: "model.predict(curve_features)",
       scriptLang: "python"
@@ -163,7 +342,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "Pack下线测试中的热失控风险实时评估。",
     files: {
-      readme: "# Thermal Runaway Warning\n\n监测电芯温升速率 (dT/dt) 和电压压差。",
+      readme: `# Pack热失控预警 (Thermal Runaway Warning)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n热失控是锂电池最严重的安全风险。本技能通过实时监测Pack温度、电压等关键参数，实现热失控的早期预警，保障生产安全和产品质量：\n- 热失控预警准确率≥99%\n- 预警提前时间≥30秒\n- 误报率≤0.1%\n- 避免重大安全事故和财产损失\n\n### 1.2 技术原理\n融合多维度异常检测算法：\n- **温升速率监测(dT/dt)**：识别异常温升趋势\n- **电压一致性分析**：检测单体电压异常偏差\n- **内阻变化追踪**：识别微短路迹象\n- **多参数融合**：综合温度、电压、气体等多源信号\n- **机器学习异常检测**：基于历史数据建立正常行为基线\n\n### 1.3 应用场景\n- Pack下线测试工序\n- 储能系统运行监测\n- 动力电池包安全监控\n- 实验室安全测试\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| cell_temperatures | array | 是 | - | 各电芯温度数组，单位：℃ |\n| cell_voltages | array | 是 | - | 各电芯电压数组，单位：mV |\n| ambient_temp | number | 否 | -40~60 | 环境温度，单位：℃ |\n| charge_current | number | 否 | 0-500 | 当前充电电流，单位：A |\n| gas_sensor_data | array | 否 | - | 气体传感器数据（CO/VOC） |\n| pack_id | string | 否 | - | Pack唯一标识 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| risk_level | number | 风险等级评分 | 0-100 |\n| warning_msg | string | 预警信息描述 | - |\n| risk_category | string | 风险类别：thermal/short/gas | - |\n| max_temp | number | 最高温度 | ℃ |\n| max_dTdt | number | 最大温升速率 | ℃/min |\n| voltage_diff | number | 最大电压差 | mV |\n| recommended_action | string | 建议处置措施 | - |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 预警准确率 | ≥99% | 热失控事件正确预警比例 |\n| 预警提前时间 | ≥30秒 | 从预警到热失控发生的时间 |\n| 误报率 | ≤0.1% | 正常状态误报比例 |\n| 响应延迟 | ≤50ms | 单次检测延迟 |\n| 系统可用性 | ≥99.99% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.10 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/thermal_runaway_warning_v2",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "cell_temperatures": [25.2, 25.5, 25.1, 25.3, 26.8, 25.4],\n        "cell_voltages": [3200, 3205, 3198, 3202, 3185, 3201],\n        "ambient_temp": 25,\n        "charge_current": 100,\n        "pack_id": "PACK-20240315-001"\n    }\n)\n\nresult = response.json()\nif result['risk_level'] > 70:\n    trigger_emergency_stop(result['pack_id'])\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "risk_level": 15,\n  "warning_msg": "温度正常，电压一致性良好",\n  "risk_category": "normal",\n  "max_temp": 26.8,\n  "max_dTdt": 0.5,\n  "voltage_diff": 20,\n  "recommended_action": "继续监测"\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| THERMAL_001 | 温度传感器数据缺失 | 检查温度传感器连接和校准 |\n| THERMAL_002 | 电压数据异常 | 检查BMS通信和电压采样电路 |\n| THERMAL_003 | 传感器数量不匹配 | 确认温度与电压数组长度一致 |\n| THERMAL_004 | 环境温度过高 | 检查测试环境通风和温控系统 |\n| THERMAL_005 | 检测到高风险 | 立即执行紧急停机程序 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v2.1.0 | 2024-02 | 新增气体传感器融合，提升预警准确率 |\n| v2.0.0 | 2023-11 | 引入深度学习异常检测模型 |\n| v1.5.0 | 2023-08 | 优化多参数融合算法 |\n| v1.0.0 | 2023-05 | 初始版本，基础温升监测 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 温度传感器：精度±0.5℃，采样频率≥1Hz\n- 电压采样：精度±1mV，每串电芯独立采样\n- BMS系统：支持实时数据上报\n- 边缘计算节点：CPU 2核/内存4GB\n\n### 8.2 软件要求\n- BMS通信协议支持（CAN/Modbus）\n- 实时操作系统，调度周期≤10ms\n- 与MES/安全系统联动接口\n\n### 8.3 数据要求\n- 历史安全测试数据≥5000组\n- 包含正常、异常、热失控等各类工况\n- 数据标注：时间戳、风险等级、处置结果`,
       config: "{\"max_temp_diff\": 5.0}",
       script: "if max(temps) > 45: return {'risk': 'high'}",
       scriptLang: "python"
@@ -203,7 +382,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "利用振动和油液分析数据，预测关键设备（如涂布机辊轴）的剩余寿命。",
     files: {
-      readme: "# Equipment RUL Prediction\n\n## 概述\nRemaining Useful Life (RUL) 预测模型。\n\n## 输入数据\n* **振动频谱**: 频域特征用于识别轴承磨损。\n* **油液分析**: 铁谱分析数据用于检测齿轮箱磨损。\n\n## 算法\n结合 CNN (提取频域特征) 和 LSTM (时序退化建模) 的混合网络。",
+      readme: `# 设备RUL预测 (Equipment RUL Prediction)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n设备故障是产线停机和产品质量波动的主要原因。本技能通过多源传感器数据分析，预测设备剩余使用寿命，实现预测性维护：\n- 非计划停机减少40-60%\n- 维护成本降低25-30%\n- 设备利用率提升10-15%\n- 备件库存优化，资金占用降低20%\n\n### 1.2 技术原理\n融合物理退化模型与数据驱动方法：\n- **振动频谱分析**：识别轴承、齿轮等旋转部件退化特征\n- **油液分析**：监测润滑油中的金属磨粒和理化指标\n- **温度趋势分析**：检测异常温升模式\n- **深度学习退化模型**：CNN+LSTM混合网络预测RUL\n- **生存分析**：考虑设备个体差异的不确定性量化\n\n### 1.3 应用场景\n- 关键生产设备（搅拌机、涂布机、辊压机）\n- 卷绕机主轴和伺服系统\n- 化成柜和分容柜\n- 物流AGV和输送系统\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| vibration_spectrum | array | 是 | - | 振动频谱数据，FFT结果 |\n| oil_analysis | object | 否 | - | 油液分析数据 |\n| run_hours | number | 是 | 0-100000 | 累计运行小时数 |\n| temperature_data | array | 否 | - | 温度传感器历史数据 |\n| current_data | array | 否 | - | 电流监测数据 |\n| equipment_id | string | 是 | - | 设备唯一标识 |\n| equipment_type | string | 是 | - | 设备类型编码 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| rul_days | number | 预测剩余使用寿命 | 天 |\n| confidence | number | 预测置信度 | 0-1 |\n| failure_mode | string | 最可能的故障模式 | - |\n| rul_distribution | object | RUL概率分布 | - |\n| health_score | number | 设备健康度评分 | 0-100 |\n| maintenance_urgency | string | 维护紧急程度 | - |\n| recommended_action | string | 建议维护措施 | - |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| RUL预测准确率 | >=91% | 预测值与实际值偏差<20%比例 |\n| 故障提前预警率 | >=95% | 提前7天以上预警比例 |\n| 误报率 | <=5% | 正常设备误判比例 |\n| 预测响应时间 | <=150ms | 单次推理延迟 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.40 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/equipment_rul_pred_v2",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "vibration_spectrum": [0.1, 0.2, 0.5, 1.2, 0.8, ...],\n        "oil_analysis": {\n            "viscosity": 45,\n            "metal_particles": 15,\n            "moisture": 0.05\n        },\n        "run_hours": 8760,\n        "equipment_id": "MIX-001",\n        "equipment_type": "vacuum_mixer"\n    }\n)\n\nresult = response.json()\nif result['rul_days'] < 30:\n    schedule_maintenance(result['equipment_id'])\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "rul_days": 145,\n  "confidence": 0.92,\n  "failure_mode": "bearing_wear",\n  "rul_distribution": {\n    "p10": 120,\n    "p50": 145,\n    "p90": 180\n  },\n  "health_score": 78,\n  "maintenance_urgency": "medium",\n  "recommended_action": "建议3个月内安排轴承更换"\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| RUL_001 | 振动数据异常 | 检查加速度传感器连接和校准 |\n| RUL_002 | 运行时间数据缺失 | 确认设备运行时间记录完整性 |\n| RUL_003 | 设备类型不支持 | 检查equipment_type是否在支持列表 |\n| RUL_004 | 预测置信度低 | 增加历史故障数据或检查传感器状态 |\n| RUL_005 | 模型需要更新 | 联系管理员进行模型重训练 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v2.1.5 | 2024-02 | 优化轴承故障检测算法 |\n| v2.1.0 | 2023-12 | 新增油液分析融合 |\n| v2.0.0 | 2023-09 | 引入CNN+LSTM混合网络 |\n| v1.5.0 | 2023-06 | 支持多设备类型 |\n| v1.0.0 | 2023-03 | 初始版本，基础RUL预测 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 振动传感器：IEPE型，频率范围0.1-10kHz\n- 数据采集器：采样率>=25.6kHz，24位ADC\n- 边缘计算节点：CPU 4核/内存8GB/GPU可选\n\n### 8.2 软件要求\n- 设备数据采集系统接口\n- CMMS系统对接\n- 历史数据存储>=12个月\n\n### 8.3 数据要求\n- 历史运行数据>=6个月\n- 故障记录>=50条\n- 包含正常运行和各类故障模式数据`,
       config: "{\"model_path\": \"s3://models/rul_hybrid_v2.pt\", \"threshold_alert\": 7}",
       script: "def predict_rul(data):\n    # 模拟深度学习推理\n    health_index = calculate_hi(data)\n    rul = map_hi_to_rul(health_index)\n    return {\"rul_days\": 45, \"confidence\": 0.88}",
       scriptLang: "python"
@@ -248,7 +427,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "实时计算分段工序的能耗与物料成本，生成单瓦时(Wh)制造成本报表。",
     files: {
-      readme: "# Cost Realtime Analyzer\n\n聚合SCADA能耗数据与MES投料数据，实时计算单吨成本。",
+      readme: `# 单吨制造成本实时分析 (Cost Realtime Analyzer)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n制造成本是电池企业核心竞争力。本技能通过实时聚合产线数据，精准计算单瓦时制造成本，支持成本控制和优化决策：\n- 成本异常实时预警，降低超支风险\n- 工序成本透明化，识别降本空间\n- 支持多维度成本分析（按产品/工序/班次）\n- 成本数据驱动工艺优化决策\n\n### 1.2 技术原理\n基于活动成本法(ABC)和实时数据融合：\n- **能耗成本计算**：SCADA电表数据实时采集\n- **物料成本追溯**：MES投料记录与BOM匹配\n- **人工费用分摊**：按标准工时和实际产量分摊\n- **制造费用分配**：设备折旧、维护费用按活动分配\n- **成本差异分析**：实际成本vs标准成本对比\n\n### 1.3 应用场景\n- 产线级成本实时监控\n- 工序成本异常诊断\n- 产品盈利能力分析\n- 成本预算执行跟踪\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| energy_consumption | number | 是 | >=0 | 工序能耗，单位：kWh |\n| material_usage | number | 是 | >=0 | 物料消耗金额，单位：元 |\n| output_volume | number | 是 | >0 | 产出电量，单位：Wh |\n| labor_hours | number | 否 | >=0 | 人工工时，单位：小时 |\n| equipment_id | string | 否 | - | 设备/产线标识 |\n| time_period | string | 否 | - | 统计周期：hour/shift/day |\n| product_type | string | 否 | - | 产品型号 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| cost_per_wh | number | 单瓦时制造成本 | 元/Wh |\n| variance_reason | string | 成本差异原因分析 | - |\n| energy_cost_ratio | number | 能耗成本占比 | % |\n| material_cost_ratio | number | 物料成本占比 | % |\n| labor_cost_ratio | number | 人工成本占比 | % |\n| total_cost | number | 总制造成本 | 元 |\n| benchmark_comparison | string | 与基准对比结果 | - |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 成本计算准确率 | >=95% | 与财务核算对比 |\n| 数据延迟 | <=5分钟 | 从生产到成本报表 |\n| 计算响应时间 | <=500ms | 单次查询延迟 |\n| 成本异常检出率 | >=90% | 超支/异常识别 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.20 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/cost_realtime_analyzer_v1",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "energy_consumption": 1250,\n        "material_usage": 85000,\n        "output_volume": 250000,\n        "labor_hours": 16,\n        "equipment_id": "LINE-A",\n        "time_period": "shift",\n        "product_type": "NCM-100Ah"\n    }\n)\n\nresult = response.json()\nprint(f"单Wh成本: {result['cost_per_wh']:.4f}元")\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "cost_per_wh": 0.345,\n  "variance_reason": "能耗略高于标准，建议检查真空泵运行效率",\n  "energy_cost_ratio": 18.5,\n  "material_cost_ratio": 72.3,\n  "labor_cost_ratio": 4.2,\n  "total_cost": 86250,\n  "benchmark_comparison": "高于基准2.1%，主要因能耗增加"\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| COST_001 | 产出量为零 | 检查MES产量数据上报 |\n| COST_002 | 能耗数据缺失 | 检查SCADA电表通信 |\n| COST_003 | 物料成本异常 | 核对BOM和投料记录 |\n| COST_004 | 计算精度溢出 | 检查输入数值范围 |\n| COST_005 | 基准数据缺失 | 配置产品标准成本基准 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v1.1.0 | 2024-01 | 新增成本差异分析和基准对比 |\n| v1.0.0 | 2023-09 | 初始版本，基础成本计算功能 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- SCADA系统：电表数据采集，精度±0.5%\n- MES系统：投料和产量数据\n- 计算节点：CPU 2核/内存4GB\n\n### 8.2 软件要求\n- MES系统接口版本>=3.0\n- SCADA数据接口\n- ERP成本模块对接（可选）\n\n### 8.3 数据要求\n- 标准BOM数据完整\n- 标准工时数据\n- 历史成本数据>=3个月`,
       config: "{\"currency\": \"CNY\", \"allocation_rule\": \"activity_based\"}",
       script: "def calculate_cost(energy, material, output):\n    return (energy * price + material) / output",
       scriptLang: "python"
@@ -268,7 +447,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "分析呆滞物料风险，提供基于安全库存水位的采购与排产建议。",
     files: {
-      readme: "# Inventory Optimizer\n\n识别库龄超标物料，并结合需求预测给出库存优化建议。",
+      readme: `# 库存周转率优化建议 (Inventory Turnover Optimization)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n库存管理是制造业资金占用的主要环节。本技能通过分析库存周转情况，识别呆滞风险，优化库存水位，实现：\n- 库存资金占用降低15-25%\n- 呆滞物料减少30-40%\n- 库存周转天数缩短20%\n- 缺货风险控制在5%以内\n\n### 1.2 技术原理\n融合经典库存理论与机器学习：\n- **ABC分类法**：按价值对物料进行分类管理\n- **安全库存计算**：基于需求波动和供应提前期\n- **EOQ经济订货量**：优化订货批量和频率\n- **呆滞风险预测**：基于物料流动性和需求趋势\n- **动态补货策略**：自适应调整补货点和补货量\n\n### 1.3 应用场景\n- 原材料库存优化（正极/负极材料）\n- 在制品库存管理\n- 备品备件库存控制\n- 成品库存水位优化\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| current_stock | object | 是 | - | 当前库存数据，包含各物料库存量 |\n| sales_rate | array | 是 | - | 历史销售/消耗速率 |\n| lead_time | number | 否 | >=0 | 供应提前期，单位：天 |\n| service_level | number | 否 | 0.9-0.99 | 目标服务水平 |\n| holding_cost_rate | number | 否 | 0.1-0.3 | 库存持有成本率 |\n| ordering_cost | number | 否 | >0 | 单次订货成本 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| recommended_stock_level | object | 推荐库存水位 | 件/吨 |\n| dead_stock_alert | array | 呆滞物料预警列表 | - |\n| safety_stock | object | 各物料安全库存 | 件/吨 |\n| reorder_point | object | 再订货点 | 件/吨 |\n| order_quantity | object | 建议订货量 | 件/吨 |\n| turnover_days | number | 预计周转天数 | 天 |\n| inventory_value | number | 库存金额 | 元 |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 库存优化准确率 | >=91% | 建议水位与实际需求匹配度 |\n| 呆滞识别准确率 | >=85% | 正确识别呆滞物料比例 |\n| 缺货率控制 | <=5% | 优化后缺货发生比例 |\n| 计算响应时间 | <=1200ms | 单次优化延迟 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.50 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/inventory_turnover_opt_v2",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "current_stock": {\n            "NCM811": 500,\n            "Graphite": 800,\n            "Electrolyte": 200\n        },\n        "sales_rate": [120, 135, 128, 142, 138],\n        "lead_time": 14,\n        "service_level": 0.95,\n        "holding_cost_rate": 0.15,\n        "ordering_cost": 500\n    }\n)\n\nresult = response.json()\nprint(f"推荐库存水位: {result['recommended_stock_level']}")\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "recommended_stock_level": {\n    "NCM811": 450,\n    "Graphite": 720,\n    "Electrolyte": 180\n  },\n  "dead_stock_alert": [\n    {\"material\": \"LCO-001\", \"days_in_stock\": 95, \"value\": 85000}\n  ],\n  "safety_stock": {\n    "NCM811": 120,\n    "Graphite": 150,\n    "Electrolyte": 50\n  },\n  "reorder_point": {\n    "NCM811": 280,\n    "Graphite": 350,\n    "Electrolyte": 100\n  },\n  "turnover_days": 28,\n  "inventory_value": 12500000\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| INV_001 | 库存数据格式错误 | 检查current_stock对象结构 |\n| INV_002 | 销售数据不足 | 提供至少3个月历史数据 |\n| INV_003 | 提前期为负 | 确认lead_time参数为正数 |\n| INV_004 | 服务水平超出范围 | 调整至0.9-0.99范围内 |\n| INV_005 | 物料编码不存在 | 检查物料主数据完整性 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v2.0.1 | 2024-01 | 优化呆滞识别算法 |\n| v2.0.0 | 2023-10 | 新增动态补货策略 |\n| v1.5.0 | 2023-06 | 支持多仓库协同优化 |\n| v1.0.0 | 2023-03 | 初始版本，基础EOQ模型 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- ERP系统接口服务器\n- 计算节点：CPU 4核/内存8GB\n\n### 8.2 软件要求\n- ERP系统接口版本>=2.5\n- WMS系统数据对接\n\n### 8.3 数据要求\n- 物料主数据完整（编码、分类、成本）\n- 历史库存数据>=6个月\n- 历史消耗/销售数据>=6个月`,
       config: "{\"dead_stock_threshold_days\": 90}",
       script: "def optimize(stock, sales):\n    # EOQ Model logic\n    return recommendations",
       scriptLang: "python"
@@ -318,12 +497,12 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "基于工艺参数、原材料规格、设备状态和环境数据，预测电芯质量等级和缺陷概率，提前识别质量风险。",
     files: {
-      readme: "# Quality Prediction Model\n\n## 概述\n电芯质量预测模型，用于在化成分容前预测电芯质量等级。\n\n## 输入特征\n- **工艺参数**: 涂布重量、辊压厚度、卷绕张力等\n- **原材料规格**: 正极材料批次、电解液配方等\n- **设备状态**: 关键设备的健康度和稳定性\n- **环境数据**: 温湿度、洁净度等\n\n## 输出\n- 质量评分 (0-100)\n- 缺陷概率\n- 主要风险因素\n- 改进建议",
+      readme: `# 电芯质量预测模型 (Cell Quality Prediction)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n电芯质量是电池企业的核心竞争力。本技能通过分析全流程工艺数据，在化成分容前预测电芯质量，实现：\n- 质量缺陷提前识别，降低后工序损耗\n- 不良品拦截率提升40%\n- 质量一致性提升15%\n- 减少返工和报废成本\n\n### 1.2 技术原理\n融合多源数据与集成学习：\n- **工艺参数挖掘**：涂布、辊压、卷绕等关键工序参数\n- **原材料追溯**：正极/负极/电解液批次质量关联\n- **设备状态融合**：关键设备健康度影响建模\n- **环境因子分析**：温湿度、洁净度对质量的影响\n- **XGBoost集成模型**：多特征融合预测\n\n### 1.3 应用场景\n- 化成分容前质量预筛\n- 工艺异常早期预警\n- 质量根因分析\n- 工艺参数优化建议\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| process_parameters | object | 是 | - | 工艺参数（涂布重量、辊压厚度等） |\n| raw_material_specs | object | 是 | - | 原材料规格和批次信息 |\n| equipment_status | object | 是 | - | 关键设备状态数据 |\n| environmental_data | object | 否 | - | 环境温湿度、洁净度 |\n| cell_id | string | 是 | - | 电芯唯一标识 |\n| production_time | string | 否 | - | 生产时间戳 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| quality_score | number | 质量评分 | 0-100 |\n| defect_probability | number | 缺陷概率 | 0-1 |\n| risk_factors | array | 主要风险因素列表 | - |\n| recommendations | array | 改进建议 | - |\n| predicted_grade | string | 预测等级：A/B/C/D | - |\n| confidence | number | 预测置信度 | 0-1 |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 质量预测准确率 | >=93% | 与实际分容结果对比 |\n| 缺陷检出率 | >=90% | 不良品正确识别比例 |\n| 误报率 | <=8% | 良品误判比例 |\n| 预测响应时间 | <=800ms | 单次推理延迟 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.60 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/quality_predict_v2",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "process_parameters": {\n            "coating_weight": 25.5,\n            "rolling_thickness": 180,\n            "winding_tension": 120\n        },\n        "raw_material_specs": {\n            "cathode_batch": "NCM-20240315",\n            "anode_batch": "GR-20240314",\n            "electrolyte_batch": "EL-001"\n        },\n        "equipment_status": {\n            "coater_health": 95,\n            "roller_health": 88\n        },\n        "cell_id": "CELL-20240315-001"\n    }\n)\n\nresult = response.json()\nif result['defect_probability'] > 0.3:\n    flag_for_inspection(result['cell_id'])\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "quality_score": 87.5,\n  "defect_probability": 0.08,\n  "risk_factors": [\n    {\"factor\": \"辊压厚度波动\", \"impact\": 0.15},\n    {\"factor\": \"卷绕张力偏高\", \"impact\": 0.12}\n  ],\n  "recommendations": [\n    "建议调整辊压压力设定值",\n    "检查卷绕张力控制参数"\n  ],\n  "predicted_grade": \"A\",\n  "confidence": 0.91\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| QUAL_001 | 工艺参数缺失 | 检查MES工艺数据完整性 |\n| QUAL_002 | 原材料批次不存在 | 核对批次号在ERP系统中 |\n| QUAL_003 | 设备状态数据异常 | 检查设备传感器状态 |\n| QUAL_004 | 预测置信度低 | 增加训练数据或检查特征分布 |\n| QUAL_005 | 环境数据超出范围 | 检查洁净室温湿度控制 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v2.0.0 | 2024-01 | 新增环境因子分析，准确率提升至93% |\n| v1.5.0 | 2023-09 | 优化特征工程，支持更多设备类型 |\n| v1.0.0 | 2023-06 | 初始版本，基础质量预测功能 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- MES系统数据接口\n- 计算节点：CPU 4核/内存8GB\n\n### 8.2 软件要求\n- MES系统版本>=3.0\n- ERP批次数据接口\n- 设备状态监测系统\n\n### 8.3 数据要求\n- 历史工艺数据>=6个月\n- 质量检验数据>=10000条\n- 包含各等级电芯的完整数据`,
       config: "{\"model_type\": \"xgboost\", \"threshold\": 0.85}",
       script: "def predict_quality(process, material, equipment, env):\n    features = extract_features(process, material, equipment, env)\n    score = model.predict_proba(features)[0]\n    risks = identify_risk_factors(features)\n    return {'quality_score': score * 100, 'defect_probability': 1 - score, 'risk_factors': risks}",
       scriptLang: "python"
     }
-  },
+  },`,
   // ========== 产销匹配协同场景技能 ==========
   {
     skill_id: "demand_forecast_v3",
@@ -348,7 +527,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: [],
     description: "基于历史订单、市场趋势和季节性因素，预测未来3-12个月的电芯需求（按产品型号、客户细分）。",
     files: {
-      readme: "# Demand Forecast for Lithium Battery\n\n## 概述\n针对锂电行业特点构建的需求预测模型，考虑储能/动力不同市场的周期性波动。\n\n## 算法特性\n- **时序分解**: 分离趋势、季节、周期和随机成分\n- **客户细分**: 区分储能大项目（波动大）和动力电池（相对稳）\n- **外部变量**: 纳入锂价指数、新能源车销量等宏观指标\n\n## 输出\n提供点预测和置信区间，支持S&OP决策。",
+      readme: `# 锂电需求智能预测 (Demand Forecast)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n准确的需求预测是产销协同的基础。本技能针对锂电行业特点，融合多源数据预测未来需求，实现：\n- 预测准确率提升至92%\n- 库存积压减少20-30%\n- 缺货风险降低35%\n- 支持S&OP决策优化\n\n### 1.2 技术原理\n融合时序分析与深度学习：\n- **Prophet时序分解**：分离趋势、季节、节假日效应\n- **LSTM深度网络**：捕捉长期依赖和非线性关系\n- **集成学习**：多模型融合提升预测稳定性\n- **外部变量融合**：锂价、新能源车销量等宏观指标\n- **客户细分建模**：区分储能和动力不同市场特性\n\n### 1.3 应用场景\n- 年度/季度销售计划制定\n- 产能规划决策支持\n- 原材料采购计划\n- 库存策略优化\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| historical_orders | array | 是 | - | 历史订单数据（至少12个月） |\n| market_trends | object | 否 | - | 市场趋势指标 |\n| seasonality_factor | number | 否 | 0-1 | 季节性因子权重 |\n| customer_segments | array | 否 | - | 客户细分列表 |\n| forecast_horizon | number | 否 | 1-52 | 预测周期，单位：周 |\n| product_models | array | 否 | - | 产品型号列表 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| predicted_demand | array | 预测需求量序列 | MWh |\n| confidence_interval | object | 置信区间（上下界） | MWh |\n| trend_analysis | string | 趋势分析结论 | - |\n| seasonality_pattern | object | 季节性模式 | - |\n| forecast_accuracy | number | 历史预测准确率 | % |\n| key_drivers | array | 需求关键驱动因素 | - |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 预测准确率 | >=92% | MAPE（平均绝对百分比误差） |\n| 预测响应时间 | <=1500ms | 单次预测延迟 |\n| 预测周期 | 1-52周 | 支持周度滚动预测 |\n| 置信区间覆盖率 | >=90% | 实际值落在区间内比例 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.70 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/demand_forecast_v3",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "historical_orders": [\n            {"date": "2023-01", "quantity": 150},\n            {"date": "2023-02", "quantity": 165},\n            ...\n        ],\n        "market_trends": {\n            "lithium_price_index": 125,\n            "ev_sales_growth": 0.35\n        },\n        "seasonality_factor": 0.8,\n        "customer_segments": ["EV", "ESS"],\n        "forecast_horizon": 12\n    }\n)\n\nresult = response.json()\nprint(f"未来12周预测: {result['predicted_demand']}")\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "predicted_demand": [180, 195, 210, 205, 220, 235, 240, 230, 245, 260, 255, 270],\n  "confidence_interval": {\n    "lower": [165, 178, 192, 187, 201, 215, 219, 210, 224, 238, 233, 247],\n    "upper": [195, 212, 228, 223, 239, 255, 261, 250, 266, 282, 277, 293]\n  },\n  "trend_analysis": "需求呈上升趋势，Q2进入旺季",\n  "seasonality_pattern": {"peak_months": [6,7,8], "trough_months": [1,2]},\n  "forecast_accuracy": 92.5,\n  "key_drivers": ["新能源车销量增长", "储能政策利好"]\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| FCST_001 | 历史数据不足 | 提供至少12个月历史订单数据 |\n| FCST_002 | 数据格式错误 | 检查historical_orders数组结构 |\n| FCST_003 | 预测周期超出范围 | 调整forecast_horizon至1-52周 |\n| FCST_004 | 市场数据缺失 | 补充market_trends或降低外部变量权重 |\n| FCST_005 | 模型需要重训练 | 联系管理员更新模型 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v3.2.0 | 2024-01 | 新增客户细分建模，准确率提升至92% |\n| v3.1.0 | 2023-10 | 优化LSTM网络结构 |\n| v3.0.0 | 2023-07 | 引入Prophet+LSTM集成 |\n| v2.0.0 | 2023-03 | 支持多产品型号预测 |\n| v1.0.0 | 2023-01 | 初始版本，基础时序预测 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 计算节点：CPU 8核/内存16GB/GPU可选\n- 存储：历史数据>=100GB\n\n### 8.2 软件要求\n- CRM/ERP系统数据接口\n- 外部数据源接口（锂价、销量等）\n\n### 8.3 数据要求\n- 历史订单数据>=24个月\n- 包含完整的产品型号和客户信息\n- 数据质量：缺失率<5%`,
       config: "{\"horizon_weeks\": 52, \"confidence_level\": 0.95, \"models\": [\"prophet\", \"lstm\"]}",
       script: "def forecast_demand(historical, market, seasonality, segments):\n    # Prophet + LSTM Ensemble\n    baseline = prophet_predict(historical, seasonality)\n    adjustment = lstm_market_adjustment(market)\n    return merge_predictions(baseline, adjustment)",
       scriptLang: "python"
@@ -406,7 +585,7 @@ export const MOCK_SKILLS: Skill[] = [
     dependencies: ["demand_forecast_v3", "capacity_evaluation_v2"],
     description: "综合考虑需求、产能、物料齐套性，生成优化的主生产计划(MPS)和详细排程(APS)。",
     files: {
-      readme: "# Smart Scheduling Engine\n\n## 概述\n锂电行业专用高级排程系统，解决前后工序产能不匹配、换型时间长等痛点。\n\n## 核心算法\n- **约束传播**: 处理物料齐套、设备互斥等硬约束\n- **启发式规则**: 最小化换型时间、均衡化生产\n- **优化目标**: 最大化交付率、最小化WIP库存\n\n## 特殊处理\n- **化成段排程**: 考虑化成柜充放电程序时长差异\n- **静置等待**: 自动计算高温静置时间窗口\n- **紧急插单**: 支持快速评估插单对整体计划的影响",
+      readme: `# 智能排产引擎 (Smart Scheduling Engine)\n\n## 1. 技能概述\n\n### 1.1 业务价值\n排产是连接销售需求与生产执行的关键环节。本技能针对锂电行业特点，生成优化的生产计划，实现：\n- 订单交付率提升至95%+\n- 设备利用率提升10-15%\n- 在制品库存降低20%\n- 换型时间减少25%\n\n### 1.2 技术原理\n基于约束规划和启发式优化：\n- **约束传播(CP)**：处理物料齐套、设备互斥等硬约束\n- **启发式规则**：最小化换型时间、均衡化生产\n- **多目标优化**：平衡交付率、库存、成本\n- **动态重排程**：支持紧急插单和异常处理\n\n### 1.3 应用场景\n- 主生产计划(MPS)生成\n- 详细排程(APS)优化\n- 紧急插单影响评估\n- 产能瓶颈识别与缓解\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 范围 | 说明 |\n|--------|------|------|------|------|\n| demand_plan | array | 是 | - | 需求计划（产品、数量、交期） |\n| capacity_constraints | object | 是 | - | 产能约束（设备、班次、OEE） |\n| material_availability | object | 是 | - | 物料可用性（库存、在途） |\n| priority_rules | object | 否 | - | 优先级规则（VIP客户、交期） |\n| scheduling_horizon | number | 否 | 1-90 | 排程周期，单位：天 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 | 单位 |\n|--------|------|------|------|\n| production_schedule | array | 生产计划明细 | - |\n| material_requirements | array | 物料需求计划 | - |\n| bottleneck_warnings | array | 瓶颈预警信息 | - |\n| schedule_feasibility | boolean | 计划可行性 | - |\n| delivery_achievement | number | 预计交付达成率 | % |\n| resource_utilization | object | 资源利用率 | % |\n\n## 4. 性能指标\n\n| 指标 | 数值 | 说明 |\n|------|------|------|\n| 排程优化率 | >=91% | 相比人工排程提升 |\n| 计算响应时间 | <=3000ms | 单次排程延迟 |\n| 交付达成率 | >=95% | 准时交付比例 |\n| 设备利用率 | >=85% | 关键设备平均利用率 |\n| 系统可用性 | >=99.5% | 年度运行时间占比 |\n| 单次调用成本 | ¥0.80 | 含计算与存储 |\n\n## 5. 使用示例\n\n### 5.1 Python调用示例\n\`\`\`python\nimport requests\n\nresponse = requests.post(\n    "https://api.battery-ai.com/skills/smart_scheduling_v4",\n    headers={"Authorization": "Bearer YOUR_API_KEY"},\n    json={\n        "demand_plan": [\n            {\"product\": \"NCM-100Ah\", \"quantity\": 1000, \"due_date\": \"2024-04-15\"},\n            {\"product\": \"LFP-280Ah\", \"quantity\": 500, \"due_date\": \"2024-04-20\"}\n        ],\n        "capacity_constraints": {\n            \"coating_line\": {\"capacity\": 800, \"oee\": 0.85},\n            \"formation\": {\"capacity\": 600, \"oee\": 0.90}\n        },\n        "material_availability": {\n            \"NCM811\": {\"on_hand\": 500, \"in_transit\": 300},\n            \"LFP\": {\"on_hand\": 400, \"in_transit\": 200}\n        },\n        "scheduling_horizon": 30\n    }\n)\n\nresult = response.json()\nprint(f"排程可行性: {result['schedule_feasibility']}")\n\`\`\`\n\n### 5.2 响应示例\n\`\`\`json\n{\n  "production_schedule": [\n    {\"product\": \"NCM-100Ah\", \"start\": \"2024-04-01\", \"end\": \"2024-04-10\", \"line\": \"A1\"},\n    {\"product\": \"LFP-280Ah\", \"start\": \"2024-04-11\", \"end\": \"2024-04-18\", \"line\": \"A2\"}\n  ],\n  "material_requirements": [\n    {\"material\": \"NCM811\", \"required\": 450, \"shortage\": 0},\n    {\"material\": \"LFP\", \"required\": 380, \"shortage\": 0}\n  ],\n  "bottleneck_warnings": [\n    {\"resource\": \"formation\", \"utilization\": 0.95, \"risk\": \"high\"}\n  ],\n  "schedule_feasibility": true,\n  "delivery_achievement": 96.5,\n  "resource_utilization": {\"coating\": 0.88, \"formation\": 0.92}\n}\n\`\`\`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| SCHED_001 | 需求数据格式错误 | 检查demand_plan数组结构 |\n| SCHED_002 | 产能约束冲突 | 调整capacity_constraints或需求 |\n| SCHED_003 | 物料齐套性不足 | 补充material_availability数据 |\n| SCHED_004 | 排程无解 | 放宽约束条件或增加产能 |\n| SCHED_005 | 计算超时 | 减少scheduling_horizon或简化约束 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更说明 |\n|------|------|----------|\n| v4.0.0 | 2024-01 | 新增动态重排程功能 |\n| v3.5.0 | 2023-10 | 优化约束传播算法 |\n| v3.0.0 | 2023-07 | 支持多目标优化 |\n| v2.0.0 | 2023-03 | 引入OR-Tools求解器 |\n| v1.0.0 | 2023-01 | 初始版本，基础排程功能 |\n\n## 8. 依赖与前置条件\n\n### 8.1 硬件要求\n- 计算节点：CPU 8核/内存16GB\n- 存储：排程数据>=50GB\n\n### 8.2 软件要求\n- OR-Tools求解器>=9.0\n- MES/ERP系统接口\n- APS系统对接\n\n### 8.3 数据要求\n- 标准工时数据完整\n- 设备产能数据>=6个月\n- 换型时间矩阵`,
       config: "{\"solver\": \"ortools\", \"time_bucket\": \"hour\", \"lookahead_days\": 30}",
       script: "from ortools.constraint_solver import routing_enums_pb2\n\ndef optimize_schedule(demand, capacity, material, rules):\n    # 构建约束满足问题\n    model = create_cp_model(demand, capacity, material)\n    solver = cp_model.CpSolver()\n    return solver.Solve(model)",
       scriptLang: "python"
