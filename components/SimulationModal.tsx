@@ -112,7 +112,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   const [solutionChatInput, setSolutionChatInput] = useState('');
   const [solutionMessages, setSolutionMessages] = useState<ChatMessage[]>([]);
 
-  // Decision Knowledge Engine 状态
+  // 决策知识引擎 状态
   const [isDKEMode, setIsDKEMode] = useState(false);
   const [dkeActiveTab, setDkeActiveTab] = useState<'chat' | 'parsing' | 'assets' | 'graph'>('chat');
   const [participants, setParticipants] = useState<Participant[]>([
@@ -515,7 +515,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
 
   // 获取节点层级颜色
 
-  // 打开 DKE Decision Knowledge Engine 模式
+  // 打开 DKE 决策知识引擎 模式
   const openDKEChat = (solutionId: string) => {
     setSelectedSolution(solutionId);
     setIsDKEMode(true);
@@ -530,7 +530,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
         {
           id: `system-${solutionId}`,
           role: 'system',
-          content: `🎯 Decision Knowledge Engine 已启动\n\n当前方案：${solution.name}\n置信度：${(solution.confidence * 100).toFixed(0)}% | 风险等级：${getRiskText(solution.riskLevel)}\n\n💡 在此模式下，您可以：\n• 邀请专家参与讨论，共同决策\n• AI实时解析讨论中的决策逻辑\n• 自动沉淀决策资产（Skills/规则/本体）\n• 生成可追溯的决策图谱`,
+          content: `🎯 决策知识引擎 已启动\n\n当前方案：${solution.name}\n置信度：${(solution.confidence * 100).toFixed(0)}% | 风险等级：${getRiskText(solution.riskLevel)}\n\n💡 在此模式下，您可以：\n• 邀请专家参与讨论，共同决策\n• AI实时解析讨论中的决策逻辑\n• 自动沉淀决策资产（Skills/规则/本体）\n• 生成可追溯的决策图谱`,
           timestamp: new Date(),
           solutionId: solutionId
         },
@@ -1748,7 +1748,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
         </div>
       )}
 
-      {/* DKE Mode - Decision Knowledge Engine */}
+      {/* DKE Mode - 决策知识引擎 */}
       {isDKEMode && selectedSolution && (
         <div className="fixed inset-0 z-50 flex"
              style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
@@ -1766,7 +1766,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Brain className="text-indigo-500" size={20} />
-                    Decision Knowledge Engine
+                    决策知识引擎
                   </h2>
                   <p className="text-xs text-slate-500">
                     {solutions.find(s => s.id === selectedSolution)?.name} · 决策研讨中
@@ -1954,12 +1954,146 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
               )}
 
               {dkeActiveTab === 'graph' && (
-                <div className="h-full p-6">
-                  <div className="h-full bg-white rounded-xl border border-slate-200 p-6 flex items-center justify-center">
-                    <div className="text-center">
-                      <Network size={48} className="text-slate-300 mx-auto mb-4" />
-                      <p className="text-slate-500">决策图谱可视化</p>
-                      <p className="text-xs text-slate-400 mt-1">基于讨论内容自动构建的决策因果图</p>
+                <div className="h-full p-6 overflow-auto">
+                  <div className="max-w-6xl mx-auto">
+                    {/* 图谱头部 */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900">决策因果图谱</h3>
+                        <p className="text-sm text-slate-500">基于讨论内容自动构建的决策逻辑关系图</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
+                          <Target size={14} />
+                          聚焦关键路径
+                        </button>
+                        <button className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
+                          <Share2 size={14} />
+                          导出图谱
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 决策图谱主体 */}
+                    <div className="grid grid-cols-4 gap-4">
+                      {/* 输入层 */}
+                      <div className="space-y-3">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">输入因素</div>
+                        {[
+                          { id: 'demand', name: '市场需求', value: '+20%', type: 'input', status: 'positive' },
+                          { id: 'inventory', name: '当前库存', value: '1,250件', type: 'input', status: 'normal' },
+                          { id: 'capacity', name: '产能上限', value: '5,000/天', type: 'input', status: 'normal' },
+                        ].map(node => (
+                          <div key={node.id} className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${node.status === 'positive' ? 'bg-green-400' : 'bg-slate-400'}`} />
+                              <span className="text-sm font-medium text-slate-700">{node.name}</span>
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">{node.value}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 假设层 */}
+                      <div className="space-y-3">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">假设条件</div>
+                        {[
+                          { id: 'h1', name: '需求持续增长', confidence: 85, type: 'hypothesis' },
+                          { id: 'h2', name: '原材料供应稳定', confidence: 92, type: 'hypothesis' },
+                          { id: 'h3', name: '设备无故障运行', confidence: 78, type: 'hypothesis' },
+                        ].map(node => (
+                          <div key={node.id} className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                            <div className="flex items-center gap-2">
+                              <Lightbulb size={14} className="text-amber-500" />
+                              <span className="text-sm font-medium text-slate-700">{node.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <div className="flex-1 h-1.5 bg-amber-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${node.confidence}%` }} />
+                              </div>
+                              <span className="text-xs text-amber-600">{node.confidence}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 约束层 */}
+                      <div className="space-y-3">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">约束条件</div>
+                        {[
+                          { id: 'c1', name: '产能利用率≤90%', type: 'hard', icon: Lock },
+                          { id: 'c2', name: '库存周转≤30天', type: 'hard', icon: Lock },
+                          { id: 'c3', name: '加班≤36小时/月', type: 'soft', icon: Scale },
+                        ].map(node => (
+                          <div key={node.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <node.icon size={14} className="text-blue-500" />
+                              <span className="text-sm font-medium text-slate-700">{node.name}</span>
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded mt-1 inline-block ${node.type === 'hard' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                              {node.type === 'hard' ? '硬约束' : '软约束'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 决策层 */}
+                      <div className="space-y-3">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">决策输出</div>
+                        {[
+                          { id: 'd1', name: '增开班次', impact: '高', recommendation: '推荐' },
+                          { id: 'd2', name: '提前备料', impact: '中', recommendation: '建议' },
+                          { id: 'd3', name: '启动外协', impact: '低', recommendation: '观察' },
+                        ].map(node => (
+                          <div key={node.id} className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-slate-700">{node.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                node.recommendation === '推荐' ? 'bg-green-100 text-green-700' :
+                                node.recommendation === '建议' ? 'bg-amber-100 text-amber-700' :
+                                'bg-slate-100 text-slate-600'
+                              }`}>
+                                {node.recommendation}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">影响度: {node.impact}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 连接关系示意 */}
+                    <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">关键决策路径</h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-3 py-1.5 bg-white rounded-lg border text-sm text-slate-600">市场需求增长</span>
+                        <ArrowRightLeft size={16} className="text-slate-400" />
+                        <span className="px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200 text-sm text-slate-600">假设:持续增长</span>
+                        <ArrowRightLeft size={16} className="text-slate-400" />
+                        <span className="px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200 text-sm text-slate-600">约束:产能限制</span>
+                        <ArrowRightLeft size={16} className="text-slate-400" />
+                        <span className="px-3 py-1.5 bg-indigo-100 rounded-lg border border-indigo-300 text-sm font-medium text-indigo-700">决策:增开班次</span>
+                      </div>
+                    </div>
+
+                    {/* 统计信息 */}
+                    <div className="mt-6 grid grid-cols-4 gap-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="text-2xl font-semibold text-slate-900">3</div>
+                        <div className="text-xs text-slate-500">输入因素</div>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="text-2xl font-semibold text-slate-900">3</div>
+                        <div className="text-xs text-slate-500">假设条件</div>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="text-2xl font-semibold text-slate-900">3</div>
+                        <div className="text-xs text-slate-500">约束条件</div>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="text-2xl font-semibold text-slate-900">3</div>
+                        <div className="text-xs text-slate-500">决策输出</div>
+                      </div>
                     </div>
                   </div>
                 </div>
