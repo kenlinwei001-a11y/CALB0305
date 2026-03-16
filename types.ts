@@ -226,6 +226,16 @@ export interface Skill {
   };
   // 新增：场景绑定
   scenarioBindings?: ScenarioBinding[];
+  // 新增：资产来源信息
+  source?: {
+    type: AssetSourceType;
+    creator: string;
+    creatorRole?: string;
+    createdAt: string;
+    updatedAt: string;
+    conversationId?: string;
+    discussionTopic?: string;
+  };
 }
 
 export interface ScenarioBinding {
@@ -468,4 +478,245 @@ export interface SolutionComparison {
     value: number;
     rank: number;
   }[];
+}
+
+// ==================== 决策知识引擎 (DKE) 资产库 ====================
+
+/**
+ * 资产来源类型
+ */
+export type AssetSourceType = 'preset' | 'conversation';
+
+/**
+ * 决策资产 - 沉淀于对话或通过预设创建的可复用决策组件
+ */
+export interface DecisionAsset {
+  id: string;
+  name: string;
+  description: string;
+  type: 'skill' | 'constraint' | 'ontology' | 'simulation_template' | 'decision_graph';
+  source: AssetSourceType;
+  // 来源信息
+  sourceInfo: {
+    creator: string;           // 创建人/决策人
+    creatorRole?: string;      // 角色（专家、AI、管理员等）
+    createdAt: string;         // 创建时间
+    updatedAt: string;         // 更新时间
+    conversationId?: string;   // 关联的对话ID（如果是从对话沉淀）
+    discussionTopic?: string;  // 讨论主题
+    participants?: string[];   // 参与讨论的人员
+  };
+  // 资产内容
+  content: {
+    // Skill类型
+    skillDef?: Skill;
+    // Constraint类型
+    constraintDef?: ConstraintRule;
+    // Ontology类型
+    ontologyDef?: OntologyRelation;
+    // Simulation Template类型
+    templateDef?: SimulationTemplate;
+    // Decision Graph类型
+    graphDef?: DecisionGraph;
+  };
+  // 标签和分类
+  tags: string[];
+  category: string;
+  // 使用统计
+  usageStats: {
+    usageCount: number;
+    lastUsedAt?: string;
+    successRate?: number;
+  };
+  // 版本信息
+  version: string;
+  status: 'draft' | 'active' | 'deprecated';
+}
+
+/**
+ * 约束规则定义
+ */
+export interface ConstraintRule {
+  id: string;
+  name: string;
+  description: string;
+  expression: string;
+  type: 'hard' | 'soft';
+  category: string;
+  priority: number;
+  applicableScope: string[];
+}
+
+/**
+ * 本体关系定义
+ */
+export interface OntologyRelation {
+  id: string;
+  source: string;
+  target: string;
+  relation: string;
+  description: string;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 推演模板定义
+ */
+export interface SimulationTemplate {
+  id: string;
+  name: string;
+  description: string;
+  inputs: string[];
+  skills: string[];
+  constraints: string[];
+  category: string;
+}
+
+/**
+ * 决策图定义
+ */
+export interface DecisionGraph {
+  id: string;
+  name: string;
+  description: string;
+  nodes: DecisionGraphNode[];
+  edges: DecisionGraphEdge[];
+}
+
+/**
+ * 决策图节点
+ */
+export interface DecisionGraphNode {
+  id: string;
+  type: 'input' | 'hypothesis' | 'constraint' | 'skill' | 'decision' | 'output';
+  name: string;
+  description?: string;
+  data?: any;
+}
+
+/**
+ * 决策图边
+ */
+export interface DecisionGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+}
+
+/**
+ * 决策案例 - 完整的决策记录
+ */
+export interface DecisionCase {
+  id: string;
+  title: string;
+  description: string;
+  context: {
+    industry: string;
+    domain: string;
+    scenario: string;
+  };
+  // 决策参与者
+  participants: {
+    userId: string;
+    name: string;
+    role: string;
+    avatar?: string;
+  }[];
+  // 决策时间线
+  timeline: {
+    startedAt: string;
+    decidedAt: string;
+    syncedAt?: string;
+  };
+  // 决策资产
+  assets: {
+    skills: string[];
+    constraints: string[];
+    ontologies: string[];
+    templates: string[];
+  };
+  // 决策结果
+  outcome: {
+    decision: string;
+    rationale: string;
+    confidence: number;
+    status: 'implemented' | 'pending' | 'abandoned';
+  };
+  // 关联的历史案例
+  similarCases: {
+    caseId: string;
+    similarity: number;
+    differences: string[];
+  }[];
+  // 差异分析
+  diffAnalysis?: {
+    comparedToCaseId: string;
+    variableDiffs: VariableDiff[];
+    ruleDiffs: RuleDiff[];
+    skillDiffs: SkillDiff[];
+  };
+}
+
+/**
+ * 变量差异
+ */
+export interface VariableDiff {
+  name: string;
+  historical: any;
+  current: any;
+  change: string;
+}
+
+/**
+ * 规则差异
+ */
+export interface RuleDiff {
+  rule: string;
+  historical: string;
+  current: string;
+  change: string;
+}
+
+/**
+ * 技能差异
+ */
+export interface SkillDiff {
+  capability: string;
+  historical: string;
+  current: string;
+  change: string;
+}
+
+/**
+ * 决策学习记录
+ */
+export interface DecisionLearningRecord {
+  id: string;
+  caseId: string;
+  timestamp: string;
+  // 差异记录
+  differences: {
+    category: string;
+    from: string;
+    to: string;
+    reason: string;
+  }[];
+  // 决策选择
+  choices: {
+    option: string;
+    selected: boolean;
+    rationale: string;
+  }[];
+  // 决策人
+  decisionMaker: {
+    userId: string;
+    name: string;
+  };
+  // 学习结果
+  learning: {
+    newSkills: string[];
+    newConstraints: string[];
+    evolvedRules: string[];
+  };
 }

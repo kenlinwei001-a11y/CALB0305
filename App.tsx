@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Network, Zap, Settings, Box, Atom, Layers, Database,
-  Command, Bell, Search, ChevronDown, Sparkles, Cpu, ChevronLeft, X, ArrowRight
+  Command, Bell, Search, ChevronDown, Sparkles, Cpu, ChevronLeft, X, ArrowRight,
+  GitBranch
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SkillsRegistry from './components/SkillsRegistry';
@@ -14,6 +15,7 @@ import ScenarioAtomsModule from './components/ScenarioAtomsModule';
 import BusinessSemanticCreator from './components/BusinessSemanticCreator';
 import MCPTools from './components/MCPTools';
 import DataSourceManager from './components/DataSourceManager';
+import DecisionRepository from './components/DecisionRepository';
 
 // 导航项配置
 const navItems = [
@@ -24,6 +26,7 @@ const navItems = [
   { path: '/ontology', icon: Network, label: '场景推演' },
   { path: '/business-semantic', icon: Layers, label: '业务语义' },
   { path: '/data-sources', icon: Database, label: '数据源' },
+  { path: '/decision-repository', icon: GitBranch, label: '决策资产' },
 ];
 
 // 左侧图标导航
@@ -528,6 +531,7 @@ const AppContent: React.FC = () => {
           <Route path="/mcp-tools/constraints/:view?" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
           <Route path="/mcp-tools/ontology/:ontologyToolId" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
           <Route path="/data-sources" element={<><TopBar title="数据源管理" /><div className="flex-1 overflow-auto p-6"><DataSourceManager /></div></>} />
+          <Route path="/decision-repository" element={<><TopBar title="决策资产库" /><div className="flex-1 overflow-auto p-6"><DecisionRepository /></div></>} />
           <Route path="/settings" element={<><TopBar title="设置" /><div className="flex-1 overflow-auto p-6"><div className="bg-white rounded-2xl p-6 shadow-sm">设置页面</div></div></>} />
           <Route path="*" element={<div className="flex-1 flex items-center justify-center"><h1 className="text-2xl text-gray-400">404 - Page Not Found</h1></div>} />
         </Routes>

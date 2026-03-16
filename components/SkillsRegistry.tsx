@@ -147,6 +147,22 @@ const SkillCard: React.FC<{ skill: Skill }> = ({ skill }) => {
     }
   };
 
+  // 获取来源标签样式
+  const getSourceBadge = () => {
+    if (!skill.source) return null;
+    const isPreset = skill.source.type === 'preset';
+    return {
+      text: isPreset ? '系统预设' : '对话沉淀',
+      className: isPreset
+        ? 'bg-gray-50 text-gray-500 border border-gray-200'
+        : 'bg-indigo-50 text-indigo-600 border border-indigo-100',
+      creator: skill.source.creator,
+      date: skill.source.createdAt ? new Date(skill.source.createdAt).toLocaleDateString('zh-CN') : null,
+    };
+  };
+
+  const sourceBadge = getSourceBadge();
+
   return (
     <div
       className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-gray-200 transition-all duration-200 group flex flex-col h-full cursor-pointer"
@@ -183,6 +199,19 @@ const SkillCard: React.FC<{ skill: Skill }> = ({ skill }) => {
             <span className="text-xs text-gray-300">+{skill.capability_tags.length - 2}</span>
           )}
         </div>
+
+        {/* 来源信息 */}
+        {sourceBadge && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${sourceBadge.className}`}>
+              {sourceBadge.text}
+            </span>
+            <span className="text-[10px] text-gray-400">
+              {sourceBadge.creator}
+              {sourceBadge.date && ` · ${sourceBadge.date}`}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-400 border-t border-gray-50 pt-3">

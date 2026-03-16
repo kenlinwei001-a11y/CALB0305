@@ -5728,3 +5728,214 @@ export const convertMolecularToOntologyData = (
 
   return { nodes, links };
 };
+// ==================== 决策知识引擎 (DKE) - 决策资产库模拟数据 ====================
+
+import type { DecisionAsset, DecisionCase } from './types';
+
+export const MOCK_DECISION_ASSETS: DecisionAsset[] = [
+  // ===== 系统预设资产 =====
+  {
+    id: 'asset-skill-001',
+    name: '产能平衡分析技能',
+    description: '评估产能与需求的匹配度，识别瓶颈并提供优化建议',
+    type: 'skill',
+    source: 'preset',
+    sourceInfo: {
+      creator: '系统管理员',
+      creatorRole: '系统预设',
+      createdAt: '2024-01-15T08:00:00Z',
+      updatedAt: '2024-06-20T10:30:00Z',
+    },
+    content: {},
+    tags: ['产能', '优化', '预设'],
+    category: 'production',
+    usageStats: {
+      usageCount: 156,
+      lastUsedAt: '2024-12-10T14:20:00Z',
+      successRate: 0.94,
+    },
+    version: '2.0.0',
+    status: 'active',
+  },
+  {
+    id: 'asset-constraint-001',
+    name: '产能利用率约束',
+    description: '产线最大日产能不超过设计产能的90%',
+    type: 'constraint',
+    source: 'preset',
+    sourceInfo: {
+      creator: '系统管理员',
+      creatorRole: '系统预设',
+      createdAt: '2024-01-10T09:00:00Z',
+      updatedAt: '2024-05-15T11:00:00Z',
+    },
+    content: {},
+    tags: ['约束', '产能', '硬约束', '预设'],
+    category: 'production',
+    usageStats: {
+      usageCount: 342,
+      lastUsedAt: '2024-12-15T09:00:00Z',
+      successRate: 0.98,
+    },
+    version: '1.0.0',
+    status: 'active',
+  },
+  // ===== 对话沉淀资产 =====
+  {
+    id: 'asset-skill-002',
+    name: '需求波动响应策略',
+    description: '基于历史讨论沉淀的需求波动应对方案，包含产能调整和库存策略',
+    type: 'skill',
+    source: 'conversation',
+    sourceInfo: {
+      creator: '张工',
+      creatorRole: '生产计划专家',
+      createdAt: '2024-11-20T14:30:00Z',
+      updatedAt: '2024-11-20T16:45:00Z',
+      conversationId: 'conv-2024-11-20-001',
+      discussionTopic: '应对Q4需求激增20%的方案讨论',
+      participants: ['张工', '李经理', '王分析师', 'AI助手'],
+    },
+    content: {},
+    tags: ['需求', '产能', '对话沉淀', 'Q4策略'],
+    category: 'planning',
+    usageStats: {
+      usageCount: 23,
+      lastUsedAt: '2024-12-14T11:20:00Z',
+      successRate: 0.87,
+    },
+    version: '1.0.0',
+    status: 'active',
+  },
+  {
+    id: 'asset-constraint-002',
+    name: '外协生产许可规则',
+    description: '允许在产能不足时启用外协生产，需满足质量标准和成本约束',
+    type: 'constraint',
+    source: 'conversation',
+    sourceInfo: {
+      creator: '李经理',
+      creatorRole: '供应链总监',
+      createdAt: '2024-10-15T10:00:00Z',
+      updatedAt: '2024-10-15T12:30:00Z',
+      conversationId: 'conv-2024-10-15-003',
+      discussionTopic: '产能紧张情况下的外协策略讨论',
+      participants: ['李经理', '张工', '采购部陈经理', '质量部刘工', 'AI助手'],
+    },
+    content: {},
+    tags: ['外协', '约束', '对话沉淀', '产能扩展'],
+    category: 'production',
+    usageStats: {
+      usageCount: 12,
+      lastUsedAt: '2024-12-10T09:30:00Z',
+      successRate: 0.92,
+    },
+    version: '1.0.0',
+    status: 'active',
+  },
+  {
+    id: 'asset-template-001',
+    name: '产销协同推演模板',
+    description: '整合需求预测、产能评估、库存优化的完整推演流程模板',
+    type: 'simulation_template',
+    source: 'conversation',
+    sourceInfo: {
+      creator: '王分析师',
+      creatorRole: '数据分析师',
+      createdAt: '2024-09-25T15:00:00Z',
+      updatedAt: '2024-11-10T10:00:00Z',
+      conversationId: 'conv-2024-09-25-002',
+      discussionTopic: '建立产销协同决策模板',
+      participants: ['王分析师', '张工', '销售部赵经理', 'AI助手'],
+    },
+    content: {},
+    tags: ['推演', '模板', '对话沉淀', 'S&OP'],
+    category: 'planning',
+    usageStats: {
+      usageCount: 45,
+      lastUsedAt: '2024-12-15T14:00:00Z',
+      successRate: 0.91,
+    },
+    version: '1.1.0',
+    status: 'active',
+  },
+  {
+    id: 'asset-graph-001',
+    name: '产能扩张决策图',
+    description: '新项目落地决策的因果逻辑图，包含需求、成本、风险等多维度分析',
+    type: 'decision_graph',
+    source: 'conversation',
+    sourceInfo: {
+      creator: '赵总',
+      creatorRole: '运营副总裁',
+      createdAt: '2024-08-20T09:00:00Z',
+      updatedAt: '2024-09-05T16:00:00Z',
+      conversationId: 'conv-2024-08-20-005',
+      discussionTopic: '厦门基地扩产投资决策',
+      participants: ['赵总', '财务总监', '李经理', '王分析师', 'AI助手'],
+    },
+    content: {},
+    tags: ['决策图', '投资', '对话沉淀', '产能'],
+    category: 'investment',
+    usageStats: {
+      usageCount: 8,
+      lastUsedAt: '2024-12-01T10:00:00Z',
+    },
+    version: '1.0.0',
+    status: 'active',
+  },
+  {
+    id: 'asset-skill-003',
+    name: '库存周转优化策略',
+    description: '基于动态安全库存的周转优化策略，平衡服务水平与库存成本',
+    type: 'skill',
+    source: 'conversation',
+    sourceInfo: {
+      creator: '陈经理',
+      creatorRole: '供应链经理',
+      createdAt: '2024-10-05T14:00:00Z',
+      updatedAt: '2024-10-05T17:30:00Z',
+      conversationId: 'conv-2024-10-05-001',
+      discussionTopic: '库存积压问题解决方案',
+      participants: ['陈经理', '王分析师', 'AI助手'],
+    },
+    content: {},
+    tags: ['库存', '优化', '对话沉淀', '周转率'],
+    category: 'logistics',
+    usageStats: {
+      usageCount: 34,
+      lastUsedAt: '2024-12-13T15:00:00Z',
+      successRate: 0.89,
+    },
+    version: '1.0.0',
+    status: 'active',
+  },
+];
+
+// ==================== 为现有技能添加来源信息 ====================
+
+// 为部分技能添加来源信息（作为示例）
+MOCK_SKILLS.forEach((skill, index) => {
+  // 前10个技能标记为系统预设
+  if (index < 10) {
+    skill.source = {
+      type: 'preset',
+      creator: '系统管理员',
+      creatorRole: '系统预设',
+      createdAt: '2024-01-15T08:00:00Z',
+      updatedAt: '2024-06-20T10:30:00Z',
+    };
+  } else if (index < 15) {
+    // 接下来5个标记为对话沉淀
+    skill.source = {
+      type: 'conversation',
+      creator: ['张工', '李经理', '王分析师'][index % 3],
+      creatorRole: '生产计划专家',
+      createdAt: '2024-11-20T14:30:00Z',
+      updatedAt: '2024-11-20T16:45:00Z',
+      conversationId: `conv-2024-11-${20 + index}`,
+      discussionTopic: '产能规划方案讨论',
+      participants: ['张工', '李经理', 'AI助手'],
+    };
+  }
+});
