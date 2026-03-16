@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Network, Zap, Settings, Menu, Box, Atom, Layers, Plus, TrendingUp, Factory, Package, CheckCircle, DollarSign, Truck, Users, Calendar, Info, Cpu, Database } from 'lucide-react';
+import {
+  LayoutDashboard, Network, Zap, Settings, Box, Atom, Layers, Database,
+  Command, Bell, Search, ChevronDown, Sparkles, Cpu
+} from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SkillsRegistry from './components/SkillsRegistry';
 import SkillDetail from './components/SkillDetail';
@@ -12,27 +15,178 @@ import BusinessSemanticCreator from './components/BusinessSemanticCreator';
 import MCPTools from './components/MCPTools';
 import DataSourceManager from './components/DataSourceManager';
 
-const NavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; active: boolean; onClick?: () => void }> = ({ to, icon, label, active, onClick }) => (
-  <Link
-    to={to}
-    onClick={onClick}
-    className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 mb-1 ${
-      active
-        ? 'bg-[#007AFF]/10 text-[#007AFF]'
-        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-    }`}
-  >
-    {icon}
-    <span className="font-medium text-sm">{label}</span>
-  </Link>
-);
+// 导航项配置
+const navItems = [
+  { path: '/', icon: LayoutDashboard, label: '仪表盘' },
+  { path: '/skills', icon: Zap, label: '技能中心' },
+  { path: '/mcp-tools', icon: Cpu, label: 'MCP工具' },
+  { path: '/atoms', icon: Atom, label: '业务释义' },
+  { path: '/ontology', icon: Network, label: '场景推演' },
+  { path: '/business-semantic', icon: Layers, label: '业务语义' },
+  { path: '/data-sources', icon: Database, label: '数据源' },
+];
 
-// 业务语义创建页面包装组件
+// 左侧图标导航
+const IconNav: React.FC<{ activePath: string }> = ({ activePath }) => {
+  return (
+    <div className="w-16 bg-white border-r border-gray-100 flex flex-col items-center py-4">
+      {/* Logo */}
+      <div className="w-10 h-10 bg-gradient-to-br from-gray-900 to-gray-700 rounded-xl flex items-center justify-center mb-8 shadow-sm">
+        <Box className="text-white" size={20} />
+      </div>
+
+      {/* 主导航 */}
+      <nav className="flex-1 flex flex-col gap-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activePath === item.path ||
+            (item.path !== '/' && activePath.startsWith(item.path));
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`relative w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 group ${
+                isActive
+                  ? 'bg-gray-900 text-white shadow-md'
+                  : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+              }`}
+              title={item.label}
+            >
+              <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gray-900 rounded-r-full -ml-4" />
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* 底部设置 */}
+      <div className="mt-auto">
+        <Link
+          to="/settings"
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
+          title="设置"
+        >
+          <Settings size={20} />
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+// 右侧快捷面板
+const RightPanel: React.FC = () => {
+  const [activeCommand, setActiveCommand] = useState<string | null>(null);
+
+  const quickCommands = [
+    { id: 'analyze', label: '分析洞察', desc: '深度分析当前数据' },
+    { id: 'prep', label: '会议准备', desc: '生成会议摘要和待办' },
+    { id: 'recap', label: '今日回顾', desc: '总结今日工作进展' },
+  ];
+
+  return (
+    <div className="w-80 bg-white border-l border-gray-100 flex flex-col">
+      {/* 顶部命令输入 */}
+      <div className="p-4 border-b border-gray-100">
+        <div className="flex items-center gap-2 text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
+          <Command size={16} />
+          <span className="text-sm">输入命令或搜索...</span>
+        </div>
+      </div>
+
+      {/* 快捷命令 */}
+      <div className="flex-1 p-4">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          快捷命令
+        </h3>
+        <div className="space-y-2">
+          {quickCommands.map((cmd) => (
+            <button
+              key={cmd.id}
+              onClick={() => setActiveCommand(cmd.id)}
+              className={`w-full text-left p-3 rounded-xl transition-all ${
+                activeCommand === cmd.id
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+              }`}
+            >
+              <div className="font-medium text-sm">{cmd.label}</div>
+              <div className={`text-xs mt-0.5 ${activeCommand === cmd.id ? 'text-gray-400' : 'text-gray-500'}`}>
+                {cmd.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* 最近使用 */}
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-3">
+          最近使用
+        </h3>
+        <div className="space-y-1">
+          {['产能利用率分析', '库存周转优化', '需求预测'].map((item) => (
+            <div
+              key={item}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer"
+            >
+              <Sparkles size={14} className="text-gray-400" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 底部用户信息 */}
+      <div className="p-4 border-t border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 text-white flex items-center justify-center text-sm font-medium">
+            AD
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-900">Admin</div>
+            <div className="text-xs text-gray-500">Production</div>
+          </div>
+          <ChevronDown size={16} className="text-gray-400" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 顶部搜索栏
+const TopBar: React.FC<{ title: string }> = ({ title }) => {
+  return (
+    <header className="h-16 bg-white/80 backdrop-blur-sm border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-10">
+      <div className="flex items-center gap-4">
+        <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+      </div>
+
+      <div className="flex items-center gap-4">
+        {/* 搜索 */}
+        <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1.5 w-64">
+          <Search size={16} className="text-gray-400" />
+          <input
+            type="text"
+            placeholder="搜索..."
+            className="bg-transparent border-none outline-none text-sm flex-1 placeholder:text-gray-400"
+          />
+        </div>
+
+        {/* 通知 */}
+        <button className="relative w-9 h-9 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-colors">
+          <Bell size={18} />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+        </button>
+      </div>
+    </header>
+  );
+};
+
+// 业务语义页面包装组件
 const BusinessSemanticPage: React.FC = () => {
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
   const location = useLocation();
 
-  // 接收来自关联性分析的跳转
   useEffect(() => {
     if (location.state?.selectedSemantic) {
       setIsCreatorOpen(true);
@@ -40,78 +194,50 @@ const BusinessSemanticPage: React.FC = () => {
   }, [location.state]);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">原子业务语义管理</h2>
-          <p className="text-gray-500 mt-1">定义锂电行业产销协同的不可再分基础业务概念（共36个业务释义）</p>
-        </div>
-        <button
-          onClick={() => setIsCreatorOpen(true)}
-          className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl hover:bg-[#0051D5] flex items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
-        >
-          <Plus size={20} />
-          查看业务释义库
-        </button>
-      </div>
-
-      {/* 原子业务语义分类展示 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { id: 'sales', name: '销售类', count: 5, desc: '订单、预测、价格、交期、履约', color: 'bg-blue-100 text-blue-600', icon: TrendingUp },
-          { id: 'production', name: '生产类', count: 5, desc: '产能、利用率、OEE、工单、周期', color: 'bg-cyan-100 text-cyan-600', icon: Factory },
-          { id: 'inventory', name: '库存类', count: 5, desc: '库存量、安全库存、补货点、周转、VMI', color: 'bg-green-100 text-green-600', icon: Package },
-          { id: 'quality', name: '质量类', count: 4, desc: '良品率、不良率、交付合格率、直通率', color: 'bg-red-100 text-red-600', icon: CheckCircle },
-          { id: 'finance', name: '财务类', count: 5, desc: '成本、毛利、库存成本、应收、逾期', color: 'bg-amber-100 text-amber-600', icon: DollarSign },
-          { id: 'logistics', name: '物流类', count: 4, desc: '交付周期、物流成本、在途、准确率', color: 'bg-purple-100 text-purple-600', icon: Truck },
-          { id: 'customer', name: '客户类', count: 4, desc: '信用评分、额度、等级、满意度', color: 'bg-pink-100 text-pink-600', icon: Users },
-          { id: 'planning', name: '计划类', count: 4, desc: 'MPS、物料需求、交货周期、达成率', color: 'bg-emerald-100 text-emerald-600', icon: Calendar },
-        ].map((category) => {
-          const Icon = category.icon;
-          return (
-            <div
-              key={category.id}
-              onClick={() => setIsCreatorOpen(true)}
-              className="bg-white rounded-2xl p-5 hover:shadow-lg transition-all duration-300 cursor-pointer shadow-sm"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${category.color}`}>
-                  <Icon size={20} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                  <span className="text-xs text-gray-400">{category.count} 个定义</span>
-                </div>
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <TopBar title="业务语义管理" />
+      <main className="flex-1 overflow-auto p-6">
+        <div className="max-w-5xl mx-auto">
+          {/* 页面内容 */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">原子业务语义</h2>
+                <p className="text-sm text-gray-500 mt-1">定义锂电行业产销协同的基础业务概念</p>
               </div>
-              <p className="text-sm text-gray-500 leading-relaxed">{category.desc}</p>
+              <button
+                onClick={() => setIsCreatorOpen(true)}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium transition-colors"
+              >
+                查看释义库
+              </button>
             </div>
-          );
-        })}
-      </div>
 
-      {/* 什么是原子业务语义说明 */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Info size={20} className="text-[#007AFF]" />
-          什么是原子业务语义？
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">不可再分</h4>
-            <p>原子业务语义是业务领域中最基础的、不可再分解的概念，如"订单量"、"库存量"、"良品率"等。</p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">标准化定义</h4>
-            <p>每个业务释义都有统一的编码、定义、数据类型、计量单位和计算规则，确保跨系统一致性。</p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">业务规则绑定</h4>
-            <p>每个业务释义关联特定的业务规则，如"良品率低于95%触发预警"、"库存低于安全库存补货"。</p>
+            {/* 分类卡片 */}
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { name: '销售类', count: 5, desc: '订单、预测、价格、交期' },
+                { name: '生产类', count: 5, desc: '产能、OEE、工单、周期' },
+                { name: '库存类', count: 5, desc: '库存量、安全库存、周转' },
+                { name: '质量类', count: 4, desc: '良品率、不良率、合格率' },
+              ].map((cat) => (
+                <div
+                  key={cat.name}
+                  onClick={() => setIsCreatorOpen(true)}
+                  className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-gray-900">{cat.name}</span>
+                    <span className="text-xs text-gray-400">{cat.count}</span>
+                  </div>
+                  <p className="text-xs text-gray-500">{cat.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* 业务语义创建器弹窗 */}
       {isCreatorOpen && (
         <BusinessSemanticCreator
           isOpen={isCreatorOpen}
@@ -124,99 +250,62 @@ const BusinessSemanticPage: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [pageTitle, setPageTitle] = useState('仪表盘');
 
-  // Debug: log current path
-  React.useEffect(() => {
-    console.log('Current pathname:', location.pathname);
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      '/': '仪表盘',
+      '/skills': '技能中心',
+      '/mcp-tools': 'MCP工具',
+      '/atoms': '业务释义库',
+      '/ontology': '业务场景推演',
+      '/business-semantic': '业务语义',
+      '/data-sources': '数据源管理',
+      '/settings': '设置',
+    };
+
+    // 处理子路由
+    let title = '仪表盘';
+    for (const [path, t] of Object.entries(titles)) {
+      if (location.pathname.startsWith(path) && path !== '/') {
+        title = t;
+        break;
+      } else if (location.pathname === '/') {
+        title = '仪表盘';
+        break;
+      }
+    }
+    setPageTitle(title);
   }, [location]);
 
-  // Determine if a path is active (handling sub-routes like /skills/:id)
-  const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    if (path === '/atoms') return location.pathname.startsWith('/atoms');
-    return location.pathname.startsWith(path);
-  };
-
   return (
-    <div className="flex h-screen bg-[#F5F5F7] overflow-hidden" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif' }}>
-      {/* Sidebar */}
-      <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-0 md:w-20'
-        } bg-white/80 backdrop-blur-xl transition-all duration-300 flex flex-col border-r border-gray-200/50 z-20`}
-      >
-        <div className="p-6 flex items-center justify-between">
-          {sidebarOpen ? (
-            <div className="flex items-center space-x-3 text-gray-900 font-semibold text-lg">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#5856D6] rounded-lg flex items-center justify-center">
-                <Box className="text-white" size={18} />
-              </div>
-              <span>Nexus<span className="text-gray-400"> Platform</span></span>
-            </div>
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#5856D6] rounded-lg flex items-center justify-center mx-auto">
-              <Box className="text-white" size={18} />
-            </div>
-          )}
-        </div>
+    <div className="flex h-screen bg-[#F9F9FB] overflow-hidden" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif' }}>
+      {/* 左侧图标导航 */}
+      <IconNav activePath={location.pathname} />
 
-        <nav className="flex-1 px-4 py-4">
-          <NavLink to="/" icon={<LayoutDashboard size={20} />} label={sidebarOpen ? "仪表盘" : ""} active={isActive('/')} />
-          <NavLink to="/skills" icon={<Zap size={20} />} label={sidebarOpen ? "技能中心" : ""} active={isActive('/skills')} />
-          <NavLink to="/mcp-tools" icon={<Cpu size={20} />} label={sidebarOpen ? "MCP工具" : ""} active={isActive('/mcp-tools')} />
-          <NavLink to="/atoms" icon={<Atom size={20} />} label={sidebarOpen ? "业务释义库" : ""} active={isActive('/atoms')} />
-          <NavLink to="/ontology" icon={<Network size={20} />} label={sidebarOpen ? "业务场景推演" : ""} active={isActive('/ontology')} />
-          <NavLink to="/business-semantic" icon={<Layers size={20} />} label={sidebarOpen ? "业务语义" : ""} active={isActive('/business-semantic')} />
-          <NavLink to="/data-sources" icon={<Database size={20} />} label={sidebarOpen ? "数据源" : ""} active={isActive('/data-sources')} />
-        </nav>
-
-        <div className="p-4 border-t border-gray-200/50">
-           <NavLink to="/settings" icon={<Settings size={20} />} label={sidebarOpen ? "设置" : ""} active={isActive('/settings')} />
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 h-16 flex items-center justify-between px-6 z-10">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
-          >
-            {sidebarOpen ? <Menu size={20} /> : <Menu size={20} />}
-          </button>
-          
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500"><span className="font-medium text-[#34C759]">●</span> Production</span>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white flex items-center justify-center font-semibold text-xs">
-              AD
-            </div>
-          </div>
-        </header>
-
-        {/* Viewport */}
-        <main className="flex-1 overflow-auto p-8 relative">
-          <div className="w-full h-full max-w-[1920px] mx-auto">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/skills" element={<SkillsRegistry />} />
-              <Route path="/skills/new" element={<SkillRegistration />} />
-              <Route path="/skills/:skillId" element={<SkillDetail />} />
-              <Route path="/ontology" element={<OntologyGraph />} />
-              <Route path="/atoms/scenario" element={<ScenarioAtomsModule />} />
-              <Route path="/atoms" element={<AtomicOntologyModule />} />
-              <Route path="/business-semantic" element={<BusinessSemanticPage />} />
-              <Route path="/mcp-tools" element={<MCPTools />} />
-              <Route path="/mcp-tools/:solverType" element={<MCPTools />} />
-              <Route path="/mcp-tools/constraints/:view?" element={<MCPTools />} />
-              <Route path="/mcp-tools/ontology/:ontologyToolId" element={<MCPTools />} />
-              <Route path="/data-sources" element={<DataSourceManager />} />
-              <Route path="*" element={<div className="p-10 text-center"><h1 className="text-2xl text-[#FF3B30]">404 - Page Not Found</h1><p className="text-gray-500">Path: {location.pathname}</p></div>} />
-            </Routes>
-          </div>
-        </main>
+      {/* 中间内容区 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Routes>
+          <Route path="/" element={<><TopBar title="仪表盘" /><div className="flex-1 overflow-auto p-6"><Dashboard /></div></>} />
+          <Route path="/skills" element={<><TopBar title="技能中心" /><div className="flex-1 overflow-auto p-6"><SkillsRegistry /></div></>} />
+          <Route path="/skills/new" element={<><TopBar title="注册技能" /><div className="flex-1 overflow-auto p-6"><SkillRegistration /></div></>} />
+          <Route path="/skills/:skillId" element={<><TopBar title="技能详情" /><div className="flex-1 overflow-auto p-6"><SkillDetail /></div></>} />
+          <Route path="/ontology" element={<><TopBar title="业务场景推演" /><div className="flex-1 overflow-auto p-6"><OntologyGraph /></div></>} />
+          <Route path="/atoms/scenario" element={<><TopBar title="场景原子管理" /><div className="flex-1 overflow-auto p-6"><ScenarioAtomsModule /></div></>} />
+          <Route path="/atoms" element={<><TopBar title="业务释义库" /><div className="flex-1 overflow-auto p-6"><AtomicOntologyModule /></div></>} />
+          <Route path="/business-semantic" element={<BusinessSemanticPage />} />
+          <Route path="/mcp-tools" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
+          <Route path="/mcp-tools/:solverType" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
+          <Route path="/mcp-tools/constraints/:view?" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
+          <Route path="/mcp-tools/ontology/:ontologyToolId" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
+          <Route path="/data-sources" element={<><TopBar title="数据源管理" /><div className="flex-1 overflow-auto p-6"><DataSourceManager /></div></>} />
+          <Route path="/settings" element={<><TopBar title="设置" /><div className="flex-1 overflow-auto p-6"><div className="bg-white rounded-2xl p-6 shadow-sm">设置页面</div></div></>} />
+          <Route path="*" element={<div className="flex-1 flex items-center justify-center"><h1 className="text-2xl text-gray-400">404 - Page Not Found</h1></div>} />
+        </Routes>
       </div>
+
+      {/* 右侧快捷面板 */}
+      <RightPanel />
     </div>
   );
 };
