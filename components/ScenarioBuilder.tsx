@@ -324,7 +324,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
         <div
           className={`flex items-center py-2 px-3 rounded-lg cursor-pointer transition-colors ${
             selectedNodeId === node.id
-              ? 'bg-indigo-50 border border-indigo-200'
+              ? 'bg-gray-50 border border-indigo-200'
               : 'hover:bg-slate-50 border border-transparent'
           }`}
           style={{ paddingLeft: `${depth * 20 + 12}px` }}
@@ -340,9 +340,9 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
           </button>
 
           <div className={`w-6 h-6 rounded flex items-center justify-center mr-2 text-xs font-bold ${
-            node.level === 2 ? 'bg-blue-100 text-blue-600' :
+            node.level === 2 ? 'bg-blue-100 text-gray-600' :
             node.level === 3 ? 'bg-sky-100 text-sky-600' :
-            'bg-teal-100 text-teal-600'
+            'bg-teal-100 text-gray-600'
           }`}>
             L{node.level}
           </div>
@@ -356,7 +356,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
           />
 
           {node.atomRefs.length > 0 && (
-            <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-xs rounded">
+            <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-gray-600 text-xs rounded">
               {node.atomRefs.length} 原子
             </span>
           )}
@@ -386,7 +386,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Workflow className="text-indigo-600" size={20} />
+              <Workflow className="text-gray-600" size={20} />
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-800">
@@ -604,7 +604,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
                   <h3 className="font-semibold text-slate-700">原子业务语义绑定</h3>
                   <button
                     onClick={() => setShowAtomLibrary(!showAtomLibrary)}
-                    className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center text-sm"
+                    className="px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-indigo-100 flex items-center text-sm"
                   >
                     <Database size={16} className="mr-1" />
                     {showAtomLibrary ? '隐藏原子库' : '打开原子库'}
@@ -650,7 +650,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
                                   </div>
                                   <button
                                     onClick={() => removeAtomFromNode(selectedNode.id, atom.id)}
-                                    className="p-1 text-red-400 hover:text-red-600"
+                                    className="p-1 text-red-400 hover:text-gray-600"
                                   >
                                     <Trash2 size={16} />
                                   </button>
@@ -770,7 +770,7 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
                       {selectedNode.atomRefs.map((ref, idx) => {
                         const atom = ATOMIC_ONTOLOGY_LIBRARY.find(a => a.id === ref.atomId);
                         return atom ? (
-                          <div key={idx} className="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded">
+                          <div key={idx} className="text-xs px-2 py-1 bg-gray-50 text-gray-600 rounded">
                             {atom.name}
                           </div>
                         ) : null;
@@ -784,8 +784,8 @@ const ScenarioBuilder: React.FC<ScenarioBuilderProps> = ({
         </div>
 
         {errors.length > 0 && (
-          <div className="px-6 py-3 bg-red-50 border-t border-red-200">
-            <div className="flex items-center text-red-600 text-sm">
+          <div className="px-6 py-3 bg-gray-50 border-t border-red-200">
+            <div className="flex items-center text-gray-600 text-sm">
               <AlertCircle size={16} className="mr-2" />
               {errors.join(', ')}
             </div>

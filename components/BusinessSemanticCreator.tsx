@@ -3765,16 +3765,16 @@ const SemanticListView: React.FC<{
                 <p className="text-sm text-slate-600 mb-4">{semantic.description}</p>
 
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded font-medium">
+                  <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded font-medium">
                     {semantic.dataEntities.length} 数据实体
                   </span>
-                  <span className="px-2 py-1 bg-cyan-50 text-cyan-600 rounded font-medium">
+                  <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded font-medium">
                     {semantic.behaviors.length} 行为操作
                   </span>
-                  <span className="px-2 py-1 bg-orange-50 text-orange-600 rounded font-medium">
+                  <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded font-medium">
                     {semantic.businessRules.length} 业务规则
                   </span>
-                  <span className="px-2 py-1 bg-green-50 text-green-600 rounded font-medium">
+                  <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded font-medium">
                     {semantic.businessProcesses.length} 业务流程
                   </span>
                 </div>
@@ -4265,7 +4265,7 @@ const MCPRuleSelector: React.FC<{
             onClick={() => setActiveTab('constraints')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'constraints'
-                ? 'bg-white text-indigo-600 shadow-sm'
+                ? 'bg-white text-gray-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -4276,7 +4276,7 @@ const MCPRuleSelector: React.FC<{
             onClick={() => setActiveTab('solvers')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'solvers'
-                ? 'bg-white text-blue-600 shadow-sm'
+                ? 'bg-white text-gray-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -4295,7 +4295,7 @@ const MCPRuleSelector: React.FC<{
                   onClick={() => setSelectedCategory(null)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     selectedCategory === null
-                      ? 'bg-indigo-500 text-white'
+                      ? 'bg-gray-500 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
@@ -4307,7 +4307,7 @@ const MCPRuleSelector: React.FC<{
                     onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                       selectedCategory === cat.id
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-gray-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -4328,14 +4328,14 @@ const MCPRuleSelector: React.FC<{
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded ${
                           rule.constraintType === 'Hard'
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-amber-100 text-amber-600'
+                            ? 'bg-red-100 text-gray-600'
+                            : 'bg-amber-100 text-gray-600'
                         }`}>
                           {rule.constraintType}
                         </span>
                         <span className="text-xs text-gray-500">{rule.ontologyObject}</span>
                       </div>
-                      <button className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-100">
+                      <button className="px-3 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-medium hover:bg-indigo-100">
                         选择
                       </button>
                     </div>
@@ -4381,7 +4381,7 @@ const MCPRuleSelector: React.FC<{
                   <p className="text-xs text-gray-500 mb-2">{solver.description}</p>
                   <div className="flex flex-wrap gap-1">
                     {solver.applicableScenarios.slice(0, 3).map((scenario, idx) => (
-                      <span key={idx} className="text-[10px] px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                      <span key={idx} className="text-[10px] px-2 py-1 bg-gray-50 text-gray-600 rounded">
                         {scenario}
                       </span>
                     ))}
@@ -4421,7 +4421,7 @@ const NodeInfoPanel: React.FC<{
         };
         return (
           <div className="space-y-4">
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="p-3 bg-gray-50 rounded-lg border border-blue-100">
               <h4 className="text-xs font-semibold text-blue-700 mb-1">定义</h4>
               <p className="text-xs text-slate-700">{node.data.description}</p>
             </div>
@@ -4430,7 +4430,7 @@ const NodeInfoPanel: React.FC<{
             <div>
               <h4 className="text-xs font-semibold text-slate-700 mb-2">实体分类</h4>
               <div className="flex flex-wrap gap-2">
-                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium">
+                <span className="text-xs px-2 py-1 bg-gray-100 text-blue-700 rounded font-medium">
                   {entityTypeLabels[node.data.entityType] || node.data.entityType}
                 </span>
                 {node.data.subtype && (
@@ -4470,7 +4470,7 @@ const NodeInfoPanel: React.FC<{
                     <div key={i} className="flex items-center gap-2 text-xs p-1.5 bg-slate-50 rounded">
                       <span className="text-slate-500">→</span>
                       <span className="text-slate-700">{rel.targetEntityId}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded">{rel.relationType}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{rel.relationType}</span>
                     </div>
                   ))}
                 </div>
@@ -4484,7 +4484,7 @@ const NodeInfoPanel: React.FC<{
                   <div key={i} className="p-2 bg-slate-50 rounded border border-slate-200">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-slate-800">{field.name}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded">{field.dataType}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{field.dataType}</span>
                     </div>
                     <p className="text-[10px] text-slate-500 mt-0.5">{field.description}</p>
                   </div>
@@ -4537,7 +4537,7 @@ const NodeInfoPanel: React.FC<{
         };
         return (
           <div className="space-y-4">
-            <div className="p-3 bg-cyan-50 rounded-lg border border-cyan-100">
+            <div className="p-3 bg-gray-50 rounded-lg border border-cyan-100">
               <h4 className="text-xs font-semibold text-cyan-700 mb-1">定义</h4>
               <p className="text-xs text-slate-700">{node.data.description}</p>
             </div>
@@ -4597,7 +4597,7 @@ const NodeInfoPanel: React.FC<{
                   {node.data.impactedEntities.map((impact: ActionImpact, i: number) => (
                     <div key={i} className="flex items-center gap-2 text-xs p-1.5 bg-slate-50 rounded">
                       <span className="text-slate-700">{impact.entityId}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-cyan-100 text-cyan-600 rounded">{impact.impactType}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 bg-cyan-100 text-gray-600 rounded">{impact.impactType}</span>
                     </div>
                   ))}
                 </div>
@@ -4666,7 +4666,7 @@ const NodeInfoPanel: React.FC<{
           <div className="space-y-4">
             {/* MCP规则关联状态 */}
             {linkedMCPRule && (
-              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+              <div className="p-3 bg-gray-50 rounded-lg border border-indigo-100">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-xs font-semibold text-indigo-700 flex items-center gap-1">
                     <Link2 size={12} />
@@ -4674,13 +4674,13 @@ const NodeInfoPanel: React.FC<{
                   </h4>
                   <button
                     onClick={() => setLinkedMCPRule(null)}
-                    className="text-[10px] text-indigo-600 hover:text-indigo-800"
+                    className="text-[10px] text-gray-600 hover:text-indigo-800"
                   >
                     解除关联
                   </button>
                 </div>
                 <p className="text-xs font-medium text-indigo-900">{linkedMCPRule.name}</p>
-                <p className="text-[10px] text-indigo-600 mt-1">{linkedMCPRule.description}</p>
+                <p className="text-[10px] text-gray-600 mt-1">{linkedMCPRule.description}</p>
               </div>
             )}
 
@@ -4688,14 +4688,14 @@ const NodeInfoPanel: React.FC<{
             {!linkedMCPRule && (
               <button
                 onClick={() => setShowMCPSelector(true)}
-                className="w-full p-3 border-2 border-dashed border-indigo-200 rounded-lg text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2"
+                className="w-full p-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2"
               >
                 <Plus size={16} />
                 <span className="text-xs font-medium">关联MCP规则</span>
               </button>
             )}
 
-            <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
+            <div className="p-3 bg-gray-50 rounded-lg border border-orange-100">
               <h4 className="text-xs font-semibold text-orange-700 mb-1">定义</h4>
               <p className="text-xs text-slate-700">{node.data.description}</p>
             </div>
@@ -4762,7 +4762,7 @@ const NodeInfoPanel: React.FC<{
               <div>
                 <h4 className="text-xs font-semibold text-slate-700 mb-2">触发机制</h4>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                  <span className="text-xs px-2 py-1 bg-gray-100 text-blue-700 rounded">
                     {triggerTypeLabels[node.data.trigger.triggerType]}
                   </span>
                   {node.data.trigger.triggerEvent && (
@@ -4780,7 +4780,7 @@ const NodeInfoPanel: React.FC<{
                   <span className="px-2 py-1 bg-yellow-50 text-yellow-700 rounded">
                     警告: {node.data.thresholdConfig.warningThreshold}
                   </span>
-                  <span className="px-2 py-1 bg-red-50 text-red-700 rounded">
+                  <span className="px-2 py-1 bg-gray-50 text-red-700 rounded">
                     严重: {node.data.thresholdConfig.criticalThreshold}
                   </span>
                 </div>
@@ -4789,7 +4789,7 @@ const NodeInfoPanel: React.FC<{
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">优先级:</span>
-              <span className="px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs font-medium">
+              <span className="px-2 py-0.5 bg-red-100 text-gray-600 rounded text-xs font-medium">
                 P{node.data.priority}
               </span>
               {!node.data.enabled && (
@@ -4812,7 +4812,7 @@ const NodeInfoPanel: React.FC<{
         };
         return (
           <div className="space-y-4">
-            <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+            <div className="p-3 bg-gray-50 rounded-lg border border-green-100">
               <h4 className="text-xs font-semibold text-green-700 mb-1">定义</h4>
               <p className="text-xs text-slate-700">{node.data.description}</p>
             </div>
@@ -4837,8 +4837,8 @@ const NodeInfoPanel: React.FC<{
                           nodeType === 'start' ? 'bg-green-200 text-green-700' :
                           nodeType === 'end' ? 'bg-gray-200 text-gray-700' :
                           nodeType === 'decision' ? 'bg-yellow-100 text-yellow-700' :
-                          nodeType === 'human' ? 'bg-blue-100 text-blue-700' :
-                          'bg-green-100 text-green-600'
+                          nodeType === 'human' ? 'bg-gray-100 text-blue-700' :
+                          'bg-green-100 text-gray-600'
                         }`}>
                           {nodeTypeIcons[nodeType] || stepOrder}
                         </div>
@@ -4865,7 +4865,7 @@ const NodeInfoPanel: React.FC<{
                                 <span className="text-slate-400">if</span>
                                 <span className="text-slate-600">{branch.condition}</span>
                                 <span className="text-slate-400">→</span>
-                                <span className="text-green-600">{branch.targetStepId}</span>
+                                <span className="text-gray-600">{branch.targetStepId}</span>
                               </div>
                             ))}
                           </div>
@@ -4874,7 +4874,7 @@ const NodeInfoPanel: React.FC<{
                         {/* 人机协作配置 */}
                         {wfNode?.humanMachineConfig?.requiresHumanApproval && (
                           <div className="mt-1 flex items-center gap-1">
-                            <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">
+                            <span className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-600 rounded">
                               👤 需审批: {wfNode.humanMachineConfig.approverRoles?.join(', ')}
                             </span>
                           </div>
@@ -4932,11 +4932,11 @@ const NodeInfoPanel: React.FC<{
                 <h4 className="text-xs font-semibold text-slate-700 mb-2">监控配置</h4>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {node.data.monitoringConfig.slaMinutes && (
-                    <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded">
+                    <span className="px-2 py-1 bg-gray-50 text-purple-700 rounded">
                       SLA: {node.data.monitoringConfig.slaMinutes}分钟
                     </span>
                   )}
-                  <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                  <span className="px-2 py-1 bg-gray-50 text-blue-700 rounded">
                     关键指标: {node.data.monitoringConfig.keyMetrics?.join(', ')}
                   </span>
                 </div>

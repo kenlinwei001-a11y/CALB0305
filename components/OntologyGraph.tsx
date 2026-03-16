@@ -509,15 +509,15 @@ const OntologyGraph: React.FC = () => {
           </button>
           <div className="flex gap-4 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm items-center">
             <span className="flex items-center text-xs text-slate-600 mr-2 border-r border-slate-200 pr-4">
-                <span className="w-3 h-3 rounded-full bg-purple-500 mr-1"></span>推演节点
-                <span className="w-3 h-3 rounded-full bg-blue-500 mx-1 ml-3"></span>数据节点
+                <span className="w-3 h-3 rounded-full bg-gray-500 mr-1"></span>推演节点
+                <span className="w-3 h-3 rounded-full bg-gray-500 mx-1 ml-3"></span>数据节点
             </span>
 
             <div className="flex items-center text-xs font-medium space-x-3">
                 <span className="text-slate-400">数据完备度:</span>
-                <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-red-500 mr-1"></span>&lt;60% (差)</span>
+                <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-gray-500 mr-1"></span>&lt;60% (差)</span>
                 <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-yellow-500 mr-1"></span>60-85% (良)</span>
-                <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-green-500 mr-1"></span>&gt;85% (优)</span>
+                <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-gray-500 mr-1"></span>&gt;85% (优)</span>
             </div>
           </div>
         </div>
@@ -552,7 +552,7 @@ const OntologyGraph: React.FC = () => {
                             key={scene.id}
                             className={`group relative w-full text-left px-3 py-3 rounded-lg text-sm transition-colors flex flex-col ${
                                 activeScenarioId === scene.id
-                                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                    ? 'bg-gray-50 text-indigo-700 border border-gray-200'
                                     : 'text-slate-600 hover:bg-slate-50 border border-transparent'
                             }`}
                         >
@@ -578,7 +578,7 @@ const OntologyGraph: React.FC = () => {
                                             e.stopPropagation();
                                             handleEditScenario(scene.id);
                                         }}
-                                        className="p-1 bg-white rounded shadow-sm text-slate-400 hover:text-indigo-600"
+                                        className="p-1 bg-white rounded shadow-sm text-slate-400 hover:text-gray-600"
                                         title="编辑"
                                     >
                                         <Edit3 size={12} />
@@ -588,7 +588,7 @@ const OntologyGraph: React.FC = () => {
                                             e.stopPropagation();
                                             handleDeleteScenario(scene.id);
                                         }}
-                                        className="p-1 bg-white rounded shadow-sm text-slate-400 hover:text-red-600"
+                                        className="p-1 bg-white rounded shadow-sm text-slate-400 hover:text-gray-600"
                                         title="删除"
                                     >
                                         <Trash2 size={12} />
@@ -608,7 +608,7 @@ const OntologyGraph: React.FC = () => {
         >
             <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-4 py-2 rounded-lg text-sm font-mono text-slate-600 pointer-events-none border border-slate-200 shadow-sm">
                 <div className="text-xs text-slate-400 uppercase">Current View</div>
-                <div className="font-bold text-indigo-600">{allScenarios.find(s => s.id === activeScenarioId)?.name}</div>
+                <div className="font-bold text-gray-600">{allScenarios.find(s => s.id === activeScenarioId)?.name}</div>
             </div>
 
             {/* 2D Military Style Graph */}
@@ -783,22 +783,22 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
   };
 
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border border-indigo-200 overflow-hidden">
+    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border border-gray-200 overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full p-3 flex items-center justify-between bg-indigo-100/50 hover:bg-indigo-100 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Lightbulb size={16} className="text-indigo-600" />
+          <Lightbulb size={16} className="text-gray-600" />
           <span className="text-sm font-semibold text-indigo-900">关联性</span>
-          <span className="text-xs text-indigo-600 bg-indigo-200/50 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-gray-600 bg-indigo-200/50 px-2 py-0.5 rounded-full">
             {requirements.semantics.length} 语义 · {requirements.skills.length} 技能
           </span>
         </div>
         <ChevronRight
           size={16}
-          className={`text-indigo-600 transition-transform ${expanded ? 'rotate-90' : ''}`}
+          className={`text-gray-600 transition-transform ${expanded ? 'rotate-90' : ''}`}
         />
       </button>
 
@@ -811,7 +811,7 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
               className={`flex-1 py-1.5 px-2 text-xs font-medium rounded transition-colors ${
                 activeTab === 'semantics'
                   ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-indigo-50'
+                  : 'text-slate-600 hover:bg-gray-50'
               }`}
             >
               业务语义
@@ -821,7 +821,7 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
               className={`flex-1 py-1.5 px-2 text-xs font-medium rounded transition-colors ${
                 activeTab === 'skills'
                   ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-indigo-50'
+                  : 'text-slate-600 hover:bg-gray-50'
               }`}
             >
               所需技能
@@ -831,7 +831,7 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
               className={`flex-1 py-1.5 px-2 text-xs font-medium rounded transition-colors ${
                 activeTab === 'atoms'
                   ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-indigo-50'
+                  : 'text-slate-600 hover:bg-gray-50'
               }`}
             >
               业务释义
@@ -849,7 +849,7 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
                     className="bg-white rounded-lg p-3 border border-indigo-100 shadow-sm cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all"
                   >
                     <div className="flex items-start gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-gray-600 flex items-center justify-center flex-shrink-0">
                         <Zap size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -857,7 +857,7 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
                         <p className="text-xs text-slate-500 mt-0.5">{semantic.description}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                            semantic.category === 'sales' ? 'bg-blue-100 text-blue-700' :
+                            semantic.category === 'sales' ? 'bg-gray-100 text-blue-700' :
                             semantic.category === 'production' ? 'bg-green-100 text-green-700' :
                             semantic.category === 'inventory' ? 'bg-amber-100 text-amber-700' :
                             semantic.category === 'quality' ? 'bg-red-100 text-red-700' :
@@ -896,7 +896,7 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
                       className="bg-white rounded-lg p-3 border border-indigo-100 shadow-sm cursor-pointer hover:shadow-md hover:border-amber-300 transition-all"
                     >
                       <div className="flex items-start gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-gray-600 flex items-center justify-center flex-shrink-0">
                           <Box size={14} />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -906,10 +906,10 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
                             <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
                               v{skill.version}
                             </span>
-                            <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] bg-gray-50 text-green-700 px-1.5 py-0.5 rounded">
                               准确率 {(skill.accuracy_score * 100).toFixed(0)}%
                             </span>
-                            <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] bg-gray-50 text-blue-700 px-1.5 py-0.5 rounded">
                               {(skill.latency / 1000).toFixed(1)}s
                             </span>
                           </div>
@@ -933,14 +933,14 @@ const BackwardAnalysisPanel: React.FC<BackwardAnalysisPanelProps> = ({ nodeId, n
                       className="bg-white rounded-lg p-3 border border-indigo-100 shadow-sm cursor-pointer hover:shadow-md hover:border-cyan-300 transition-all"
                     >
                       <div className="flex items-start gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-cyan-100 text-gray-600 flex items-center justify-center flex-shrink-0">
                           <Atom size={14} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-slate-900">{atom.name}</h4>
                           <p className="text-xs text-slate-500 mt-0.5">{atom.description}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[10px] bg-cyan-50 text-cyan-700 px-1.5 py-0.5 rounded font-mono">
+                            <span className="text-[10px] bg-gray-50 text-cyan-700 px-1.5 py-0.5 rounded font-mono">
                               {atom.id}
                             </span>
                             {atom.unit && (
@@ -997,7 +997,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
     const type = getNodeType(label);
     switch (type) {
       case 'simulation': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'data': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'data': return 'bg-gray-100 text-blue-700 border-gray-200';
       default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
@@ -1013,8 +1013,8 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 size={14} className="text-green-600" />;
-      case 'in_progress': return <Loader2 size={14} className="text-blue-600 animate-spin" />;
+      case 'completed': return <CheckCircle2 size={14} className="text-gray-600" />;
+      case 'in_progress': return <Loader2 size={14} className="text-gray-600 animate-spin" />;
       default: return <Circle size={14} className="text-slate-400" />;
     }
   };
@@ -1073,7 +1073,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
   // 状态指示器组件
   const StatusIndicator = ({ completed, label }: { completed: boolean; label: string }) => (
     <div className="flex items-center gap-1" title={label}>
-      <span className={`w-2 h-2 rounded-full ${completed ? 'bg-green-500' : 'bg-red-500'}`} />
+      <span className={`w-2 h-2 rounded-full ${completed ? 'bg-gray-500' : 'bg-gray-500'}`} />
       <span className="text-[10px] text-slate-500">{label}</span>
     </div>
   );
@@ -1121,11 +1121,11 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
         {/* 负责人 */}
         <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-            <User size={16} className="text-indigo-500" />
+            <User size={16} className="text-gray-500" />
             <span>负责人</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 text-gray-600 flex items-center justify-center text-sm font-bold">
               {owner.charAt(0)}
             </div>
             <span className="text-slate-900 font-medium">{owner}</span>
@@ -1135,10 +1135,10 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
         {/* 职责描述 */}
         <div>
           <div className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-            <FileText size={16} className="text-blue-500" />
+            <FileText size={16} className="text-gray-500" />
             <span>职责描述</span>
           </div>
-          <p className="text-sm text-slate-600 bg-blue-50 rounded-lg p-3 border border-blue-100 leading-relaxed">
+          <p className="text-sm text-slate-600 bg-gray-50 rounded-lg p-3 border border-blue-100 leading-relaxed">
             {responsibility}
           </p>
         </div>
@@ -1148,7 +1148,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
           {/* 上一级节点 */}
           <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600 mb-2">
-              <ArrowUp size={14} className="text-blue-500" />
+              <ArrowUp size={14} className="text-gray-500" />
               <span>上一级节点</span>
             </div>
             {upstreamNodes.length > 0 ? (
@@ -1207,7 +1207,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
 
         {/* 文件导入功能 - 仅在导入模式下显示 */}
         {isImportMode && (
-          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 text-sm font-medium text-indigo-700 mb-3">
               <Upload size={16} />
               <span>文件导入</span>
@@ -1229,14 +1229,14 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
               />
               {selectedFile ? (
                 <div className="flex items-center justify-center gap-2">
-                  <FileUp size={20} className="text-indigo-500" />
-                  <span className="text-sm text-indigo-600 font-medium">{selectedFile.name}</span>
+                  <FileUp size={20} className="text-gray-500" />
+                  <span className="text-sm text-gray-600 font-medium">{selectedFile.name}</span>
                   <span className="text-xs text-slate-400">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
                 </div>
               ) : (
                 <div className="text-center">
                   <Upload size={24} className="text-indigo-400 mx-auto mb-2" />
-                  <p className="text-sm text-indigo-600">点击或拖拽文件到此处上传</p>
+                  <p className="text-sm text-gray-600">点击或拖拽文件到此处上传</p>
                   <p className="text-xs text-indigo-400 mt-1">支持格式: CSV, JSON, XML, Excel</p>
                 </div>
               )}
@@ -1266,7 +1266,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, allNodes, onClo
             {/* 上传成功提示 */}
             {uploadStatus === 'success' && (
               <div className="mt-3 p-2 bg-green-100 border border-green-200 rounded-lg flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-600" />
+                <CheckCircle size={16} className="text-gray-600" />
                 <span className="text-sm text-green-700">文件导入成功!</span>
               </div>
             )}

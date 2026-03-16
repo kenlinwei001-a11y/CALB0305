@@ -455,9 +455,9 @@ const ProductTab: React.FC<{
   onClick: () => void;
 }> = ({ product, data, isActive, onClick }) => {
   const colorClasses = {
-    blue: 'bg-blue-50 text-[#007AFF] border-blue-200',
-    amber: 'bg-amber-50 text-[#FF9500] border-amber-200',
-    green: 'bg-green-50 text-[#34C759] border-green-200'
+    blue: 'bg-gray-50 text-[#007AFF] border-blue-200',
+    amber: 'bg-gray-50 text-[#FF9500] border-amber-200',
+    green: 'bg-gray-50 text-[#34C759] border-green-200'
   };
 
   return (
@@ -526,7 +526,7 @@ const CapacityView: React.FC<{ data: CapacityData }> = ({ data }) => (
       <MetricCard title="人员配置率" value={data.staffingRate.toString()} unit="%" icon={<Users size={18} />} color="pink" />
       <MetricCard title="设备稼动率" value={data.equipmentUptime.toString()} unit="%" icon={<Wrench size={18} />} color="teal" />
     </div>
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+    <div className="bg-gray-50 border border-amber-200 rounded-xl p-4">
       <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
         <AlertTriangle size={18} />
         瓶颈工序: {data.bottleneckProcess}
@@ -576,11 +576,11 @@ const InventoryView: React.FC<{ data: InventoryData }> = ({ data }) => (
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-red-200 rounded-xl p-4">
         <div className="text-red-800 font-medium">呆滞库存: {data.slowMovingInventory} 万元</div>
         <div className="text-sm text-[#FF3B30] mt-1">呆滞风险: {data.obsoleteRisk} 万元</div>
       </div>
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-blue-200 rounded-xl p-4">
         <div className="text-blue-800 font-medium">库存资金占用</div>
         <div className="text-2xl font-bold text-blue-900 mt-1">{data.totalValue.toLocaleString()} 万元</div>
       </div>
@@ -656,11 +656,11 @@ const SupplierView: React.FC<{ data: SupplierData }> = ({ data }) => (
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-amber-200 rounded-xl p-4">
         <div className="text-amber-800 font-medium">单一来源物料: {data.singleSourceMaterials} 项</div>
         <div className="text-sm text-[#FF9500] mt-1">建议开发第二供应商降低风险</div>
       </div>
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-blue-200 rounded-xl p-4">
         <div className="text-blue-800 font-medium">进口依赖度: {data.importDependency}%</div>
         <div className="text-sm text-[#007AFF] mt-1">持续推进国产化替代</div>
       </div>
@@ -688,7 +688,7 @@ const QualityView: React.FC<{ data: QualityData }> = ({ data }) => (
           <div className="flex justify-between"><span className="text-gray-600">待检批次</span><span className="font-medium">{data.inspectionPending} 批</span></div>
         </div>
       </div>
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-green-200 rounded-xl p-4">
         <div className="flex items-center gap-2 text-green-800 font-medium mb-2">
           <CheckCircle size={18} />
           质量状态良好
@@ -713,27 +713,27 @@ const FinanceView: React.FC<{ data: FinancialData }> = ({ data }) => (
     <div className="bg-white rounded-2xl border border-gray-200 p-4">
       <h4 className="font-semibold text-gray-800 mb-3">成本结构</h4>
       <div className="flex h-8 rounded-xl overflow-hidden">
-        <div className="bg-blue-500" style={{ width: `${data.costBreakdown.material}%` }} />
-        <div className="bg-green-500" style={{ width: `${data.costBreakdown.labor}%` }} />
-        <div className="bg-amber-500" style={{ width: `${data.costBreakdown.overhead}%` }} />
+        <div className="bg-gray-500" style={{ width: `${data.costBreakdown.material}%` }} />
+        <div className="bg-gray-500" style={{ width: `${data.costBreakdown.labor}%` }} />
+        <div className="bg-gray-500" style={{ width: `${data.costBreakdown.overhead}%` }} />
       </div>
       <div className="flex gap-4 mt-2 text-sm">
-        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-500 rounded" />材料 {data.costBreakdown.material}%</span>
-        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded" />人工 {data.costBreakdown.labor}%</span>
-        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-500 rounded" />制造费用 {data.costBreakdown.overhead}%</span>
+        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-500 rounded" />材料 {data.costBreakdown.material}%</span>
+        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-500 rounded" />人工 {data.costBreakdown.labor}%</span>
+        <span className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-500 rounded" />制造费用 {data.costBreakdown.overhead}%</span>
       </div>
     </div>
     <div className="grid grid-cols-3 gap-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-blue-200 rounded-xl p-4">
         <div className="text-sm text-[#007AFF]">应收账款</div>
         <div className="text-xl font-bold text-blue-900">{(data.accountsReceivable / 10000).toFixed(1)} 亿</div>
       </div>
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+      <div className="bg-gray-50 border border-green-200 rounded-xl p-4">
         <div className="text-sm text-[#34C759]">应付账款</div>
         <div className="text-xl font-bold text-green-900">{(data.accountsPayable / 10000).toFixed(1)} 亿</div>
       </div>
-      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-        <div className="text-sm text-purple-600">库存资金</div>
+      <div className="bg-gray-50 border border-purple-200 rounded-xl p-4">
+        <div className="text-sm text-gray-600">库存资金</div>
         <div className="text-xl font-bold text-purple-900">{(data.inventoryCost / 10000).toFixed(1)} 亿</div>
       </div>
     </div>
@@ -743,9 +743,9 @@ const FinanceView: React.FC<{ data: FinancialData }> = ({ data }) => (
 // 告警卡片
 const AlertCard: React.FC<{ alert: AlertItem }> = ({ alert }) => {
   const colors = {
-    critical: 'bg-red-50 border-red-200 text-red-800',
-    warning: 'bg-amber-50 border-amber-200 text-amber-800',
-    info: 'bg-blue-50 border-blue-200 text-blue-800'
+    critical: 'bg-gray-50 border-red-200 text-red-800',
+    warning: 'bg-gray-50 border-amber-200 text-amber-800',
+    info: 'bg-gray-50 border-blue-200 text-blue-800'
   };
 
   return (

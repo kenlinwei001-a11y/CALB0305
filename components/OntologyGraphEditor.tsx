@@ -250,7 +250,7 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <GitBranch className="text-indigo-600" size={18} />
+              <GitBranch className="text-gray-600" size={18} />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">低代码图谱编辑器</h2>
@@ -263,21 +263,21 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
             <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1 mr-4">
               <button
                 onClick={() => { setMode('select'); setConnectingSource(null); }}
-                className={`p-2 rounded ${mode === 'select' ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                className={`p-2 rounded ${mode === 'select' ? 'bg-indigo-100 text-gray-600' : 'text-slate-500 hover:bg-slate-100'}`}
                 title="选择模式"
               >
                 <MousePointer2 size={18} />
               </button>
               <button
                 onClick={() => { setMode('connect'); setConnectingSource(null); }}
-                className={`p-2 rounded ${mode === 'connect' ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                className={`p-2 rounded ${mode === 'connect' ? 'bg-indigo-100 text-gray-600' : 'text-slate-500 hover:bg-slate-100'}`}
                 title="连线模式"
               >
                 <GitBranch size={18} />
               </button>
               <button
                 onClick={() => { setMode('pan'); setConnectingSource(null); }}
-                className={`p-2 rounded ${mode === 'pan' ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                className={`p-2 rounded ${mode === 'pan' ? 'bg-indigo-100 text-gray-600' : 'text-slate-500 hover:bg-slate-100'}`}
                 title="拖拽画布"
               >
                 <Move size={18} />
@@ -464,7 +464,7 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
                         {isSelected && (
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-md"
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-gray-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-md"
                           >
                             <X size={14} />
                           </button>
@@ -472,7 +472,7 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
 
                         {/* Connecting Indicator */}
                         {isConnecting && (
-                          <div className="absolute -top-2 -left-2 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-md">
+                          <div className="absolute -top-2 -left-2 w-6 h-6 bg-gray-500 text-white rounded-full flex items-center justify-center shadow-md">
                             <GitBranch size={14} />
                           </div>
                         )}
@@ -514,9 +514,9 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
             <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
               <div className="bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow border border-slate-200 text-sm text-slate-600">
                 {mode === 'connect' && connectingSource ? (
-                  <span className="text-amber-600">请选择目标节点完成连接...</span>
+                  <span className="text-gray-600">请选择目标节点完成连接...</span>
                 ) : mode === 'connect' ? (
-                  <span className="text-indigo-600">点击节点开始连接</span>
+                  <span className="text-gray-600">点击节点开始连接</span>
                 ) : (
                   <span>选中节点拖拽移动，点击配置属性</span>
                 )}
@@ -679,7 +679,7 @@ const OntologyGraphEditor: React.FC<OntologyGraphEditorProps> = ({
 
                   <button
                     onClick={() => deleteLink(selectedLink.id)}
-                    className="w-full py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium"
+                    className="w-full py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-red-100 text-sm font-medium"
                   >
                     删除连线
                   </button>

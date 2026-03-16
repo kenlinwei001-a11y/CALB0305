@@ -446,7 +446,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   const getNodeLevelBadgeColor = (group?: 'simulation' | 'data') => {
     switch (group) {
       case 'simulation': return 'bg-purple-100 text-purple-700';
-      case 'data': return 'bg-blue-100 text-blue-700';
+      case 'data': return 'bg-gray-100 text-blue-700';
       default: return 'bg-slate-100 text-slate-600';
     }
   };
@@ -685,7 +685,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-white'
+                  ? 'text-gray-600 border-b-2 border-indigo-600 bg-white'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -716,7 +716,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                   {/* 下级推演节点 */}
                   {childSimulationNodes.length > 0 && (
                     <div className="mb-3">
-                      <p className="text-[10px] text-purple-600 uppercase mb-2 font-medium">下级推演节点</p>
+                      <p className="text-[10px] text-gray-600 uppercase mb-2 font-medium">下级推演节点</p>
                       {childSimulationNodes.map(childNode => {
                         const hasResults = childSimulationResults[childNode.id]?.length > 0;
                         const isSelected = selectedParamId === childNode.id;
@@ -725,17 +725,17 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                             key={childNode.id}
                             onClick={() => setSelectedParamId(childNode.id)}
                             className={`p-3 rounded-lg border-2 cursor-pointer transition-all mb-2 ${
-                              isSelected ? 'border-purple-500 bg-purple-50' : hasResults ? 'border-green-300 bg-green-50' : 'border-purple-200 bg-white hover:border-purple-300'
+                              isSelected ? 'border-purple-500 bg-gray-50' : hasResults ? 'border-green-300 bg-gray-50' : 'border-purple-200 bg-white hover:border-purple-300'
                             }`}
                           >
                             <div className="flex items-start justify-between mb-1">
                               <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700">推演</span>
-                              {hasResults && <CheckCircle size={14} className="text-green-600" />}
+                              {hasResults && <CheckCircle size={14} className="text-gray-600" />}
                             </div>
                             <h4 className="text-sm font-medium text-slate-900 truncate">{childNode.label}</h4>
                             <p className="text-[10px] text-slate-500 mt-0.5">{getNodeLevelName(childNode.group)}</p>
                             {hasResults && (
-                              <p className="text-[10px] text-green-600 mt-1">已导入 {childSimulationResults[childNode.id].length} 个方案</p>
+                              <p className="text-[10px] text-gray-600 mt-1">已导入 {childSimulationResults[childNode.id].length} 个方案</p>
                             )}
                           </div>
                         );
@@ -755,7 +755,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                               key={childNode.id}
                               onClick={() => setSelectedParamId(childNode.id)}
                               className={`p-3 rounded-lg border-2 cursor-pointer transition-all mb-2 ${
-                                isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                                isSelected ? 'border-indigo-500 bg-gray-50' : 'border-slate-200 bg-white hover:border-slate-300'
                               }`}
                             >
                               <div className="flex items-start justify-between mb-1">
@@ -829,7 +829,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
 
                           {/* 推演节点：导入推演结果 */}
                           {isSimNode && (
-                            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                            <div className="bg-gray-50 rounded-lg p-3 border border-purple-200">
                               <h4 className="text-xs font-semibold text-purple-700 mb-2 flex items-center gap-2">
                                 <Database size={14} />推演结果
                               </h4>
@@ -857,24 +857,24 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                           )}
 
                           {/* File Import */}
-                          <div className="bg-white rounded-lg p-3 border border-indigo-200">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
                             <h4 className="text-xs font-semibold text-indigo-700 mb-2 flex items-center gap-2">
                               <Upload size={14} />文件导入
                             </h4>
-                            <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-indigo-300 rounded-lg p-3 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
+                            <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-indigo-300 rounded-lg p-3 text-center cursor-pointer hover:border-indigo-400 hover:bg-gray-50 transition-colors">
                               <input ref={fileInputRef} type="file" multiple onChange={(e) => handleParamFileUpload(selectedParamId, e)} className="hidden" accept=".csv,.json,.xml,.xlsx,.xls" />
                               <Upload size={20} className="text-indigo-400 mx-auto mb-1" />
-                              <p className="text-xs text-indigo-600">点击上传数据文件</p>
+                              <p className="text-xs text-gray-600">点击上传数据文件</p>
                             </div>
                             {uploadedFiles[selectedParamId]?.length > 0 && (
                               <div className="mt-3 space-y-1.5">
                                 {uploadedFiles[selectedParamId].map((file, idx) => (
-                                  <div key={idx} className="flex items-center justify-between bg-indigo-50 p-2 rounded text-xs">
+                                  <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded text-xs">
                                     <div className="flex items-center gap-2 overflow-hidden">
-                                      <FileUp size={12} className="text-indigo-500 flex-shrink-0" />
+                                      <FileUp size={12} className="text-gray-500 flex-shrink-0" />
                                       <span className="truncate">{file.name}</span>
                                     </div>
-                                    <button onClick={() => removeParamFile(selectedParamId, idx)} className="p-1 hover:bg-red-50 rounded text-red-500"><X size={12} /></button>
+                                    <button onClick={() => removeParamFile(selectedParamId, idx)} className="p-1 hover:bg-gray-50 rounded text-red-500"><X size={12} /></button>
                                   </div>
                                 ))}
                               </div>
@@ -902,7 +902,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                   <div className="border-b border-slate-100">
                     <button onClick={() => setShowSkillPanel(!showSkillPanel)} className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-slate-50">
                       <div className="flex items-center gap-2">
-                        <Layers size={16} className="text-indigo-500" />
+                        <Layers size={16} className="text-gray-500" />
                         <span className="text-sm font-medium text-slate-700">技能中心</span>
                         {selectedSkills.length > 0 && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">{selectedSkills.length}</span>}
                       </div>
@@ -978,7 +978,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                               onClick={() => toggleSolver(solver.id)}
                               className={`p-2 rounded border cursor-pointer transition-all ${
                                 selectedSolvers.includes(solver.id)
-                                  ? 'border-amber-500 bg-amber-50'
+                                  ? 'border-amber-500 bg-gray-50'
                                   : 'border-slate-200 bg-white hover:border-slate-300'
                               }`}
                             >
@@ -1028,7 +1028,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                                     onClick={() => toggleConstraint(rule.id)}
                                     className={`p-1.5 rounded border cursor-pointer transition-all ${
                                       selectedConstraints.includes(rule.id)
-                                        ? 'border-emerald-500 bg-emerald-50'
+                                        ? 'border-emerald-500 bg-gray-50'
                                         : 'border-slate-200 bg-white hover:border-slate-300'
                                     }`}
                                   >
@@ -1062,7 +1062,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                       className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/50"
                     >
                       <div className="flex items-center gap-2">
-                        <Database size={16} className="text-purple-600" />
+                        <Database size={16} className="text-gray-600" />
                         <span className="text-sm font-medium text-slate-700">下级推演节点</span>
                         <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">
                           {childSimulationNodes.length}个
@@ -1086,12 +1086,12 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                               <div
                                 key={childNode.id}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                  hasResults ? 'border-green-300 bg-green-50' : 'border-purple-200 bg-white hover:border-purple-300'
+                                  hasResults ? 'border-green-300 bg-gray-50' : 'border-purple-200 bg-white hover:border-purple-300'
                                 }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                    <span className="w-2 h-2 rounded-full bg-gray-500" />
                                     <span className="text-sm font-medium text-slate-900">{childNode.label}</span>
                                     <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700">推演节点</span>
                                   </div>
@@ -1170,7 +1170,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'}`}>
+                      <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-gray-900 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'}`}>
                         {msg.content}
                       </div>
                     </div>
@@ -1190,22 +1190,22 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                 <div className="p-4 border-t border-slate-200 bg-white space-y-3">
                   <div className="flex items-center gap-4 text-xs">
                     <span className="flex items-center gap-1 text-slate-600">
-                      <div className={`w-2 h-2 rounded-full ${Object.keys(uploadedFiles).length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                      <div className={`w-2 h-2 rounded-full ${Object.keys(uploadedFiles).length > 0 ? 'bg-gray-500' : 'bg-slate-300'}`} />
                       已导入节点数据: {Object.keys(uploadedFiles).length}/{allChildNodes.length}
                     </span>
                     <span className="flex items-center gap-1 text-slate-600">
-                      <div className={`w-2 h-2 rounded-full ${Object.keys(childSimulationResults).length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                      <div className={`w-2 h-2 rounded-full ${Object.keys(childSimulationResults).length > 0 ? 'bg-gray-500' : 'bg-slate-300'}`} />
                       已导入推演结果: {Object.keys(childSimulationResults).length}/{childSimulationNodes.length}
                     </span>
                     <span className="flex items-center gap-1 text-slate-600">
-                      <div className={`w-2 h-2 rounded-full ${selectedSkills.length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                      <div className={`w-2 h-2 rounded-full ${selectedSkills.length > 0 ? 'bg-gray-500' : 'bg-slate-300'}`} />
                       技能: {selectedSkills.length}个
                     </span>
                   </div>
                   <div className="flex gap-2">
                     <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && sendMessage()} placeholder="输入您的推演需求，与AI助手对话..." disabled={isAnalyzing} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100" />
                     <button onClick={sendMessage} disabled={!chatInput.trim() || isAnalyzing} className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:bg-slate-100 disabled:text-slate-400 transition-colors"><MessageCircle size={18} /></button>
-                    <button onClick={runSimulation} disabled={isAnalyzing} className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center gap-2">
+                    <button onClick={runSimulation} disabled={isAnalyzing} className="px-6 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center gap-2">
                       {isAnalyzing ? (<><Loader2 size={16} className="animate-spin" />分析中</>) : (<><Zap size={16} />运行推演</>)}
                     </button>
                   </div>
@@ -1221,7 +1221,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                   <div className="text-center">
                     <FileText size={48} className="text-slate-300 mx-auto mb-4" />
                     <p className="text-slate-500">请先完成推演分析</p>
-                    <button onClick={() => setActiveTab('analysis')} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">前往推演分析</button>
+                    <button onClick={() => setActiveTab('analysis')} className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800">前往推演分析</button>
                   </div>
                 </div>
               ) : (
@@ -1230,14 +1230,14 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                     <div className="p-4 border-b border-slate-200"><h3 className="text-sm font-semibold text-slate-700">分析方案 ({solutions.length})</h3></div>
                     <div className="p-3 space-y-2">
                       {solutions.map(solution => (
-                        <div key={solution.id} onClick={() => setSelectedSolution(solution.id)} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedSolution === solution.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                        <div key={solution.id} onClick={() => setSelectedSolution(solution.id)} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedSolution === solution.id ? 'border-indigo-500 bg-gray-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
                           <div className="flex items-center justify-between mb-1"><h4 className="text-sm font-medium text-slate-900">{solution.name}</h4></div>
                           <span className={`px-1.5 py-0.5 text-[10px] rounded border ${getRiskColor(solution.riskLevel)}`}>{getRiskText(solution.riskLevel)}</span>
                           <p className="text-xs text-slate-500 mt-1 line-clamp-2">{solution.description}</p>
 
                           {/* 已关联节点显示 */}
                           {solutionAdditionalNodes[solution.id]?.length > 0 && (
-                            <div className="mt-2 flex items-center gap-1 text-[10px] text-indigo-600">
+                            <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-600">
                               <Box size={10} />
                               <span>已关联 {solutionAdditionalNodes[solution.id].length} 个节点</span>
                             </div>
@@ -1246,14 +1246,14 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                           <div className="mt-2 flex gap-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); openSolutionChat(solution.id); }}
-                              className="flex-1 py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs rounded flex items-center justify-center gap-1 transition-colors"
+                              className="flex-1 py-1.5 px-2 bg-gray-50 hover:bg-indigo-100 text-gray-600 text-xs rounded flex items-center justify-center gap-1 transition-colors"
                             >
                               <MessageCircle size={12} />
                               咨询
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); openNodeSelector(solution.id); }}
-                              className="flex-1 py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-600 text-xs rounded flex items-center justify-center gap-1 transition-colors"
+                              className="flex-1 py-1.5 px-2 bg-gray-50 hover:bg-amber-100 text-gray-600 text-xs rounded flex items-center justify-center gap-1 transition-colors"
                             >
                               <Plus size={12} />
                               添加节点
@@ -1286,14 +1286,14 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => openNodeSelector(selectedSolution)}
-                                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 text-sm rounded flex items-center gap-1 transition-colors"
+                                className="px-3 py-1.5 bg-gray-50 hover:bg-amber-100 text-gray-600 text-sm rounded flex items-center gap-1 transition-colors"
                               >
                                 <Plus size={14} />
                                 添加节点
                               </button>
                               <button
                                 onClick={() => openSolutionChat(selectedSolution)}
-                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm rounded flex items-center gap-1 transition-colors"
+                                className="px-3 py-1.5 bg-gray-50 hover:bg-indigo-100 text-gray-600 text-sm rounded flex items-center gap-1 transition-colors"
                               >
                                 <MessageCircle size={14} />
                                 咨询此方案
@@ -1303,9 +1303,9 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                           </div>
                           <div className="grid grid-cols-4 gap-4 mb-6">
                             {Object.entries(solutions.find(s => s.id === selectedSolution)?.metrics || {}).map(([key, value]) => (
-                              <div key={key} className="bg-slate-50 rounded-lg p-3 border border-slate-200"><p className="text-xs text-slate-500 mb-1">{key}</p><p className="text-xl font-bold text-indigo-600">{value}</p></div>
+                              <div key={key} className="bg-slate-50 rounded-lg p-3 border border-slate-200"><p className="text-xs text-slate-500 mb-1">{key}</p><p className="text-xl font-bold text-gray-600">{value}</p></div>
                             ))}
-                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200"><p className="text-xs text-slate-500 mb-1">置信度</p><p className="text-xl font-bold text-green-600">{((solutions.find(s => s.id === selectedSolution)?.confidence || 0) * 100).toFixed(0)}%</p></div>
+                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200"><p className="text-xs text-slate-500 mb-1">置信度</p><p className="text-xl font-bold text-gray-600">{((solutions.find(s => s.id === selectedSolution)?.confidence || 0) * 100).toFixed(0)}%</p></div>
                           </div>
                           <p className="text-sm text-slate-600">{solutions.find(s => s.id === selectedSolution)?.description}</p>
                         </div>
@@ -1313,27 +1313,27 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                           <h3 className="text-sm font-semibold text-slate-700 mb-4">方案量化对比</h3>
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                              <thead><tr className="border-b border-slate-200"><th className="text-left py-3 px-2 font-medium text-slate-600">指标</th>{solutions.map(sol => (<th key={sol.id} className={`text-center py-3 px-2 font-medium ${sol.id === selectedSolution ? 'text-indigo-600' : 'text-slate-600'}`}>{sol.name}</th>))}</tr></thead>
+                              <thead><tr className="border-b border-slate-200"><th className="text-left py-3 px-2 font-medium text-slate-600">指标</th>{solutions.map(sol => (<th key={sol.id} className={`text-center py-3 px-2 font-medium ${sol.id === selectedSolution ? 'text-gray-600' : 'text-slate-600'}`}>{sol.name}</th>))}</tr></thead>
                               <tbody>
                                 {Object.keys(solutions[0]?.metrics || {}).map((metric, idx) => (
-                                  <tr key={metric} className={idx % 2 === 0 ? 'bg-slate-50' : ''}><td className="py-3 px-2 font-medium text-slate-700">{metric}</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-indigo-600 font-medium' : 'text-slate-600'}`}>{sol.metrics[metric]}</td>))}</tr>
+                                  <tr key={metric} className={idx % 2 === 0 ? 'bg-slate-50' : ''}><td className="py-3 px-2 font-medium text-slate-700">{metric}</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-gray-600 font-medium' : 'text-slate-600'}`}>{sol.metrics[metric]}</td>))}</tr>
                                 ))}
-                                <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">置信度</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-indigo-600 font-medium' : 'text-slate-600'}`}>{(sol.confidence * 100).toFixed(0)}%</td>))}</tr>
-                                <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">预估成本</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-indigo-600 font-medium' : 'text-slate-600'}`}>{sol.cost ? `${sol.cost}万` : '-'}</td>))}</tr>
-                                <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">预计周期</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-indigo-600 font-medium' : 'text-slate-600'}`}>{sol.timeline || '-'}</td>))}</tr>
+                                <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">置信度</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-gray-600 font-medium' : 'text-slate-600'}`}>{(sol.confidence * 100).toFixed(0)}%</td>))}</tr>
+                                <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">预估成本</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-gray-600 font-medium' : 'text-slate-600'}`}>{sol.cost ? `${sol.cost}万` : '-'}</td>))}</tr>
+                                <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">预计周期</td>{solutions.map(sol => (<td key={sol.id} className={`text-center py-3 px-2 ${sol.id === selectedSolution ? 'text-gray-600 font-medium' : 'text-slate-600'}`}>{sol.timeline || '-'}</td>))}</tr>
                                 <tr className="border-t border-slate-200"><td className="py-3 px-2 font-medium text-slate-700">风险等级</td>{solutions.map(sol => (<td key={sol.id} className="text-center py-3 px-2"><span className={`px-2 py-0.5 text-xs rounded border ${getRiskColor(sol.riskLevel)}`}>{getRiskText(sol.riskLevel)}</span></td>))}</tr>
                               </tbody>
                             </table>
                           </div>
                         </div>
-                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-6">
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-gray-200 p-6">
                           <h3 className="text-sm font-semibold text-indigo-700 mb-2 flex items-center gap-2"><Lightbulb size={16} />分析建议</h3>
-                          <p className="text-sm text-indigo-600">基于当前输入数据和多维度分析，<strong>{solutions.find(s => s.id === selectedSolution)?.name}</strong>在当前条件下综合表现最优。该方案在控制风险的前提下，能够实现较好的预期目标。</p>
+                          <p className="text-sm text-gray-600">基于当前输入数据和多维度分析，<strong>{solutions.find(s => s.id === selectedSolution)?.name}</strong>在当前条件下综合表现最优。该方案在控制风险的前提下，能够实现较好的预期目标。</p>
                         </div>
 
                         {/* 方案咨询对话框 */}
                         {showSolutionChat && selectedSolution && (
-                          <div className="bg-white rounded-xl border border-indigo-200 p-6 shadow-lg">
+                          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-lg">
                             <div className="flex items-center justify-between mb-4">
                               <h3 className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
                                 <MessageCircle size={16} />
@@ -1355,7 +1355,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[80%] p-3 rounded-lg text-sm ${
                                       msg.role === 'user'
-                                        ? 'bg-indigo-600 text-white rounded-br-none'
+                                        ? 'bg-gray-900 text-white rounded-br-none'
                                         : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'
                                     }`}>
                                       {msg.content}
@@ -1377,7 +1377,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                               <button
                                 onClick={sendSolutionMessage}
                                 disabled={!solutionChatInput.trim()}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:bg-slate-300 transition-colors"
+                                className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 disabled:bg-slate-300 transition-colors"
                               >
                                 发送
                               </button>
@@ -1435,8 +1435,8 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                                 return (
                                   <div key={nodeId} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded text-xs">
                                     <span className={`w-2 h-2 rounded-full ${
-                                      nodeItem.group === 'simulation' ? 'bg-purple-500' :
-                                      nodeItem.group === 'data' ? 'bg-blue-500' :
+                                      nodeItem.group === 'simulation' ? 'bg-gray-500' :
+                                      nodeItem.group === 'data' ? 'bg-gray-500' :
                                       'bg-slate-500'
                                     }`} />
                                     <span className="text-slate-700">{nodeItem.label}</span>
@@ -1491,12 +1491,12 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                         key={nodeItem.id}
                         onClick={() => toggleNodeSelection(nodeItem.id)}
                         className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                          isSelected ? 'border-amber-500 bg-amber-50' : 'border-slate-200 hover:border-slate-300'
+                          isSelected ? 'border-amber-500 bg-gray-50' : 'border-slate-200 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                            isSelected ? 'border-amber-500 bg-amber-500' : 'border-slate-300'
+                            isSelected ? 'border-amber-500 bg-gray-500' : 'border-slate-300'
                           }`}>
                             {isSelected && <CheckCircle size={12} className="text-white" />}
                           </div>
@@ -1533,7 +1533,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                           <span className="text-xs text-slate-700 truncate flex-1">{nodeItem.label}</span>
                           <button
                             onClick={() => toggleNodeSelection(nodeId)}
-                            className="p-1 hover:bg-red-50 rounded text-red-500"
+                            className="p-1 hover:bg-gray-50 rounded text-red-500"
                           >
                             <X size={12} />
                           </button>
@@ -1554,7 +1554,7 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
               </button>
               <button
                 onClick={saveSolutionNodes}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-gray-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
               >
                 保存 ({selectedNodesForSolution.length})
               </button>

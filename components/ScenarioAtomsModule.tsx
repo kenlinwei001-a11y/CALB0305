@@ -175,7 +175,7 @@ const ScenarioAtomsModule: React.FC = () => {
             onClick={() => { setActiveTab('general'); setSelectedCategory(null); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'general'
-                ? 'bg-white text-indigo-600 shadow-sm'
+                ? 'bg-white text-gray-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-800'
             }`}
           >
@@ -185,7 +185,7 @@ const ScenarioAtomsModule: React.FC = () => {
             onClick={() => { setActiveTab('lithium'); setSelectedCategory(null); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'lithium'
-                ? 'bg-white text-indigo-600 shadow-sm'
+                ? 'bg-white text-gray-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-800'
             }`}
           >
@@ -209,7 +209,7 @@ const ScenarioAtomsModule: React.FC = () => {
                   onClick={() => setSelectedCategory(category.id)}
                   className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
                     isSelected
-                      ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                      ? 'border-indigo-500 bg-gray-50 shadow-md'
                       : 'border-slate-200 bg-white hover:border-indigo-300'
                   }`}
                 >
@@ -258,7 +258,7 @@ const ScenarioAtomsModule: React.FC = () => {
           {/* Info Section */}
           <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div className="flex items-center gap-3 mb-3">
-              <Workflow className="text-indigo-600" size={24} />
+              <Workflow className="text-gray-600" size={24} />
               <h3 className="font-semibold text-slate-800">场景构建指南</h3>
             </div>
             <div className="space-y-2 text-sm text-slate-600">
@@ -306,7 +306,7 @@ const ScenarioAtomsModule: React.FC = () => {
                     return (
                       <div
                         key={atomId}
-                        className="p-4 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50/30 transition-all"
+                        className="p-4 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-gray-50/30 transition-all"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">

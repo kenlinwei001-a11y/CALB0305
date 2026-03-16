@@ -50,8 +50,8 @@ const Dashboard: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-900">欢迎使用 Nexus Platform</h2>
             <p className="text-sm text-gray-500 mt-1">今日概览 · 2026年3月16日</p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-green-700 rounded-full text-sm">
+            <span className="w-2 h-2 bg-gray-500 rounded-full"></span>
             系统正常运行
           </div>
         </div>
@@ -149,8 +149,8 @@ const Dashboard: React.FC = () => {
                   <td className="px-6 py-3 text-gray-900">{exec.task_text}</td>
                   <td className="px-6 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      exec.status === 'success' ? 'bg-green-50 text-green-700' :
-                      exec.status === 'failed' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
+                      exec.status === 'success' ? 'bg-gray-50 text-green-700' :
+                      exec.status === 'failed' ? 'bg-gray-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
                     }`}>
                       {exec.status === 'success' ? '成功' : exec.status === 'failed' ? '失败' : '运行中'}
                     </span>

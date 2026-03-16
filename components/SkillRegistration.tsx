@@ -284,7 +284,7 @@ exports.handler = async (event) => {
               onClick={() => toggleDomain(scenario.id)}
               className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
                 isSelected
-                  ? 'bg-indigo-50 border border-indigo-200'
+                  ? 'bg-gray-50 border border-gray-200'
                   : 'bg-white border border-slate-200 hover:bg-slate-50'
               }`}
             >
@@ -297,7 +297,7 @@ exports.handler = async (event) => {
                 <div className="flex items-center">
                   <span className="font-medium text-slate-700">{scenario.name}</span>
                   {isDynamic && (
-                    <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-xs rounded">
+                    <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-gray-600 text-xs rounded">
                       自定义
                     </span>
                   )}
@@ -364,12 +364,12 @@ exports.handler = async (event) => {
 
       {/* Error Messages */}
       {errors.length > 0 && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center text-red-600 mb-2">
+        <div className="mb-4 p-4 bg-gray-50 border border-red-200 rounded-lg">
+          <div className="flex items-center text-gray-600 mb-2">
             <AlertCircle size={18} className="mr-2" />
             <span className="font-medium">请修正以下错误：</span>
           </div>
-          <ul className="list-disc list-inside text-sm text-red-600 ml-2">
+          <ul className="list-disc list-inside text-sm text-gray-600 ml-2">
             {errors.map((err, idx) => <li key={idx}>{err}</li>)}
           </ul>
         </div>
@@ -453,7 +453,7 @@ exports.handler = async (event) => {
                             {scenario.name}
                             <button
                               onClick={() => toggleDomain(domainId)}
-                              className="ml-2 text-indigo-500 hover:text-indigo-700"
+                              className="ml-2 text-gray-500 hover:text-indigo-700"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -466,7 +466,7 @@ exports.handler = async (event) => {
                   )}
                   <button
                     onClick={() => setShowScenarioSelector(!showScenarioSelector)}
-                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    className="text-sm text-gray-600 hover:text-indigo-700 font-medium"
                   >
                     {showScenarioSelector ? '收起场景列表' : '+ 选择场景'}
                   </button>
@@ -611,7 +611,7 @@ exports.handler = async (event) => {
                   {/* 原子业务语义推荐 */}
                   <div className="border border-slate-200 rounded-lg p-4">
                     <h4 className="font-medium text-slate-700 mb-3 flex items-center">
-                      <Box size={16} className="mr-2 text-indigo-600" />
+                      <Box size={16} className="mr-2 text-gray-600" />
                       可关联的原子业务语义
                     </h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -646,7 +646,7 @@ exports.handler = async (event) => {
 }`}</pre>
                   </div>
 
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <h4 className="font-medium text-blue-800 mb-2">提示</h4>
                     <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
                       <li>参数名称应简洁明了，使用英文命名</li>

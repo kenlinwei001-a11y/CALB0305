@@ -66,12 +66,12 @@ const AtomicOntologyModule: React.FC = () => {
         {/* 场景原子业务语义入口 */}
         <button
           onClick={() => navigate('/atoms/scenario')}
-          className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+          className="flex items-center gap-3 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
         >
           <Layers size={20} />
           <div className="text-left">
             <div className="font-semibold text-sm">场景原子业务语义</div>
-            <div className="text-xs text-indigo-100">查看图谱场景构建所需核心原子业务语义</div>
+            <div className="text-xs text-gray-300">查看图谱场景构建所需核心原子业务语义</div>
           </div>
           <ArrowRight size={16} className="ml-2" />
         </button>
@@ -83,8 +83,8 @@ const AtomicOntologyModule: React.FC = () => {
           onClick={() => setSelectedCategory('all')}
           className={`p-3 rounded-lg border transition-all text-left ${
             selectedCategory === 'all'
-              ? 'bg-indigo-50 border-indigo-300 shadow-sm'
-              : 'bg-white border-slate-200 hover:border-indigo-300'
+              ? 'bg-gray-50 border-gray-300'
+              : 'bg-white border-gray-200 hover:border-gray-300'
           }`}
         >
           <div className="text-xs text-slate-500 mb-1">全部</div>
@@ -155,8 +155,8 @@ const AtomicOntologyModule: React.FC = () => {
                     onClick={() => setSelectedAtom(atom)}
                     className={`p-3 rounded-lg border text-left transition-all ${
                       selectedAtom?.id === atom.id
-                        ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                        : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+                        ? 'border-gray-400 bg-gray-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-start justify-between">

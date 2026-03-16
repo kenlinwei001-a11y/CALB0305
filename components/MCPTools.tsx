@@ -38,12 +38,12 @@ export interface ConstraintRule {
 
 // 约束规则分类
 export const CONSTRAINT_CATEGORIES = [
-  { id: 'order', name: '订单与客户维度', icon: FileText, color: 'blue', count: 10 },
-  { id: 'logistics', name: '基地与物流维度', icon: Truck, color: 'cyan', count: 7 },
-  { id: 'capacity', name: '产线与产能维度', icon: Factory, color: 'indigo', count: 8 },
-  { id: 'inventory', name: '物料与库存维度', icon: Package, color: 'green', count: 7 },
-  { id: 'supplier', name: '供应商与质量维度', icon: CheckCircle, color: 'amber', count: 6 },
-  { id: 'strategy', name: '经营目标与策略权重', icon: Target, color: 'purple', count: 5 }
+  { id: 'order', name: '订单与客户维度', icon: FileText, color: 'gray', count: 10 },
+  { id: 'logistics', name: '基地与物流维度', icon: Truck, color: 'gray', count: 7 },
+  { id: 'capacity', name: '产线与产能维度', icon: Factory, color: 'gray', count: 8 },
+  { id: 'inventory', name: '物料与库存维度', icon: Package, color: 'gray', count: 7 },
+  { id: 'supplier', name: '供应商与质量维度', icon: CheckCircle, color: 'gray', count: 6 },
+  { id: 'strategy', name: '经营目标与策略权重', icon: Target, color: 'gray', count: 5 }
 ];
 
 // 推理模型工具定义
@@ -60,18 +60,18 @@ export interface OntologyModelingTool {
 
 // 推理模型域分类
 export const ONTOLOGY_DOMAINS = [
-  { id: 'order', name: '订单域建模', icon: FileText, color: 'blue', desc: '订单结构、生命周期、拆分规则' },
-  { id: 'customer', name: '客户域建模', icon: Box, color: 'cyan', desc: '客户分层、弹性、风险评分' },
-  { id: 'network', name: '基地与网络', icon: Truck, color: 'indigo', desc: '基地拓扑、物流时效、调拨规则' },
-  { id: 'line', name: '产线与工艺', icon: Factory, color: 'violet', desc: '产线能力、OEE、切换规则' },
-  { id: 'inventory', name: '物料与库存', icon: Package, color: 'green', desc: 'BOM、齐套率、安全库存' },
-  { id: 'supplier', name: '供应商域', icon: CheckCircle, color: 'amber', desc: '供货周期、稳定性、加急能力' },
-  { id: 'quality', name: '质量与良率', icon: Shield, color: 'rose', desc: '良率模型、异常频率、返工报废' },
-  { id: 'objective', name: '经营目标', icon: Target, color: 'purple', desc: '目标函数、权重管理、策略标签' },
-  { id: 'decision', name: '优化与决策', icon: Cpu, color: 'orange', desc: '目标函数、求解器编排、冲突解释' },
-  { id: 'simulation', name: '推演与仿真', icon: Activity, color: 'teal', desc: 'What-if沙盘、时间滚动、资源轨迹' },
-  { id: 'risk', name: '风险与概率', icon: AlertTriangle, color: 'red', desc: '概率分布、蒙特卡洛、敏感性分析' },
-  { id: 'governance', name: '执行与治理', icon: Lock, color: 'slate', desc: '冻结变更、审计版本、组织协同' }
+  { id: 'order', name: '订单域建模', icon: FileText, color: 'gray', desc: '订单结构、生命周期、拆分规则' },
+  { id: 'customer', name: '客户域建模', icon: Box, color: 'gray', desc: '客户分层、弹性、风险评分' },
+  { id: 'network', name: '基地与网络', icon: Truck, color: 'gray', desc: '基地拓扑、物流时效、调拨规则' },
+  { id: 'line', name: '产线与工艺', icon: Factory, color: 'gray', desc: '产线能力、OEE、切换规则' },
+  { id: 'inventory', name: '物料与库存', icon: Package, color: 'gray', desc: 'BOM、齐套率、安全库存' },
+  { id: 'supplier', name: '供应商域', icon: CheckCircle, color: 'gray', desc: '供货周期、稳定性、加急能力' },
+  { id: 'quality', name: '质量与良率', icon: Shield, color: 'gray', desc: '良率模型、异常频率、返工报废' },
+  { id: 'objective', name: '经营目标', icon: Target, color: 'gray', desc: '目标函数、权重管理、策略标签' },
+  { id: 'decision', name: '优化与决策', icon: Cpu, color: 'gray', desc: '目标函数、求解器编排、冲突解释' },
+  { id: 'simulation', name: '推演与仿真', icon: Activity, color: 'gray', desc: 'What-if沙盘、时间滚动、资源轨迹' },
+  { id: 'risk', name: '风险与概率', icon: AlertTriangle, color: 'gray', desc: '概率分布、蒙特卡洛、敏感性分析' },
+  { id: 'governance', name: '执行与治理', icon: Lock, color: 'gray', desc: '冻结变更、审计版本、组织协同' }
 ];
 
 // 推理模型工具数据
@@ -1706,9 +1706,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于成本最小化、资源分配等连续优化问题',
     applicableScenarios: ['成本最小化', '资源分配', '物料平衡'],
     exampleSolvers: ['CPLEX', 'Gurobi', 'GLPK', 'SCIP'],
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Calculator size={24} />
   },
   {
@@ -1718,9 +1718,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于主生产计划、批量排产等含离散决策的优化问题',
     applicableScenarios: ['主生产计划', '批量排产', '设施选址'],
     exampleSolvers: ['CPLEX', 'Gurobi', 'SCIP', 'CBC', 'OR-Tools'],
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Layers size={24} />
   },
   {
@@ -1730,9 +1730,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于工艺流程优化、产品生命周期管理等含非线性约束的问题',
     applicableScenarios: ['工艺流程优化', '产品生命周期管理', '能耗优化'],
     exampleSolvers: ['IPOPT', 'KNITRO', 'GAMS', 'BARON'],
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Zap size={24} />
   },
   {
@@ -1742,9 +1742,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于生产调度、设备约束管理等复杂约束满足问题',
     applicableScenarios: ['生产调度', '设备约束管理', '人员排班'],
     exampleSolvers: ['Choco Solver', 'IBM CP Optimizer', 'OR-Tools CP-SAT', 'Gecode'],
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Shield size={24} />
   },
   {
@@ -1754,9 +1754,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于复杂工艺路径优化、生产能力调度等高度复杂问题',
     applicableScenarios: ['复杂工艺路径优化', '生产能力调度', '多品种混线'],
     exampleSolvers: ['Bonmin', 'GAMS', 'BARON', 'DICOPT'],
-    color: 'text-rose-600',
-    bgColor: 'bg-rose-50',
-    borderColor: 'border-rose-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Box size={24} />
   },
   {
@@ -1766,9 +1766,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于大规模排产、插单优化等NP-hard问题的近似求解',
     applicableScenarios: ['大规模排产', '插单优化', '动态调度'],
     exampleSolvers: ['遗传算法(GA)', '模拟退火(SA)', '禁忌搜索(TS)', '粒子群优化(PSO)', '蚁群算法(ACO)'],
-    color: 'text-amber-600',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Cpu size={24} />
   },
   {
@@ -1778,9 +1778,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于What-if推演、多场景模拟等需要动态建模的问题',
     applicableScenarios: ['What-if推演', '多场景模拟', '瓶颈分析', '产能验证'],
     exampleSolvers: ['AnyLogic', 'FlexSim', 'Arena', 'Simio', 'Plant Simulation'],
-    color: 'text-cyan-600',
-    bgColor: 'bg-cyan-50',
-    borderColor: 'border-cyan-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Clock size={24} />
   },
   {
@@ -1790,9 +1790,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于产销平衡、客户优先级优化等多目标权衡问题',
     applicableScenarios: ['产销平衡', '客户优先级优化', '成本-交期权衡'],
     exampleSolvers: ['NSGA-II', 'MOEA/D', 'GAMS', 'PlatEMO', 'jMetal'],
-    color: 'text-pink-600',
-    bgColor: 'bg-pink-50',
-    borderColor: 'border-pink-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <BarChart3 size={24} />
   },
   {
@@ -1802,9 +1802,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于动态调度、生产调整等需要频繁重优化的场景',
     applicableScenarios: ['动态调度', '生产调整', '实时排产', '插单响应'],
     exampleSolvers: ['OR-Tools', 'Simulated Annealing', '滚动MILP', '模型预测控制(MPC)'],
-    color: 'text-teal-600',
-    bgColor: 'bg-teal-50',
-    borderColor: 'border-teal-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <RotateCcw size={24} />
   },
   {
@@ -1814,9 +1814,9 @@ export const SOLVER_TYPES: SolverType[] = [
     description: '用于需求预测、库存管理等数据驱动的预测和决策问题',
     applicableScenarios: ['需求预测', '库存管理', '异常检测', '参数调优'],
     exampleSolvers: ['LSTM', 'Transformer', 'DQN', 'PPO', 'GNN'],
-    color: 'text-violet-600',
-    bgColor: 'bg-violet-50',
-    borderColor: 'border-violet-200',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
     icon: <Database size={24} />
   }
 ];
@@ -1884,7 +1884,7 @@ const SolverTypeCard: React.FC<{
 }> = ({ solver, onClick }) => (
   <div
     onClick={onClick}
-    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 bg-white border-gray-200 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1 group`}
+    className={`p-5 rounded-xl border cursor-pointer transition-all duration-200 bg-white border-gray-100 shadow-sm hover:border-gray-200 hover:shadow-md group`}
   >
     <div className="flex items-start justify-between mb-3">
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${solver.bgColor} ${solver.color} group-hover:scale-110 transition-transform`}>
@@ -1989,7 +1989,7 @@ const SolverConfigPage: React.FC<{
           <button
             onClick={handleSave}
             className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors ${
-              isSaved ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              isSaved ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             <Save size={16} />
@@ -1998,7 +1998,7 @@ const SolverConfigPage: React.FC<{
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium text-sm hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
           >
             <Play size={16} />
             {isRunning ? '运行中...' : '运行求解'}
@@ -2019,7 +2019,7 @@ const SolverConfigPage: React.FC<{
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
                     activeTab === tab.id
-                      ? 'bg-blue-50 text-blue-600'
+                      ? 'bg-gray-100 text-gray-900'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -2108,7 +2108,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.paretoMode}
                     onChange={(e) => updateConfig({ paretoMode: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                   />
                   <span className="text-gray-700">启用Pareto多目标模式</span>
                 </label>
@@ -2124,7 +2124,7 @@ const SolverConfigPage: React.FC<{
                         newObjs[idx].enabled = e.target.checked;
                         updateConfig({ objectives: newObjs });
                       }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                      className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                     />
                     <span className="flex-1 text-sm font-medium text-gray-700">{obj.name}</span>
                     <div className="flex items-center gap-3">
@@ -2148,7 +2148,7 @@ const SolverConfigPage: React.FC<{
                 ))}
               </div>
               <div className="flex gap-3">
-                <button className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium">
+                <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
                   加载预设模板
                 </button>
                 <button className="px-4 py-2 text-sm bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 font-medium">
@@ -2167,12 +2167,12 @@ const SolverConfigPage: React.FC<{
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-red-500 rounded-full" />
+                  <span className="w-2 h-2 bg-red-400 rounded-full" />
                   硬约束（不可违反）
                 </h4>
                 <div className="space-y-2">
                   {config.hardConstraints.map((cons, idx) => (
-                    <div key={cons.id} className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+                    <div key={cons.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
                       <input
                         type="checkbox"
                         checked={cons.enabled}
@@ -2181,10 +2181,10 @@ const SolverConfigPage: React.FC<{
                           newCons[idx].enabled = e.target.checked;
                           updateConfig({ hardConstraints: newCons });
                         }}
-                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 w-5 h-5"
+                        className="rounded border-gray-300 text-gray-600 focus:ring-red-500 w-5 h-5"
                       />
                       <span className="flex-1 text-sm font-medium text-gray-700">{cons.name}</span>
-                      <span className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded font-medium">必须</span>
+                      <span className="text-xs px-2 py-1 bg-red-100 text-gray-600 rounded font-medium">必须</span>
                     </div>
                   ))}
                 </div>
@@ -2192,12 +2192,12 @@ const SolverConfigPage: React.FC<{
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-amber-500 rounded-full" />
+                  <span className="w-2 h-2 bg-gray-500 rounded-full" />
                   软约束（可违反，有惩罚）
                 </h4>
                 <div className="space-y-2">
                   {config.softConstraints.map((cons, idx) => (
-                    <div key={cons.id} className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg">
+                    <div key={cons.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
                       <input
                         type="checkbox"
                         checked={cons.enabled}
@@ -2206,7 +2206,7 @@ const SolverConfigPage: React.FC<{
                           newCons[idx].enabled = e.target.checked;
                           updateConfig({ softConstraints: newCons });
                         }}
-                        className="rounded border-gray-300 text-amber-600 focus:ring-amber-500 w-5 h-5"
+                        className="rounded border-gray-300 text-gray-600 focus:ring-amber-500 w-5 h-5"
                       />
                       <span className="flex-1 text-sm font-medium text-gray-700">{cons.name}</span>
                       <div className="flex items-center gap-2">
@@ -2246,7 +2246,7 @@ const SolverConfigPage: React.FC<{
                         onClick={() => updateConfig({ timeGranularity: g })}
                         className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                           config.timeGranularity === g
-                            ? 'bg-blue-500 text-white'
+                            ? 'bg-gray-500 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -2262,7 +2262,7 @@ const SolverConfigPage: React.FC<{
                       type="checkbox"
                       checked={config.allowSplitOrder}
                       onChange={(e) => updateConfig({ allowSplitOrder: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                      className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                     />
                     <div>
                       <div className="font-medium text-gray-900">允许拆单</div>
@@ -2275,7 +2275,7 @@ const SolverConfigPage: React.FC<{
                       type="checkbox"
                       checked={config.allowCrossLine}
                       onChange={(e) => updateConfig({ allowCrossLine: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                      className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                     />
                     <div>
                       <div className="font-medium text-gray-900">允许跨产线生产</div>
@@ -2359,7 +2359,7 @@ const SolverConfigPage: React.FC<{
                   type="checkbox"
                   checked={config.warmStart}
                   onChange={(e) => updateConfig({ warmStart: e.target.checked })}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                  className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                 />
                 <div>
                   <div className="font-medium text-gray-900">启用Warm Start</div>
@@ -2386,7 +2386,7 @@ const SolverConfigPage: React.FC<{
                     key={mode.id}
                     className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
                       config.scenarioMode === mode.id
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-blue-500 bg-gray-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -2425,7 +2425,7 @@ const SolverConfigPage: React.FC<{
                         newSources[idx].enabled = e.target.checked;
                         updateConfig({ dataSources: newSources });
                       }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                      className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                     />
                     <div className="flex-1">
                       <div className="font-medium text-sm text-gray-900">
@@ -2462,7 +2462,7 @@ const SolverConfigPage: React.FC<{
                       onClick={() => updateConfig({ outputLevel: level.id as any })}
                       className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                         config.outputLevel === level.id
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-gray-500 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -2490,7 +2490,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.outputPareto}
                     onChange={(e) => updateConfig({ outputPareto: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                    className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                   />
                   <span className="text-sm font-medium text-gray-700">输出Pareto解集</span>
                 </label>
@@ -2500,7 +2500,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.generateReport}
                     onChange={(e) => updateConfig({ generateReport: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                    className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                   />
                   <span className="text-sm font-medium text-gray-700">生成解释性报告</span>
                 </label>
@@ -2521,7 +2521,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.timeoutFallback}
                     onChange={(e) => updateConfig({ timeoutFallback: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                    className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                   />
                   <div>
                     <div className="font-medium text-gray-900">超时自动降级</div>
@@ -2534,7 +2534,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.autoRelaxConstraint}
                     onChange={(e) => updateConfig({ autoRelaxConstraint: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                    className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                   />
                   <div>
                     <div className="font-medium text-gray-900">无可行解自动放宽约束</div>
@@ -2547,7 +2547,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.alertOnException}
                     onChange={(e) => updateConfig({ alertOnException: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                    className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                   />
                   <div>
                     <div className="font-medium text-gray-900">异常报警</div>
@@ -2560,7 +2560,7 @@ const SolverConfigPage: React.FC<{
                     type="checkbox"
                     checked={config.requireApproval}
                     onChange={(e) => updateConfig({ requireApproval: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
+                    className="rounded border-gray-300 text-gray-600 focus:ring-blue-500 w-5 h-5"
                   />
                   <div>
                     <div className="font-medium text-gray-900">人工审批开关</div>
@@ -2598,7 +2598,7 @@ const SolverConfigPage: React.FC<{
                 </div>
               </div>
               <div className="flex gap-3">
-                <button className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium">
+                <button className="px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-blue-600 font-medium">
                   查看完整日志
                 </button>
                 <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
@@ -2688,7 +2688,7 @@ const ConstraintRulesLibrary: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">管理产销协同场景下的业务约束规则配置</p>
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 flex items-center gap-2">
+          <button className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-indigo-600 flex items-center gap-2">
             <Plus size={18} />
             新建规则
           </button>
@@ -2704,7 +2704,7 @@ const ConstraintRulesLibrary: React.FC = () => {
         <button
           onClick={() => setActiveTab('list')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'list' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            activeTab === 'list' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           规则列表
@@ -2712,7 +2712,7 @@ const ConstraintRulesLibrary: React.FC = () => {
         <button
           onClick={() => setActiveTab('config')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'config' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            activeTab === 'config' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           批量配置
@@ -2727,13 +2727,13 @@ const ConstraintRulesLibrary: React.FC = () => {
               onClick={() => setSelectedCategory(null)}
               className={`p-2 rounded-lg border cursor-pointer transition-all ${
                 selectedCategory === null
-                  ? 'border-indigo-500 bg-indigo-50'
+                  ? 'border-indigo-500 bg-gray-50'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">全部</span>
-                <span className="text-base font-bold text-indigo-600">{rules.length}</span>
+                <span className="text-base font-bold text-gray-600">{rules.length}</span>
               </div>
             </div>
             {CONSTRAINT_CATEGORIES.map(cat => {
@@ -2819,8 +2819,8 @@ const ConstraintRulesLibrary: React.FC = () => {
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-1 rounded ${
                         rule.constraintType === 'Hard'
-                          ? 'bg-red-100 text-red-600'
-                          : 'bg-amber-100 text-amber-600'
+                          ? 'bg-red-100 text-gray-600'
+                          : 'bg-amber-100 text-gray-600'
                       }`}>
                         {rule.constraintType}
                       </span>
@@ -2832,7 +2832,7 @@ const ConstraintRulesLibrary: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-indigo-500"
+                            className="h-full bg-gray-500"
                             style={{ width: `${rule.riskWeight * 100}%` }}
                           />
                         </div>
@@ -2842,7 +2842,7 @@ const ConstraintRulesLibrary: React.FC = () => {
                     <td className="px-4 py-3">
                       <button
                         onClick={() => setEditingRule(rule)}
-                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                        className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg"
                       >
                         <Edit3 size={16} />
                       </button>
@@ -2971,7 +2971,7 @@ const ConstraintRulesLibrary: React.FC = () => {
                   id="ruleEnabled"
                   checked={editingRule.enabled}
                   onChange={(e) => setEditingRule({ ...editingRule, enabled: e.target.checked })}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded border-gray-300 text-gray-600 focus:ring-indigo-500"
                 />
                 <label htmlFor="ruleEnabled" className="text-sm text-gray-700">启用此规则</label>
               </div>
@@ -2980,7 +2980,7 @@ const ConstraintRulesLibrary: React.FC = () => {
             <div className="flex gap-3 mt-6 pt-4 border-t">
               <button
                 onClick={() => updateRule(editingRule)}
-                className="flex-1 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-indigo-600"
               >
                 保存修改
               </button>
@@ -3034,13 +3034,13 @@ const OntologyModelingLibrary: React.FC<{ onSelectTool?: (toolId: string) => voi
           onClick={() => setSelectedDomain(null)}
           className={`p-2 rounded-lg border cursor-pointer transition-all ${
             selectedDomain === null
-              ? 'border-emerald-500 bg-emerald-50'
+              ? 'border-emerald-500 bg-gray-50'
               : 'border-gray-200 bg-white hover:border-gray-300'
           }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">全部</span>
-            <span className="text-base font-bold text-emerald-600">{ONTOLOGY_MODELING_TOOLS.length}</span>
+            <span className="text-base font-bold text-gray-600">{ONTOLOGY_MODELING_TOOLS.length}</span>
           </div>
         </div>
         {ONTOLOGY_DOMAINS.map(domain => {
@@ -3188,7 +3188,7 @@ const OntologyToolConfigPage: React.FC<OntologyToolConfigPageProps> = ({ toolId,
                 </label>
               </div>
             </div>
-            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="p-3 bg-gray-50 rounded-lg border border-amber-200">
               <p className="text-xs text-amber-800 font-mono">
                 PriorityScore = W1 × CustomerLevel + W2 × MarginContribution + W3 × StrategicFlag - W4 × RiskScore
               </p>
@@ -3220,7 +3220,7 @@ const OntologyToolConfigPage: React.FC<OntologyToolConfigPageProps> = ({ toolId,
               <input type="checkbox" className="rounded border-gray-300" />
               <span className="text-sm text-gray-700">参与 Monte Carlo 模拟</span>
             </label>
-            <div className="p-3 bg-rose-50 rounded-lg border border-rose-200">
+            <div className="p-3 bg-gray-50 rounded-lg border border-rose-200">
               <p className="text-xs text-rose-800 font-mono">Yield ~ N(μ, σ²)</p>
             </div>
           </div>
@@ -3258,7 +3258,7 @@ const OntologyToolConfigPage: React.FC<OntologyToolConfigPageProps> = ({ toolId,
                 </select>
               </div>
             </div>
-            <div className="p-3 bg-violet-50 rounded-lg border border-violet-200">
+            <div className="p-3 bg-gray-50 rounded-lg border border-violet-200">
               <p className="text-xs text-violet-800 font-mono">EffectiveCapacity = TheoreticalCapacity × OEE × Yield</p>
             </div>
           </div>
@@ -3547,14 +3547,14 @@ const OntologyToolConfigPage: React.FC<OntologyToolConfigPageProps> = ({ toolId,
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">权限与治理</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-amber-200">
                     <div>
                       <p className="text-sm font-medium text-amber-900">影响核心决策</p>
                       <p className="text-xs text-amber-700">高风险模型需要审批</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-500"></div>
                     </label>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -3564,7 +3564,7 @@ const OntologyToolConfigPage: React.FC<OntologyToolConfigPageProps> = ({ toolId,
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-500"></div>
                     </label>
                   </div>
                 </div>
@@ -3658,14 +3658,14 @@ const MCPTools: React.FC = () => {
           onClick={() => setActiveTab('solver')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'solver'
-              ? 'bg-white text-blue-600 shadow-sm'
+              ? 'bg-white text-gray-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
           <Cpu size={18} />
           求解器
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            activeTab === 'solver' ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'
+            activeTab === 'solver' ? 'bg-blue-100 text-gray-600' : 'bg-gray-200 text-gray-500'
           }`}>
             {SOLVER_TYPES.length}
           </span>
@@ -3674,14 +3674,14 @@ const MCPTools: React.FC = () => {
           onClick={() => setActiveTab('constraints')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'constraints'
-              ? 'bg-white text-indigo-600 shadow-sm'
+              ? 'bg-white text-gray-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
           <BookOpen size={18} />
           约束规则
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            activeTab === 'constraints' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-500'
+            activeTab === 'constraints' ? 'bg-indigo-100 text-gray-600' : 'bg-gray-200 text-gray-500'
           }`}>
             {DEFAULT_CONSTRAINT_RULES.length}
           </span>
@@ -3690,14 +3690,14 @@ const MCPTools: React.FC = () => {
           onClick={() => setActiveTab('ontology')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'ontology'
-              ? 'bg-white text-emerald-600 shadow-sm'
+              ? 'bg-white text-gray-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
           <Grid3X3 size={18} />
           推理模型
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            activeTab === 'ontology' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500'
+            activeTab === 'ontology' ? 'bg-emerald-100 text-gray-600' : 'bg-gray-200 text-gray-500'
           }`}>
             {ONTOLOGY_MODELING_TOOLS.length}
           </span>
