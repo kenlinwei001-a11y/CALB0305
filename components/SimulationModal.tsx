@@ -3,7 +3,10 @@ import {
   X, Box, FileText, Upload, FileUp, CheckCircle, Zap,
   MessageCircle, ChevronRight, Loader2, Lightbulb, Database,
   Maximize2, Minimize2, Plus, Search, Cpu, Scale, Layers,
-  Atom, Network, Workflow
+  Atom, Network, Workflow, Users, Brain, GitBranch, Save,
+  Sparkles, Target, CheckSquare, Share2, History, Code,
+  FileCode, GitMerge, BookOpen, ArrowRightLeft, PanelRight,
+  PanelLeft, Mic, Video, MoreHorizontal, Pin, Lock
 } from 'lucide-react';
 import type { OntologyNode, OntologyLink, SimulationNodeConfig } from '../types';
 import { MOCK_SKILLS, isSimulationNode, getSimulationConfig } from '../constants';
@@ -31,10 +34,54 @@ interface Solution {
 
 interface ChatMessage {
   id: string;
-  role: 'user' | 'ai';
+  role: 'user' | 'ai' | 'system' | 'expert' | 'analyst';
   content: string;
   timestamp: Date;
-  solutionId?: string; // 关联到特定方案
+  solutionId?: string;
+  userName?: string;
+  avatar?: string;
+  decisionData?: DecisionParseData;
+}
+
+// 决策解析数据
+interface DecisionParseData {
+  hypothesis?: string[];
+  constraints?: string[];
+  variables?: string[];
+  metrics?: string[];
+  logic?: string;
+  confidence?: number;
+}
+
+// 决策资产
+interface DecisionAsset {
+  id: string;
+  type: 'skill' | 'constraint' | 'ontology' | 'decision_graph' | 'template';
+  name: string;
+  description: string;
+  content: any;
+  sourceDiscussion: string[];
+  createdAt: Date;
+  status: 'draft' | 'confirmed' | 'published';
+}
+
+// 参与者
+interface Participant {
+  id: string;
+  name: string;
+  role: 'expert' | 'analyst' | 'ai_copilot' | 'moderator';
+  avatar: string;
+  isOnline: boolean;
+}
+
+// AI Shadow Learning 记录
+interface ShadowLearningRecord {
+  id: string;
+  timestamp: Date;
+  humanDecision: string;
+  aiSuggestion: string;
+  difference: string;
+  learning: string;
 }
 
 interface ParamDataStatus {
@@ -64,6 +111,21 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   const [showSolutionChat, setShowSolutionChat] = useState(false);
   const [solutionChatInput, setSolutionChatInput] = useState('');
   const [solutionMessages, setSolutionMessages] = useState<ChatMessage[]>([]);
+
+  // Decision Knowledge Engine 状态
+  const [isDKEMode, setIsDKEMode] = useState(false);
+  const [dkeActiveTab, setDkeActiveTab] = useState<'chat' | 'parsing' | 'assets' | 'graph'>('chat');
+  const [participants, setParticipants] = useState<Participant[]>([
+    { id: 'ai', name: 'AI Copilot', role: 'ai_copilot', avatar: '🤖', isOnline: true },
+    { id: 'expert1', name: '张专家', role: 'expert', avatar: '👨‍💼', isOnline: true },
+    { id: 'analyst1', name: '李分析师', role: 'analyst', avatar: '👩‍💻', isOnline: false },
+  ]);
+  const [currentUser, setCurrentUser] = useState<string>('user');
+  const [decisionAssets, setDecisionAssets] = useState<DecisionAsset[]>([]);
+  const [shadowLearningRecords, setShadowLearningRecords] = useState<ShadowLearningRecord[]>([]);
+  const [isExtractingAssets, setIsExtractingAssets] = useState(false);
+  const [showAssetPreview, setShowAssetPreview] = useState(false);
+  const [pendingAsset, setPendingAsset] = useState<DecisionAsset | null>(null);
   const [solutionAdditionalNodes, setSolutionAdditionalNodes] = useState<Record<string, string[]>>({});
   const [showNodeSelector, setShowNodeSelector] = useState(false);
   const [selectedNodesForSolution, setSelectedNodesForSolution] = useState<string[]>([]);
@@ -452,7 +514,130 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
   };
 
   // 获取节点层级颜色
-  // 打开方案咨询对话框
+
+  // 打开 DKE Decision Knowledge Engine 模式
+  const openDKEChat = (solutionId: string) => {
+    setSelectedSolution(solutionId);
+    setIsDKEMode(true);
+    setDkeActiveTab('chat');
+
+    const linkedNodes = solutionAdditionalNodes[solutionId] || [];
+    const solution = solutions.find(s => s.id === solutionId);
+
+    if (solution) {
+      // DKE 模式的欢迎消息
+      const welcomeMessages: ChatMessage[] = [
+        {
+          id: `system-${solutionId}`,
+          role: 'system',
+          content: `🎯 Decision Knowledge Engine 已启动\n\n当前方案：${solution.name}\n置信度：${(solution.confidence * 100).toFixed(0)}% | 风险等级：${getRiskText(solution.riskLevel)}\n\n💡 在此模式下，您可以：\n• 邀请专家参与讨论，共同决策\n• AI实时解析讨论中的决策逻辑\n• 自动沉淀决策资产（Skills/规则/本体）\n• 生成可追溯的决策图谱`,
+          timestamp: new Date(),
+          solutionId: solutionId
+        },
+        {
+          id: `ai-welcome-${solutionId}`,
+          role: 'ai',
+          content: `您好！我是AI决策助手。\n\n我将协助您：\n1️⃣ 实时解析讨论中的假设、约束和决策逻辑\n2️⃣ 对比专家决策与AI推演方案的差异（Shadow Learning）\n3️⃣ 自动提取可复用的决策资产\n\n请开始您的讨论，或邀请其他专家加入。`,
+          timestamp: new Date(),
+          solutionId: solutionId
+        }
+      ];
+
+      // 只添加不存在的消息
+      const existingIds = new Set(solutionMessages.map(m => m.id));
+      const newMessages = welcomeMessages.filter(m => !existingIds.has(m.id));
+
+      if (newMessages.length > 0) {
+        setSolutionMessages(prev => [...prev, ...newMessages]);
+      }
+    }
+  };
+
+  // DKE 消息发送
+  const sendDKEMessage = () => {
+    if (!solutionChatInput.trim() || !selectedSolution) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: solutionChatInput,
+      timestamp: new Date(),
+      solutionId: selectedSolution,
+      userName: '我',
+    };
+
+    setSolutionMessages(prev => [...prev, userMessage]);
+    setSolutionChatInput('');
+
+    // 模拟AI解析和回复
+    setTimeout(() => {
+      // AI解析消息中的决策要素
+      const decisionData: DecisionParseData = {
+        hypothesis: ['需求增长假设', '产能约束'],
+        constraints: ['产能上限', '库存限制'],
+        variables: ['需求量', '产能利用率'],
+        confidence: 0.85,
+      };
+
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        content: `收到您的观点。我已识别到以下决策要素：\n\n• 假设：${decisionData.hypothesis?.join(', ')}\n• 约束：${decisionData.constraints?.join(', ')}\n• 变量：${decisionData.variables?.join(', ')}\n\n基于当前讨论，该方案的可行性评估为${(decisionData.confidence * 100).toFixed(0)}%。请问您希望深入分析哪个方面？`,
+        timestamp: new Date(),
+        solutionId: selectedSolution,
+        decisionData,
+      };
+
+      setSolutionMessages(prev => [...prev, aiMessage]);
+    }, 1500);
+  };
+
+  // 提取决策资产
+  const extractDecisionAssets = () => {
+    setIsExtractingAssets(true);
+
+    setTimeout(() => {
+      // 模拟资产提取
+      const newAssets: DecisionAsset[] = [
+        {
+          id: 'skill-001',
+          type: 'skill',
+          name: '产能平衡分析',
+          description: '评估产能与需求的匹配度',
+          content: { inputs: ['demand', 'capacity'], logic: 'balance = demand / capacity' },
+          sourceDiscussion: ['msg-001', 'msg-002'],
+          createdAt: new Date(),
+          status: 'draft',
+        },
+        {
+          id: 'constraint-001',
+          type: 'constraint',
+          name: '产能利用率约束',
+          description: '产能利用率不超过90%',
+          content: { expression: 'utilization <= 0.9', type: 'hard' },
+          sourceDiscussion: ['msg-003'],
+          createdAt: new Date(),
+          status: 'draft',
+        },
+      ];
+
+      setDecisionAssets(prev => [...prev, ...newAssets]);
+      setIsExtractingAssets(false);
+
+      // 添加系统消息
+      const systemMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'system',
+        content: `✅ 已自动提取 ${newAssets.length} 项决策资产：\n• Skill: ${newAssets.filter(a => a.type === 'skill').length}\n• Constraint: ${newAssets.filter(a => a.type === 'constraint').length}\n\n请在"决策资产"标签页查看并确认。`,
+        timestamp: new Date(),
+        solutionId: selectedSolution,
+      };
+
+      setSolutionMessages(prev => [...prev, systemMessage]);
+    }, 2000);
+  };
+
+  // 传统方案咨询对话框（保留向后兼容）
   const openSolutionChat = (solutionId: string) => {
     setSelectedSolution(solutionId);
     setShowSolutionChat(true);
@@ -1292,11 +1477,11 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
                                 添加节点
                               </button>
                               <button
-                                onClick={() => openSolutionChat(selectedSolution)}
-                                className="px-3 py-1.5 bg-gray-50 hover:bg-indigo-100 text-gray-600 text-sm rounded flex items-center gap-1 transition-colors"
+                                onClick={() => openDKEChat(selectedSolution)}
+                                className="px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
                               >
-                                <MessageCircle size={14} />
-                                咨询此方案
+                                <Brain size={14} />
+                                决策研讨
                               </button>
                               <span className={`px-3 py-1 text-sm rounded-full border ${getRiskColor(solutions.find(s => s.id === selectedSolution)?.riskLevel || 'medium')}`}>{getRiskText(solutions.find(s => s.id === selectedSolution)?.riskLevel || 'medium')}</span>
                             </div>
@@ -1562,8 +1747,407 @@ const SimulationModal: React.FC<SimulationModalProps> = ({ isOpen, onClose, node
           </div>
         </div>
       )}
+
+      {/* DKE Mode - Decision Knowledge Engine */}
+      {isDKEMode && selectedSolution && (
+        <div className="fixed inset-0 z-50 flex"
+             style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+          {/* 左侧：讨论区 */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* 头部 */}
+            <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setIsDKEMode(false)}
+                  className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <Brain className="text-indigo-500" size={20} />
+                    Decision Knowledge Engine
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {solutions.find(s => s.id === selectedSolution)?.name} · 决策研讨中
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* 参与者 */}
+                <div className="flex items-center gap-2 mr-4">
+                  {participants.map(p => (
+                    <div key={p.id} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 rounded-full">
+                      <span className="text-sm">{p.avatar}</span>
+                      <span className="text-xs text-slate-600">{p.name}</span>
+                      <div className={`w-2 h-2 rounded-full ${p.isOnline ? 'bg-green-500' : 'bg-slate-300'}`} />
+                    </div>
+                  ))}
+                  <button className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400">
+                    <Plus size={16} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setDkeActiveTab('assets')}
+                  className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
+                >
+                  <Save size={16} />
+                  沉淀资产
+                </button>
+              </div>
+            </div>
+
+            {/* 标签栏 */}
+            <div className="bg-white border-b border-slate-200 px-6 flex gap-1">
+              {[
+                { id: 'chat', label: '协同讨论', icon: MessageCircle },
+                { id: 'parsing', label: '实时解析', icon: Brain },
+                { id: 'graph', label: '决策图谱', icon: Network },
+                { id: 'assets', label: '决策资产', icon: BookOpen },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setDkeActiveTab(tab.id as any)}
+                  className={`px-4 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                    dkeActiveTab === tab.id
+                      ? 'text-indigo-600 border-indigo-600'
+                      : 'text-slate-500 border-transparent hover:text-slate-700'
+                  }`}
+                >
+                  <tab.icon size={16} />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 内容区 */}
+            <div className="flex-1 overflow-hidden">
+              {dkeActiveTab === 'chat' && (
+                <div className="h-full flex flex-col">
+                  {/* 消息列表 */}
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {solutionMessages
+                      .filter(m => m.solutionId === selectedSolution)
+                      .map(msg => (
+                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          {msg.role !== 'user' && (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-sm mr-2 flex-shrink-0">
+                              {msg.role === 'ai' ? '🤖' : msg.avatar || '👤'}
+                            </div>
+                          )}
+                          <div className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm ${
+                            msg.role === 'user'
+                              ? 'bg-gray-900 text-white rounded-br-md'
+                              : msg.role === 'system'
+                              ? 'bg-amber-50 border border-amber-200 text-amber-800 rounded-bl-md'
+                              : 'bg-white border border-slate-200 text-slate-700 shadow-sm rounded-bl-md'
+                          }`}>
+                            {msg.role !== 'user' && msg.userName && (
+                              <div className="text-xs font-medium text-indigo-600 mb-1">{msg.userName}</div>
+                            )}
+                            <div className="whitespace-pre-line">{msg.content}</div>
+                            {msg.decisionData && (
+                              <div className="mt-2 pt-2 border-t border-slate-200/50">
+                                <div className="text-xs text-slate-500">AI解析到决策要素：</div>
+                                {msg.decisionData.hypothesis && (
+                                  <div className="text-xs text-amber-600 mt-1">假设：{msg.decisionData.hypothesis.join(', ')}</div>
+                                )}
+                                {msg.decisionData.constraints && (
+                                  <div className="text-xs text-blue-600 mt-0.5">约束：{msg.decisionData.constraints.join(', ')}</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* 输入区 */}
+                  <div className="p-4 bg-white border-t border-slate-200">
+                    <div className="flex gap-3">
+                      <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                        <Plus size={20} />
+                      </button>
+                      <input
+                        type="text"
+                        value={solutionChatInput}
+                        onChange={(e) => setSolutionChatInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendDKEMessage())}
+                        placeholder="输入您的观点，与专家和AI共同讨论..."
+                        className="flex-1 px-4 py-2.5 bg-slate-100 border-0 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+                      />
+                      <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                        <Mic size={20} />
+                      </button>
+                      <button
+                        onClick={sendDKEMessage}
+                        disabled={!solutionChatInput.trim()}
+                        className="px-6 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                      >
+                        <ArrowRightLeft size={16} />
+                        发送
+                      </button>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-400 text-center">
+                      AI实时解析讨论内容 · 自动沉淀决策资产
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {dkeActiveTab === 'parsing' && (
+                <div className="h-full p-6 overflow-y-auto">
+                  <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="bg-white rounded-xl border border-slate-200 p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <Target className="text-amber-500" size={20} />
+                        假设识别 (Hypothesis)
+                      </h3>
+                      <div className="space-y-2">
+                        {['需求将增长20%', '产能利用率保持在85%以上', '原材料供应稳定'].map((h, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                            <Lightbulb size={16} className="text-amber-500" />
+                            <span className="text-sm text-slate-700">{h}</span>
+                            <span className="ml-auto text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">置信度 {85 + i * 5}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200 p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <Lock className="text-blue-500" size={20} />
+                        约束识别 (Constraints)
+                      </h3>
+                      <div className="space-y-2">
+                        {['产线最大日产能 ≤ 5000单位', '库存周转天数 ≤ 30天', '加班时长 ≤ 36小时/月'].map((c, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Scale size={16} className="text-blue-500" />
+                            <span className="text-sm text-slate-700">{c}</span>
+                            <span className="ml-auto text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">Hard</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200 p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <GitMerge className="text-purple-500" size={20} />
+                        决策逻辑 (Logic)
+                      </h3>
+                      <div className="p-4 bg-slate-50 rounded-lg">
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="px-3 py-1 bg-white rounded border">需求预测</span>
+                          <ArrowRightLeft size={16} className="text-slate-400" />
+                          <span className="px-3 py-1 bg-white rounded border">产能评估</span>
+                          <ArrowRightLeft size={16} className="text-slate-400" />
+                          <span className="px-3 py-1 bg-white rounded border">库存分析</span>
+                          <ArrowRightLeft size={16} className="text-slate-400" />
+                          <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded border border-indigo-200">生产决策</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {dkeActiveTab === 'graph' && (
+                <div className="h-full p-6">
+                  <div className="h-full bg-white rounded-xl border border-slate-200 p-6 flex items-center justify-center">
+                    <div className="text-center">
+                      <Network size={48} className="text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500">决策图谱可视化</p>
+                      <p className="text-xs text-slate-400 mt-1">基于讨论内容自动构建的决策因果图</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {dkeActiveTab === 'assets' && (
+                <div className="h-full p-6 overflow-y-auto">
+                  <div className="max-w-5xl mx-auto">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900">决策资产沉淀</h3>
+                        <p className="text-sm text-slate-500">从讨论中自动提取的可复用决策资产</p>
+                      </div>
+                      <button
+                        onClick={extractDecisionAssets}
+                        disabled={isExtractingAssets}
+                        className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+                      >
+                        {isExtractingAssets ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                        {isExtractingAssets ? '提取中...' : '自动提取资产'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Skill Cards */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Zap size={18} className="text-amber-500" />
+                          <h4 className="font-semibold text-slate-900">Skills</h4>
+                          <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">2</span>
+                        </div>
+                        <div className="space-y-2">
+                          {[
+                            { name: '产能平衡分析', desc: '评估产能与需求的匹配度', type: 'scenario' },
+                            { name: '库存优化计算', desc: '计算最优库存水平', type: 'domain' },
+                          ].map((skill, i) => (
+                            <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-slate-700">{skill.name}</span>
+                                <span className="text-xs text-slate-400">{skill.type}</span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1">{skill.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Constraint Rules */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Scale size={18} className="text-blue-500" />
+                          <h4 className="font-semibold text-slate-900">约束规则</h4>
+                          <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">3</span>
+                        </div>
+                        <div className="space-y-2">
+                          {[
+                            { rule: 'production ≤ capacity * 0.9', desc: '产能利用率不超过90%' },
+                            { rule: 'inventory ≥ safety_stock', desc: '库存不低于安全库存' },
+                          ].map((c, i) => (
+                            <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                              <code className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{c.rule}</code>
+                              <p className="text-xs text-slate-500 mt-1">{c.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Ontology Relations */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Network size={18} className="text-purple-500" />
+                          <h4 className="font-semibold text-slate-900">本体关系</h4>
+                          <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">4</span>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          {[
+                            'ProductionLine → produces → Product',
+                            'Demand → drives → ProductionPlan',
+                          ].map((rel, i) => (
+                            <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded">
+                              <GitBranch size={14} className="text-slate-400" />
+                              <span className="text-slate-700">{rel}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Decision Template */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileCode size={18} className="text-green-500" />
+                          <h4 className="font-semibold text-slate-900">推演模板</h4>
+                          <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">1</span>
+                        </div>
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="text-sm font-medium text-slate-700">产销协同推演模板</div>
+                          <p className="text-xs text-slate-500 mt-1">适用于产能规划、库存优化场景</p>
+                          <div className="mt-2 flex gap-2">
+                            <span className="text-xs bg-white px-2 py-0.5 rounded border">需求预测</span>
+                            <span className="text-xs bg-white px-2 py-0.5 rounded border">产能评估</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Shadow Learning Records */}
+                    <div className="mt-6 bg-white rounded-xl border border-slate-200 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <History size={18} className="text-indigo-500" />
+                        <h4 className="font-semibold text-slate-900">Shadow Learning 记录</h4>
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        AI 已记录 3 次人类决策与AI推演差异，用于持续优化决策模型
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 右侧：AI Copilot 侧边栏 */}
+          <div className="w-80 bg-white border-l border-slate-200 flex flex-col">
+            <div className="p-4 border-b border-slate-200">
+              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                <Sparkles size={18} className="text-indigo-500" />
+                AI Copilot
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">实时辅助决策分析</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* AI Insights */}
+              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                <div className="text-xs font-medium text-indigo-700 mb-2">💡 洞察建议</div>
+                <p className="text-xs text-indigo-600">
+                  基于当前讨论，建议关注产能利用率与需求增长的匹配度，可能需要考虑柔性生产策略。
+                </p>
+              </div>
+
+              {/* Quick Actions */}
+              <div>
+                <div className="text-xs font-medium text-slate-500 mb-2">快捷操作</div>
+                <div className="space-y-1">
+                  {['生成会议纪要', '提取行动项', '创建推演任务'].map((action, i) => (
+                    <button key={i} className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                      {action}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Similar Cases */}
+              <div>
+                <div className="text-xs font-medium text-slate-500 mb-2">相似案例</div>
+                <div className="space-y-2">
+                  {['2024Q1产能规划决策', '库存优化专项分析'].map((c, i) => (
+                    <div key={i} className="p-2 bg-slate-50 rounded border border-slate-100 text-xs">
+                      <div className="font-medium text-slate-700">{c}</div>
+                      <div className="text-slate-400 mt-0.5">相似度 {(85 - i * 10).toFixed(0)}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-slate-200 space-y-2">
+              <button className="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                结束研讨并沉淀
+              </button>
+              <button
+                onClick={() => setIsDKEMode(false)}
+                className="w-full py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm transition-colors"
+              >
+                返回推演报告
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// DKE Helper Functions
+const sendDKEMessage = () => {
+  // This will be implemented in the component
 };
 
 export default SimulationModal;

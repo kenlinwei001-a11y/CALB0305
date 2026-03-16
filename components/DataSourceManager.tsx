@@ -479,21 +479,21 @@ const AddDataSourceModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <h4 className="text-sm font-medium text-gray-700">选择数据源类型</h4>
               <div className="grid grid-cols-3 gap-3"
               >
-                {DATA_SOURCE_TYPES.map((type) => (
+                {DATA_SOURCE_TYPES.map((dataSourceType) => (
                   <button
-                    key={type.type}
-                    onClick={() => setSelectedType(type.type)}
+                    key={dataSourceType.type}
+                    onClick={() => setSelectedType(dataSourceType.type)}
                     className={`p-4 rounded-xl border transition-all text-left ${
-                      selectedType === type.type
+                      selectedType === dataSourceType.type
                         ? 'border-gray-900 bg-gray-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-
+                  >
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-2"
                     >
-                      <type.icon size={20} className="text-gray-600" />
+                      <dataSourceType.icon size={20} className="text-gray-600" />
                     </div>
-                    <div className="font-medium text-sm text-gray-900">{type.name}</div>
+                    <div className="font-medium text-sm text-gray-900">{dataSourceType.name}</div>
                   </button>
                 ))}
               </div>
@@ -506,14 +506,14 @@ const AddDataSourceModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
-
+          >
             取消
           </button>
           <button
             onClick={() => selectedType && setStep(2)}
             disabled={!selectedType}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-
+          >
             下一步
           </button>
         </div>
@@ -564,9 +564,8 @@ const OntologyMappingModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                           ? 'border-gray-900 bg-gray-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
-
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center"
-                      >
+                    >
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                         <typeConfig.icon size={20} className="text-gray-600" />
                       </div>
                       <div className="flex-1"
@@ -596,7 +595,7 @@ const OntologyMappingModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                         ? 'border-gray-900 bg-gray-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-
+                  >
                     <div className="flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3"
@@ -665,15 +664,14 @@ const OntologyMappingModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
             onClick={() => setStep(Math.max(1, step - 1))}
             disabled={step === 1}
             className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-
+          >
             上一步
           </button>
-          <div className="flex gap-2"
-          >
+          <div className="flex gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
-
+            >
               取消
             </button>
             <button
@@ -685,7 +683,7 @@ const OntologyMappingModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                 }
               }}
               className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
-
+            >
               {step === 4 ? '完成' : '下一步'}
             </button>
           </div>

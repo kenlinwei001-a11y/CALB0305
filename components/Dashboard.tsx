@@ -91,8 +91,8 @@ const Dashboard: React.FC = () => {
               <option>最近7天</option>
             </select>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 min-h-[256px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={256}>
               <LineChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dy={10} />
@@ -111,8 +111,8 @@ const Dashboard: React.FC = () => {
             <h3 className="font-semibold text-gray-900">技能调用分布</h3>
             <button className="text-sm text-gray-500 hover:text-gray-700">查看全部</button>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 min-h-[256px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={256}>
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} />

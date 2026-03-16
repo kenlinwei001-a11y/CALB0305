@@ -15,8 +15,6 @@ interface PrincipleCategory {
   name: string;
   description: string;
   icon: React.ElementType;
-  color: string;
-  bgColor: string;
   atomIds: string[];
 }
 
@@ -27,8 +25,6 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
     name: '场景核心原子业务语义',
     description: '定义业务场景的基础属性，包括场景标识、状态、版本等信息',
     icon: Layers,
-    color: '#4f46e5',
-    bgColor: '#e0e7ff',
     atomIds: ['scenario_status', 'scenario_version', 'data_readiness', 'industry_type', 'domain_scope']
   },
   {
@@ -36,8 +32,6 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
     name: '层级结构原子业务语义',
     description: '支撑推演节点和数据节点定义的核心原子业务语义，用于构建场景的分子结构',
     icon: Box,
-    color: '#2563eb',
-    bgColor: '#dbeafe',
     atomIds: ['subsystem_type', 'process_type', 'param_category', 'skill_capability', 'node_level']
   },
   {
@@ -45,8 +39,6 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
     name: '关系逻辑原子业务语义',
     description: '定义节点间关系的语义，包括依赖、触发、控制等关系类型',
     icon: GitBranch,
-    color: '#0284c7',
-    bgColor: '#e0f2fe',
     atomIds: ['relation_type', 'dependency_strength', 'trigger_condition', 'control_authority']
   },
   {
@@ -54,8 +46,6 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
     name: '决策支撑原子业务语义',
     description: '支撑场景决策分析的原子原子业务语义，包括权重、阈值、规则等',
     icon: Target,
-    color: '#0d9488',
-    bgColor: '#ccfbf1',
     atomIds: ['decision_weight', 'threshold_value', 'rule_type', 'influence_factor', 'priority_level']
   },
   {
@@ -63,8 +53,6 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
     name: '执行度量原子业务语义',
     description: '衡量场景执行效果的核心指标，包括成本、延迟、准确率等',
     icon: BarChart3,
-    color: '#16a34a',
-    bgColor: '#dcfce7',
     atomIds: ['execution_cost', 'latency_ms', 'accuracy_score', 'success_rate', 'throughput']
   },
   {
@@ -72,8 +60,6 @@ const PRINCIPLE_CATEGORIES: PrincipleCategory[] = [
     name: '质量治理原子业务语义',
     description: '保障数据质量和场景可靠性的原子原子业务语义',
     icon: ShieldAlert,
-    color: '#dc2626',
-    bgColor: '#fee2e2',
     atomIds: ['data_quality_score', 'reliability_index', 'confidence_level', 'validation_status', 'risk_level']
   }
 ];
@@ -85,8 +71,6 @@ const LITHIUM_SPECIFIC_PRINCIPLES: PrincipleCategory[] = [
     name: '涂布工艺原子业务语义',
     description: '涂布工序场景构建必需的核心参数原子业务语义',
     icon: Beaker,
-    color: '#7c3aed',
-    bgColor: '#ede9fe',
     atomIds: ['coating_speed', 'coating_thickness', 'slurry_viscosity', 'coating_width', 'coating_temperature']
   },
   {
@@ -94,8 +78,6 @@ const LITHIUM_SPECIFIC_PRINCIPLES: PrincipleCategory[] = [
     name: '辊压工艺原子业务语义',
     description: '辊压工序场景构建必需的核心参数原子业务语义',
     icon: Scale,
-    color: '#c026d3',
-    bgColor: '#fae8ff',
     atomIds: ['rolling_pressure', 'rolling_thickness', 'thickness_uniformity', 'surface_density', 'pole_piece_density']
   },
   {
@@ -103,8 +85,6 @@ const LITHIUM_SPECIFIC_PRINCIPLES: PrincipleCategory[] = [
     name: '电性能原子业务语义',
     description: '电池电性能评估场景的核心指标原子业务语义',
     icon: ZapIcon,
-    color: '#ea580c',
-    bgColor: '#ffedd5',
     atomIds: ['voltage', 'current', 'resistance', 'capacity', 'energy_density', 'power_density']
   },
   {
@@ -112,8 +92,6 @@ const LITHIUM_SPECIFIC_PRINCIPLES: PrincipleCategory[] = [
     name: '环境控制原子业务语义',
     description: '制造环境监控场景必需的环境参数原子业务语义',
     icon: Wind,
-    color: '#0891b2',
-    bgColor: '#cffafe',
     atomIds: ['dew_point', 'cleanliness', 'ambient_temperature', 'humidity', 'pressure']
   },
   {
@@ -121,8 +99,6 @@ const LITHIUM_SPECIFIC_PRINCIPLES: PrincipleCategory[] = [
     name: '安全监控原子业务语义',
     description: '生产安全监控场景必需的安全参数原子业务语义',
     icon: AlertTriangle,
-    color: '#dc2626',
-    bgColor: '#fee2e2',
     atomIds: ['temperature_rise', 'gas_concentration', 'smoke_density', 'emergency_status', 'safety_interlock']
   },
   {
@@ -130,8 +106,6 @@ const LITHIUM_SPECIFIC_PRINCIPLES: PrincipleCategory[] = [
     name: '材料特性原子业务语义',
     description: '材料质量评估场景必需的材料参数原子业务语义',
     icon: Package,
-    color: '#65a30d',
-    bgColor: '#ecfccb',
     atomIds: ['particle_size', 'specific_surface_area', 'tap_density', 'moisture_content', 'purity']
   }
 ];
@@ -151,32 +125,32 @@ const ScenarioAtomsModule: React.FC = () => {
   const selectedCategoryData = currentCategories.find(c => c.id === selectedCategory);
 
   return (
-    <div className="h-full flex flex-col space-y-4">
+    <div className="h-full flex flex-col space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/atoms')}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">场景原子业务语义</h2>
-            <p className="text-slate-500 text-sm mt-1">
+            <h2 className="text-xl font-semibold text-gray-900">场景原子业务语义</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
               支撑业务流程图谱场景构建的核心原子业务语义集合
             </p>
           </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-100 rounded-lg p-1">
+        <div className="flex bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => { setActiveTab('general'); setSelectedCategory(null); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'general'
-                ? 'bg-white text-gray-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-800'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
             }`}
           >
             通用语义
@@ -185,8 +159,8 @@ const ScenarioAtomsModule: React.FC = () => {
             onClick={() => { setActiveTab('lithium'); setSelectedCategory(null); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'lithium'
-                ? 'bg-white text-gray-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-800'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
             }`}
           >
             锂电制造专用
@@ -207,29 +181,23 @@ const ScenarioAtomsModule: React.FC = () => {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
+                  className={`p-4 rounded-xl border text-left transition-all hover:shadow-sm ${
                     isSelected
-                      ? 'border-indigo-500 bg-gray-50 shadow-md'
-                      : 'border-slate-200 bg-white hover:border-indigo-300'
+                      ? 'border-gray-900 bg-gray-50'
+                      : 'border-gray-100 bg-white hover:border-gray-200 shadow-sm'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: category.bgColor }}
-                    >
-                      <Icon size={24} style={{ color: category.color }} />
+                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
+                      <Icon size={20} className="text-gray-500" />
                     </div>
-                    <span
-                      className="px-2 py-1 rounded-full text-xs font-medium"
-                      style={{ backgroundColor: category.bgColor, color: category.color }}
-                    >
+                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
                       {category.atomIds.length} 个语义
                     </span>
                   </div>
 
-                  <h3 className="font-semibold text-slate-800 mb-1">{category.name}</h3>
-                  <p className="text-sm text-slate-500 line-clamp-2">{category.description}</p>
+                  <h3 className="font-medium text-gray-900 mb-1 text-sm">{category.name}</h3>
+                  <p className="text-xs text-gray-500 line-clamp-2">{category.description}</p>
 
                   {/* Preview Atoms */}
                   <div className="mt-3 flex flex-wrap gap-1">
@@ -238,14 +206,14 @@ const ScenarioAtomsModule: React.FC = () => {
                       return atom ? (
                         <span
                           key={atomId}
-                          className="text-xs px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600"
+                          className="text-[10px] px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-gray-600"
                         >
                           {atom.name}
                         </span>
                       ) : null;
                     })}
                     {category.atomIds.length > 3 && (
-                      <span className="text-xs px-2 py-0.5 text-slate-400">
+                      <span className="text-[10px] px-2 py-0.5 text-gray-400">
                         +{category.atomIds.length - 3}
                       </span>
                     )}
@@ -256,22 +224,22 @@ const ScenarioAtomsModule: React.FC = () => {
           </div>
 
           {/* Info Section */}
-          <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
             <div className="flex items-center gap-3 mb-3">
-              <Workflow className="text-gray-600" size={24} />
-              <h3 className="font-semibold text-slate-800">场景构建指南</h3>
+              <Workflow className="text-gray-500" size={20} />
+              <h3 className="font-medium text-gray-900 text-sm">场景构建指南</h3>
             </div>
-            <div className="space-y-2 text-sm text-slate-600">
+            <div className="space-y-2 text-xs text-gray-500">
               <p>
-                <span className="font-medium text-slate-700">推演节点：</span>
+                <span className="font-medium text-gray-700">推演节点：</span>
                 负责分析、评估、预测、决策的节点，整合数据节点输入并输出决策建议
               </p>
               <p>
-                <span className="font-medium text-slate-700">数据节点：</span>
+                <span className="font-medium text-gray-700">数据节点：</span>
                 提供原始数据、参数、指标的节点，为推演节点提供分析所需的数据支撑
               </p>
               <p>
-                <span className="font-medium text-slate-700">关系连接：</span>
+                <span className="font-medium text-gray-700">关系连接：</span>
                 使用关系逻辑原子业务语义定义节点间的语义关联，形成完整的知识图谱
               </p>
             </div>
@@ -279,20 +247,17 @@ const ScenarioAtomsModule: React.FC = () => {
         </div>
 
         {/* Right Panel - Atom Details */}
-        <div className="w-1/2 bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+        <div className="w-1/2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
           {selectedCategoryData ? (
             <>
-              <div className="p-4 border-b border-slate-200 bg-slate-50">
+              <div className="p-4 border-b border-gray-100 bg-gray-50/50">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: selectedCategoryData.bgColor }}
-                  >
-                    <selectedCategoryData.icon size={20} style={{ color: selectedCategoryData.color }} />
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <selectedCategoryData.icon size={20} className="text-gray-500" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-800">{selectedCategoryData.name}</h3>
-                    <p className="text-sm text-slate-500">{selectedCategoryData.description}</p>
+                    <h3 className="font-medium text-gray-900 text-sm">{selectedCategoryData.name}</h3>
+                    <p className="text-xs text-gray-500">{selectedCategoryData.description}</p>
                   </div>
                 </div>
               </div>
@@ -306,56 +271,53 @@ const ScenarioAtomsModule: React.FC = () => {
                     return (
                       <div
                         key={atomId}
-                        className="p-4 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-gray-50/30 transition-all"
+                        className="p-4 border border-gray-100 rounded-xl hover:border-gray-200 bg-white shadow-sm transition-all"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: selectedCategoryData.color }}
-                            />
-                            <span className="font-medium text-slate-800">{atom.name}</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            <span className="font-medium text-gray-900 text-sm">{atom.name}</span>
                             {atom.unit && (
-                              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                                 {atom.unit}
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-slate-400">{atom.dataType}</span>
+                          <span className="text-xs text-gray-400">{atom.dataType}</span>
                         </div>
 
-                        <p className="text-sm text-slate-600 mt-2 ml-4">{atom.description}</p>
+                        <p className="text-xs text-gray-500 mt-2 ml-3.5">{atom.description}</p>
 
                         {atom.constraints && (
-                          <div className="mt-2 ml-4 flex flex-wrap gap-2">
+                          <div className="mt-2 ml-3.5 flex flex-wrap gap-2">
                             {atom.constraints.min !== undefined && (
-                              <span className="text-xs bg-slate-50 text-slate-500 px-2 py-0.5 rounded">
+                              <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded">
                                 最小: {atom.constraints.min}
                               </span>
                             )}
                             {atom.constraints.max !== undefined && (
-                              <span className="text-xs bg-slate-50 text-slate-500 px-2 py-0.5 rounded">
+                              <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded">
                                 最大: {atom.constraints.max}
                               </span>
                             )}
                             {atom.constraints.enum && (
-                              <span className="text-xs bg-slate-50 text-slate-500 px-2 py-0.5 rounded">
+                              <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded">
                                 枚举: {atom.constraints.enum.join(', ')}
                               </span>
                             )}
                           </div>
                         )}
 
-                        <div className="mt-2 ml-4 flex flex-wrap gap-1">
+                        <div className="mt-2 ml-3.5 flex flex-wrap gap-1">
                           {atom.tags.map((tag, idx) => (
-                            <span key={idx} className="text-xs text-slate-400">
+                            <span key={idx} className="text-[10px] text-gray-400">
                               #{tag}
                             </span>
                           ))}
                         </div>
 
                         {/* Usage Context */}
-                        <div className="mt-3 ml-4 p-2 bg-slate-50 rounded text-xs text-slate-500">
+                        <div className="mt-3 ml-3.5 p-2 bg-gray-50 rounded-lg text-[10px] text-gray-500">
                           <span className="font-medium">应用场景: </span>
                           {activeTab === 'general'
                             ? `适用于${selectedCategoryData.name}的业务流程图谱构建`
@@ -369,11 +331,11 @@ const ScenarioAtomsModule: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-400">
+            <div className="flex-1 flex items-center justify-center text-gray-400">
               <div className="text-center">
-                <FileText size={48} className="mx-auto mb-3 opacity-30" />
-                <p>选择左侧分类查看原子业务语义详情</p>
-                <p className="text-sm mt-1">这些原子业务语义是构建业务流程图谱场景的基础</p>
+                <FileText size={32} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-400">选择左侧分类查看原子业务语义详情</p>
+                <p className="text-xs text-gray-400 mt-1">这些原子业务语义是构建业务流程图谱场景的基础</p>
               </div>
             </div>
           )}

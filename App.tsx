@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Network, Zap, Settings, Box, Atom, Layers, Database,
-  Command, Bell, Search, ChevronDown, Sparkles, Cpu
+  Command, Bell, Search, ChevronDown, Sparkles, Cpu, ChevronLeft, X, ArrowRight
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SkillsRegistry from './components/SkillsRegistry';
@@ -75,15 +75,216 @@ const IconNav: React.FC<{ activePath: string }> = ({ activePath }) => {
   );
 };
 
-// 右侧快捷面板
-const RightPanel: React.FC = () => {
-  const [activeCommand, setActiveCommand] = useState<string | null>(null);
+// 消息类型定义
+type MessageRole = 'user' | 'assistant';
+interface Message {
+  id: string;
+  role: MessageRole;
+  content: string;
+  timestamp: Date;
+}
 
-  const quickCommands = [
-    { id: 'analyze', label: '分析洞察', desc: '深度分析当前数据' },
-    { id: 'prep', label: '会议准备', desc: '生成会议摘要和待办' },
-    { id: 'recap', label: '今日回顾', desc: '总结今日工作进展' },
-  ];
+interface QuickCommand {
+  id: string;
+  label: string;
+  desc: string;
+}
+
+// 页面特定的快捷命令配置
+const PAGE_COMMANDS: Record<string, QuickCommand[]> = {
+  dashboard: [
+    { id: 'overview', label: '查看今日概览', desc: '系统运行状态总结' },
+    { id: 'trends', label: '分析性能趋势', desc: '执行成功率和时延分析' },
+    { id: 'alerts', label: '检查异常预警', desc: '查看待处理告警事项' },
+  ],
+  skills: [
+    { id: 'recommend', label: '技能推荐', desc: '根据场景推荐适合技能' },
+    { id: 'search', label: '智能搜索', desc: '用自然语言查找技能' },
+    { id: 'compare', label: '技能对比', desc: '比较多个技能参数' },
+  ],
+  ontology: [
+    { id: 'explore', label: '探索场景', desc: '了解场景节点关系' },
+    { id: 'simulate', label: '启动推演', desc: '开始多轮模拟分析' },
+    { id: 'optimize', label: '优化建议', desc: '获取节点优化方案' },
+  ],
+  datasource: [
+    { id: 'sync', label: '同步数据', desc: '手动触发数据同步' },
+    { id: 'quality', label: '检查质量', desc: '数据质量检测报告' },
+    { id: 'mapping', label: '映射检查', desc: '验证本体映射关系' },
+  ],
+  default: [
+    { id: 'help', label: '使用帮助', desc: '了解系统功能' },
+    { id: 'feedback', label: '反馈建议', desc: '提交产品建议' },
+    { id: 'support', label: '技术支持', desc: '联系技术团队' },
+  ],
+};
+
+// 右侧快捷面板
+const RightPanel: React.FC<{ commands?: QuickCommand[] }> = ({ commands }) => {
+  const [activeCommand, setActiveCommand] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const quickCommands = commands || PAGE_COMMANDS.default;
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleCommandClick = (cmdId: string) => {
+    setActiveCommand(cmdId);
+    setShowChat(true);
+    const cmd = quickCommands.find(c => c.id === cmdId);
+
+    // 添加欢迎消息
+    const welcomeMessages: Record<string, string> = {
+      analyze: '我是您的数据分析助手。我可以帮您分析产能利用率、库存周转、质量指标等数据。请问您想分析哪个方面？',
+      prep: '我来帮您准备会议。请告诉我会议主题，我将为您生成会议摘要和相关待办事项。',
+      recap: '让我帮您回顾今天的工作。以下是今日系统运行的关键指标和待处理事项总结。',
+    };
+
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: welcomeMessages[cmdId] || '您好，有什么可以帮助您的？',
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputValue,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+
+    // 模拟助手回复
+    setTimeout(() => {
+      const responses: Record<string, string[]> = {
+        analyze: [
+          '根据最新数据，当前产能利用率为87.5%，较上周提升3.2%。主要提升来自B产线的效率优化。',
+          '库存周转天数目前为28天，处于健康范围。建议关注原材料库存，预计下周需要补充。',
+          '质量检测显示良品率为98.2%，符合目标。但C工序的不良率略有上升，建议关注。',
+        ],
+        prep: [
+          '已生成会议摘要：上周完成产能提升项目，达成预期目标。下周重点推进质量优化。',
+          '待办事项已整理：1)审批采购申请 2)确认供应商交期 3)review新订单排程',
+          '相关文档已准备完毕，包括生产报表、质量分析、库存状态等资料。',
+        ],
+        recap: [
+          '今日概览：系统运行正常，完成订单处理156笔，生产效率达标。',
+          '异常处理：处理了3个设备预警，均已恢复正常。无重大质量问题。',
+          '明日提醒：有2个订单需优先排程，建议上午安排产线准备。',
+        ],
+      };
+
+      const cmdResponses = responses[activeCommand || 'analyze'] || ['收到，我来帮您处理。'];
+      const randomResponse = cmdResponses[Math.floor(Math.random() * cmdResponses.length)];
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: randomResponse,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    }, 1000);
+  };
+
+  const handleCloseChat = () => {
+    setShowChat(false);
+    setActiveCommand(null);
+    setMessages([]);
+  };
+
+  if (showChat) {
+    const activeCmd = quickCommands.find(c => c.id === activeCommand);
+    return (
+      <div className="w-96 bg-white border-l border-gray-100 flex flex-col">
+        {/* 头部 */}
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCloseChat}
+              className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div>
+              <div className="font-medium text-sm text-gray-900">{activeCmd?.label}</div>
+              <div className="text-xs text-gray-400">AI 助手</div>
+            </div>
+          </div>
+          <button
+            onClick={handleCloseChat}
+            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* 消息区域 */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                  msg.role === 'user'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* 输入区域 */}
+        <div className="p-4 border-t border-gray-100">
+          <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+              placeholder="输入消息..."
+              className="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 placeholder:text-gray-400"
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim()}
+              className="p-1.5 bg-gray-900 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="text-xs text-gray-400 mt-2 text-center">
+            AI 生成内容仅供参考
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-80 bg-white border-l border-gray-100 flex flex-col">
@@ -104,7 +305,7 @@ const RightPanel: React.FC = () => {
           {quickCommands.map((cmd) => (
             <button
               key={cmd.id}
-              onClick={() => setActiveCommand(cmd.id)}
+              onClick={() => handleCommandClick(cmd.id)}
               className={`w-full text-left p-3 rounded-xl transition-all ${
                 activeCommand === cmd.id
                   ? 'bg-gray-900 text-white'
@@ -251,6 +452,7 @@ const BusinessSemanticPage: React.FC = () => {
 const AppContent: React.FC = () => {
   const location = useLocation();
   const [pageTitle, setPageTitle] = useState('仪表盘');
+  const [pageCommands, setPageCommands] = useState<QuickCommand[]>(PAGE_COMMANDS.default);
 
   useEffect(() => {
     const titles: Record<string, string> = {
@@ -266,6 +468,8 @@ const AppContent: React.FC = () => {
 
     // 处理子路由
     let title = '仪表盘';
+    let commands = PAGE_COMMANDS.default;
+
     for (const [path, t] of Object.entries(titles)) {
       if (location.pathname.startsWith(path) && path !== '/') {
         title = t;
@@ -275,7 +479,32 @@ const AppContent: React.FC = () => {
         break;
       }
     }
+
+    // 根据路由设置对应的快捷命令
+    if (location.pathname === '/') {
+      commands = PAGE_COMMANDS.dashboard;
+    } else if (location.pathname.startsWith('/skills')) {
+      commands = PAGE_COMMANDS.skills;
+    } else if (location.pathname.startsWith('/ontology')) {
+      commands = PAGE_COMMANDS.ontology;
+    } else if (location.pathname.startsWith('/data-sources')) {
+      commands = PAGE_COMMANDS.datasource;
+    } else if (location.pathname.startsWith('/atoms')) {
+      commands = [
+        { id: 'explain', label: '解释语义', desc: '解释原子业务语义概念' },
+        { id: 'relate', label: '查看关联', desc: '查看关联的场景和技能' },
+        { id: 'apply', label: '应用场景', desc: '应用到具体业务场景' },
+      ];
+    } else if (location.pathname.startsWith('/mcp-tools')) {
+      commands = [
+        { id: 'solve', label: '运行求解器', desc: '执行约束求解计算' },
+        { id: 'config', label: '配置参数', desc: '调整求解器参数' },
+        { id: 'result', label: '查看结果', desc: '分析求解结果' },
+      ];
+    }
+
     setPageTitle(title);
+    setPageCommands(commands);
   }, [location]);
 
   return (
@@ -305,7 +534,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* 右侧快捷面板 */}
-      <RightPanel />
+      <RightPanel commands={pageCommands} />
     </div>
   );
 };
