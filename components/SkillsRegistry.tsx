@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MOCK_SKILLS, getAllScenarios } from '../constants';
-import { Skill } from '../types';
-import { Search, Filter, Cpu, Code, Database, Zap, Network, Plus, Atom, Box, Grid, Layers, Activity, TrendingUp, Factory, Package, CheckCircle, DollarSign, Truck, Users, Calendar, Settings, AlertCircle, BarChart3, Cog, GitBranch, Calculator, Clock, Wrench, AlertTriangle, Shield, GitMerge, Target, Hammer } from 'lucide-react';
+import { Skill, SkillCategory as SkillCategoryType, SKILL_CATEGORIES } from '../types';
+import { Search, Filter, Cpu, Code, Database, Zap, Network, Plus, Atom, Box, Grid, Layers, Activity, TrendingUp, Factory, Package, CheckCircle, DollarSign, Truck, Users, Calendar, Settings, AlertCircle, BarChart3, Cog, GitBranch, Calculator, Clock, Wrench, AlertTriangle, Shield, GitMerge, Target, Hammer, Library, Workflow, FileCode, BookOpen, Server, Leaf } from 'lucide-react';
 
 // 技能层级定义
 type SkillLevel = 'atomic' | 'domain' | 'scenario' | 'business';
@@ -10,26 +10,44 @@ type SkillLevel = 'atomic' | 'domain' | 'scenario' | 'business';
 // 技能业务分类
 type SkillBusinessCategory = 'production' | 'maintenance' | 'planning' | 'quality' | 'finance' | 'logistics' | 'general';
 
-// 技能分类定义
-type SkillCategory = 'all' | SkillLevel | SkillBusinessCategory;
+// 技能分类定义 - 包含Claude Code 10大分类
+ type SkillFilterCategory = 'all' | SkillLevel | SkillBusinessCategory | SkillCategoryType;
 
-interface CategoryConfig {
-  id: SkillCategory;
+ interface CategoryConfig {
+  id: SkillFilterCategory;
   name: string;
   icon: React.ReactNode;
+  type: 'system' | 'claude';
 }
 
+// Claude Code 10大分类图标映射
+const categoryIconMap: Record<string, React.ReactNode> = {
+  'library-api': <Library size={16} />,
+  'validation': <CheckCircle size={16} />,
+  'data-analysis': <BarChart3 size={16} />,
+  'workflow': <Workflow size={16} />,
+  'scaffolding': <FileCode size={16} />,
+  'code-quality': <Shield size={16} />,
+  'cicd': <GitBranch size={16} />,
+  'runbook': <BookOpen size={16} />,
+  'infrastructure': <Server size={16} />,
+  'carbon-energy': <Leaf size={16} />
+};
+
+// 完整的分类列表 - 系统层级 + Claude Code 10大分类
 const CATEGORIES: CategoryConfig[] = [
-  { id: 'all', name: '全部技能', icon: <Grid size={16} /> },
-  { id: 'atomic', name: '原子层算法', icon: <Atom size={16} /> },
-  { id: 'domain', name: '领域层技能', icon: <Layers size={16} /> },
-  { id: 'scenario', name: '场景层技能', icon: <Activity size={16} /> },
-  { id: 'production', name: '生产制造', icon: <Factory size={16} /> },
-  { id: 'maintenance', name: '设备维护', icon: <Settings size={16} /> },
-  { id: 'planning', name: '计划排程', icon: <Calendar size={16} /> },
-  { id: 'quality', name: '质量管理', icon: <CheckCircle size={16} /> },
-  { id: 'finance', name: '财务成本', icon: <DollarSign size={16} /> },
-  { id: 'logistics', name: '供应链物流', icon: <Truck size={16} /> },
+  // 系统层级分类
+  { id: 'all', name: '全部技能', icon: <Grid size={16} />, type: 'system' },
+  { id: 'atomic', name: '原子层算法', icon: <Atom size={16} />, type: 'system' },
+  { id: 'domain', name: '领域层技能', icon: <Layers size={16} />, type: 'system' },
+  { id: 'scenario', name: '场景层技能', icon: <Activity size={16} />, type: 'system' },
+  // Claude Code 10大分类
+  ...SKILL_CATEGORIES.map(cat => ({
+    id: cat.id as SkillFilterCategory,
+    name: cat.name,
+    icon: categoryIconMap[cat.id] || <Box size={16} />,
+    type: 'claude' as const
+  }))
 ];
 
 // 判断技能层级
@@ -186,17 +204,27 @@ const SkillCard: React.FC<{ skill: Skill }> = ({ skill }) => {
 
         <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed">{skill.description}</p>
 
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+        {/* 分类标签 */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {skill.category && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium border border-indigo-100">
+              {SKILL_CATEGORIES.find(c => c.id === skill.category)?.name || skill.category}
+            </span>
+          )}
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 font-medium">
             {domainName}
           </span>
-          {skill.capability_tags.slice(0, 2).map(tag => (
+        </div>
+
+        {/* 能力标签 */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {skill.capability_tags.slice(0, 3).map(tag => (
             <span key={tag} className="text-xs text-gray-400 px-1.5 py-0.5">
               #{tag}
             </span>
           ))}
-          {skill.capability_tags.length > 2 && (
-            <span className="text-xs text-gray-300">+{skill.capability_tags.length - 2}</span>
+          {skill.capability_tags.length > 3 && (
+            <span className="text-xs text-gray-300">+{skill.capability_tags.length - 3}</span>
           )}
         </div>
 
@@ -233,7 +261,7 @@ const SkillCard: React.FC<{ skill: Skill }> = ({ skill }) => {
 
 const SkillsRegistry: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<SkillCategory>('all');
+  const [activeCategory, setActiveCategory] = useState<SkillFilterCategory>('all');
   const navigate = useNavigate();
 
   // 按层级统计技能数量
@@ -248,11 +276,11 @@ const SkillsRegistry: React.FC = () => {
 
   // 按分类统计技能数量
   const categoryStats = useMemo(() => {
-    const stats: Record<SkillCategory, number> = {
+    const stats: Record<SkillFilterCategory, number> = {
       all: MOCK_SKILLS.length,
-      atomic: 0,
-      domain: 0,
-      scenario: 0,
+      atomic: levelStats.atomic,
+      domain: levelStats.domain,
+      scenario: levelStats.scenario,
       production: 0,
       maintenance: 0,
       planning: 0,
@@ -260,14 +288,33 @@ const SkillsRegistry: React.FC = () => {
       finance: 0,
       logistics: 0,
       general: 0,
+      // Claude Code 10大分类
+      'library-api': 0,
+      'validation': 0,
+      'data-analysis': 0,
+      'workflow': 0,
+      'scaffolding': 0,
+      'code-quality': 0,
+      'cicd': 0,
+      'runbook': 0,
+      'infrastructure': 0,
+      'carbon-energy': 0
     };
+
     MOCK_SKILLS.forEach(skill => {
-      const category = getSkillCategory(skill);
-      stats[category]++;
+      // 统计业务分类
+      const businessCategory = getSkillBusinessCategory(skill);
+      if (businessCategory in stats) {
+        stats[businessCategory as SkillFilterCategory]++;
+      }
+      // 统计Claude Code分类
+      if (skill.category) {
+        if (skill.category in stats) {
+          stats[skill.category as SkillFilterCategory]++;
+        }
+      }
     });
-    stats.atomic = levelStats.atomic;
-    stats.domain = levelStats.domain;
-    stats.scenario = levelStats.scenario;
+
     return stats;
   }, [levelStats]);
 
@@ -279,13 +326,20 @@ const SkillsRegistry: React.FC = () => {
         skill.skill_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         skill.capability_tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const category = getSkillCategory(skill);
-      const level = getSkillLevel(skill);
-      const matchesCategory = activeCategory === 'all' ||
-        category === activeCategory ||
-        level === activeCategory;
+      if (activeCategory === 'all') return matchesSearch;
 
-      return matchesSearch && matchesCategory;
+      // 检查是否是系统层级分类
+      const level = getSkillLevel(skill);
+      if (activeCategory === level) return matchesSearch;
+
+      // 检查是否是Claude Code分类
+      if (skill.category === activeCategory) return matchesSearch;
+
+      // 检查是否是业务分类
+      const businessCategory = getSkillBusinessCategory(skill);
+      if (businessCategory === activeCategory) return matchesSearch;
+
+      return false;
     });
   }, [searchTerm, activeCategory]);
 
@@ -364,27 +418,54 @@ const SkillsRegistry: React.FC = () => {
         </button>
       </div>
 
-      {/* 分类筛选 - 简化为pill样式 */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => setActiveCategory(category.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
-              activeCategory === category.id
-                ? 'bg-gray-900 text-white'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            {category.icon}
-            <span>{category.name}</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              activeCategory === category.id ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
-            }`}>
-              {categoryStats[category.id]}
-            </span>
-          </button>
-        ))}
+      {/* 分类筛选 - 系统层级 + Claude Code 10大分类 */}
+      <div className="space-y-3">
+        {/* 系统层级分类 */}
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.filter(c => c.type === 'system').map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
+                activeCategory === category.id
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {category.icon}
+              <span>{category.name}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeCategory === category.id ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {categoryStats[category.id]}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Claude Code 10大分类 */}
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs text-gray-400 py-1.5 mr-1">分类:</span>
+          {CATEGORIES.filter(c => c.type === 'claude').map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
+                activeCategory === category.id
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-50 text-indigo-600 border border-indigo-100 hover:border-indigo-200 hover:bg-indigo-100'
+              }`}
+            >
+              {category.icon}
+              <span>{category.name}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeCategory === category.id ? 'bg-white/20' : 'bg-indigo-100 text-indigo-500'
+              }`}>
+                {categoryStats[category.id] || 0}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 搜索栏 - 简化设计 */}

@@ -201,7 +201,130 @@ export interface BusinessScenario {
   tags: string[];
 }
 
+// ==================== 技能分类常量 ====================
+
+export const SKILL_CATEGORIES: SkillCategoryConfig[] = [
+  {
+    id: 'library-api',
+    name: '库与 API 参考',
+    description: '解释如何正确使用某个库、CLI 工具或 SDK',
+    icon: 'Library',
+    examples: ['内部计费库', 'CLI 封装工具', '设计系统适配']
+  },
+  {
+    id: 'validation',
+    name: '产品验证',
+    description: '测试或验证代码是否正常工作，通常搭配外部工具',
+    icon: 'CheckCircle',
+    examples: ['注册流程验证', '结账流程测试', 'CLI 交互测试']
+  },
+  {
+    id: 'data-analysis',
+    name: '数据获取与分析',
+    description: '连接数据和监控系统，获取和分析数据',
+    icon: 'BarChart3',
+    examples: ['漏斗查询', '用户群对比', '仪表盘查询']
+  },
+  {
+    id: 'workflow',
+    name: '业务流程与自动化',
+    description: '将重复性工作流自动化为一条命令',
+    icon: 'Workflow',
+    examples: ['站会内容生成', '工单创建', '周报生成']
+  },
+  {
+    id: 'scaffolding',
+    name: '代码脚手架与模板',
+    description: '为特定功能生成框架代码',
+    icon: 'FileCode',
+    examples: ['新服务模板', '数据库迁移', '应用创建']
+  },
+  {
+    id: 'code-quality',
+    name: '代码质量与审查',
+    description: '帮助执行代码质量标准并辅助代码审查',
+    icon: 'Shield',
+    examples: ['对抗性审查', '代码风格检查', '测试实践']
+  },
+  {
+    id: 'cicd',
+    name: 'CI/CD 与部署',
+    description: '获取、推送和部署代码',
+    icon: 'GitBranch',
+    examples: ['PR 监控', '服务部署', '生产环境 cherry-pick']
+  },
+  {
+    id: 'runbook',
+    name: '运维手册',
+    description: '接收故障现象并执行多工具联合排查',
+    icon: 'BookOpen',
+    examples: ['服务调试', '值班排查', '日志关联']
+  },
+  {
+    id: 'infrastructure',
+    name: '基础设施运维',
+    description: '执行日常维护和操作流程',
+    icon: 'Server',
+    examples: ['孤儿资源清理', '依赖管理', '成本调查']
+  },
+  {
+    id: 'carbon-energy',
+    name: '碳排放与能源管理',
+    description: '碳排放核算、碳足迹追踪、节能减排优化、清洁能源规划',
+    icon: 'Leaf',
+    examples: ['碳排放核算', '产品碳足迹', '节能优化', '碳配额管理', '清洁能源替代']
+  }
+];
+
 // ==================== 技能注册中心集成 ====================
+
+// ==================== Skill 分类定义 ====================
+
+/**
+ * Skill 十大分类（基于 Claude Code 官方指南 + 碳排放能源管理）
+ */
+export type SkillCategory =
+  | 'library-api'        // 库与 API 参考
+  | 'validation'         // 产品验证
+  | 'data-analysis'      // 数据获取与分析
+  | 'workflow'           // 业务流程与自动化
+  | 'scaffolding'        // 代码脚手架与模板
+  | 'code-quality'       // 代码质量与审查
+  | 'cicd'              // CI/CD 与部署
+  | 'runbook'           // 运维手册
+  | 'infrastructure'    // 基础设施运维
+  | 'carbon-energy';    // 碳排放与能源管理
+
+/**
+ * Skill 分类配置
+ */
+export interface SkillCategoryConfig {
+  id: SkillCategory;
+  name: string;
+  description: string;
+  icon: string;
+  examples: string[];
+}
+
+/**
+ * Gotcha（坑点）定义
+ */
+export interface SkillGotcha {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  solution?: string;
+}
+
+/**
+ * 触发条件定义
+ */
+export interface SkillTriggerCondition {
+  description: string;
+  examples: string[];
+  keywords: string[];
+}
 
 export interface Skill {
   skill_id: string;
@@ -216,6 +339,14 @@ export interface Skill {
   accuracy_score: number; // 0.0 - 1.0
   dependencies: string[];
   description: string;
+  // 新增：分类（基于 Claude Code 指南的 9 大类别）
+  category?: SkillCategory;
+  // 新增：触发条件（描述何时应该调用此 Skill）
+  triggerConditions?: SkillTriggerCondition;
+  // 新增：常见坑点列表
+  gotchas?: SkillGotcha[];
+  // 新增：依赖的其他 Skill
+  dependsOn?: string[];
   files: {
     readme: string;        // SKILL.md - 核心规则文档
     config: string;        // 配置参数
@@ -223,6 +354,8 @@ export interface Skill {
     scriptLang: string;    // 脚本语言
     references?: string[]; // references/ - 知识库文档列表
     assets?: string[];     // assets/ - 静态模板文件列表
+    // 新增：辅助脚本列表
+    helpers?: string[];
   };
   // 新增：场景绑定
   scenarioBindings?: ScenarioBinding[];

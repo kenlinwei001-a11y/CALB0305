@@ -21,9 +21,53 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 120,
     accuracy_score: 0.98,
     dependencies: [],
-    description: "基于光谱数据的原材料杂质含量快速分析。",
+    description: "当用户需要分析原材料质检数据、生成检验报告、或判断来料是否合格时调用此 Skill。特别适用于：来料检验异常需要分析原因、需要快速生成检验报告、批量分析多个批次质量数据、需要生成符合国标的检验证书。",
+    category: "validation",
+    triggerConditions: {
+      description: "在原材料入库检验环节，当质检员输入批次号并上传光谱数据文件时触发",
+      examples: ["分析批次202403001的光谱数据", "检测这批Li2CO3的纯度是否合格", "生成来料检验报告"],
+      keywords: ["光谱", "纯度", "检验", "批次", "来料", "质检"]
+    },
+    gotchas: [
+      {
+        id: "batch_format",
+        title: "批次号编码规则混乱",
+        description: "供应商可能使用 BATCH202403001、2024-03-001、240301001 等多种格式，必须先标准化",
+        severity: "high",
+        solution: "使用 shared.data_loader.normalize_batch_id() 统一转换为 YYYYMMDDXXX 格式"
+      },
+      {
+        id: "temperature_unit",
+        title: "温度单位陷阱",
+        description: "光谱仪设备可能输出摄氏度或华氏度，未转换会导致纯度计算错误",
+        severity: "critical",
+        solution: "使用 shared.data_loader.convert_temperature() 显式转换为摄氏度"
+      },
+      {
+        id: "spectrum_format",
+        title: "光谱数据格式不一致",
+        description: "不同型号光谱仪输出的列名不同（wavelength vs nm），列顺序也可能不同",
+        severity: "medium",
+        solution: "使用 auto_load_data 自动检测格式，并验证必需列是否存在"
+      },
+      {
+        id: "duplicate_inspection",
+        title: "重复检测",
+        description: "同一批次可能被多次送检，导致重复记录",
+        severity: "low",
+        solution: "使用 shared.history_manager.is_already_executed() 检查是否已检测"
+      },
+      {
+        id: "purity_threshold",
+        title: "纯度阈值动态变化",
+        description: "不同客户、不同材料类型的合格阈值不同，不能写死为99.5%",
+        severity: "high",
+        solution: "从 config.json 读取对应材料类型的阈值配置"
+      }
+    ],
+    dependsOn: ["data-quality-check", "batch-normalizer"],
     files: {
-      readme: "# 原料纯度AI检测\n\n## 1. 概述\n\n### 1.1 业务价值\n原料纯度直接影响锂电池的能量密度和循环寿命。本技能通过AI驱动的多模态检测技术，实现原料纯度的自动化、高精度检测，替代传统人工化验流程，检测效率提升80%以上，误判率降低至0.1%以下。\n\n### 1.2 技术原理\n融合近红外光谱分析(NIR)与深度学习视觉检测，构建多模态融合模型。光谱模块检测分子结构特征，视觉模块识别表面杂质，融合层通过注意力机制综合判定，输出纯度评分及污染物分布。\n\n### 1.3 应用场景\n- 正极材料（磷酸铁锂、三元材料）来料检验\n- 负极材料（石墨、硅基材料）纯度检测\n- 电解液原料（LiPF6、溶剂）质量把控\n- 隔膜原料聚烯烃的洁净度评估\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 默认值 | 说明 |\n|--------|------|------|--------|------|\n| material_type | string | 是 | - | 原料类型，如Li2CO3、LiOH等 |\n| batch_id | string | 是 | - | 批次编号，唯一标识 |\n| purity_threshold | number | 否 | 99.5 | 纯度阈值(%)，低于此值判定为不合格 |\n| inspection_mode | string | 否 | 'auto' | 检测模式：auto/quick/deep |\n| sample_location | string | 否 | 'center' | 取样位置：center/edge/mixed |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| purity_score | number | 纯度评分(0-100)，综合光谱和视觉分析结果 |\n| contaminants | array | 污染物列表，包含类型、浓度、位置信息 |\n| is_passed | boolean | 是否通过检测 |\n| confidence | number | 模型置信度(0-1) |\n| spectra_data | object | 原始光谱数据（可选） |\n| visual_report | string | 视觉检测报告URL |\n\n## 4. 性能指标\n\n| 指标 | 数值 |\n|------|------|\n| 检测精度 | ±0.05% |\n| 响应时间 | <2秒 |\n| 吞吐量 | 60样本/小时 |\n| 准确率 | 99.9% |\n| 误报率 | <0.1% |\n\n## 5. 使用示例\n\n### 5.1 基础调用\n`skill.invoke({ material_type: 'Li2CO3', batch_id: 'BATCH202403001', purity_threshold: 99.5 })`\n\n### 5.2 深度检测模式\n`skill.invoke({ material_type: 'NCM811', batch_id: 'BATCH202403002', purity_threshold: 99.8, inspection_mode: 'deep' })`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| Purity_001 | 光谱仪连接异常 | 检查设备电源和数据线连接 |\n| Purity_002 | 样本识别失败 | 重新放置样本，确保采样区域清洁 |\n| Purity_003 | 模型推理超时 | 检查GPU资源，降低inspection_mode等级 |\n| Purity_004 | 批次号格式错误 | 核对batch_id格式是否符合规范 |\n| Purity_005 | 原料类型不支持 | 更新material_type为支持的类型 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更内容 |\n|------|------|----------|\n| v1.0.0 | 2024-01 | 初始版本，支持基础光谱检测 |\n| v2.0.0 | 2024-06 | 增加视觉融合模块，支持多模态检测 |\n| v2.1.0 | 2024-09 | 优化检测算法，提升响应速度 |\n\n## 8. 依赖与前置条件\n\n- 硬件：近红外光谱仪、工业相机(500万像素+)\n- 软件：CUDA 11.8+、Python 3.9+\n- 网络：可访问模型推理服务\n- 权限：需要质检员角色权限\n- 前置流程：原料入库登记完成",
+      readme: "# 原料纯度AI检测\n\n## 描述\n\n当用户需要分析原材料质检数据、生成检验报告、或判断来料是否合格时调用此 Skill。特别适用于：来料检验异常、需要快速生成检验报告、批量分析多个批次质量数据。\n\n## 使用场景\n\n- 收到原料到货通知，需要快速完成来料检验\n- 质检数据异常，需要分析原因并生成报告\n- 需要批量对比多个批次的质量指标\n- 需要生成符合国标的检验证书\n\n## 初始化\n\n首次使用时，检查 `config.json` 是否存在。如不存在，询问用户：\n1. 默认检验标准（国标/企标/客户定制）\n2. 报告输出格式（PDF/Excel/JSON）\n3. 是否需要自动发送到指定邮箱\n4. 不同材料类型的纯度阈值\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **光谱仪数据格式不一致** - 不同型号光谱仪输出的波长范围可能不同（350-2500nm vs 1000-1700nm），必须先检查数据范围再处理\n2. **批次号编码规则混乱** - 可能存在 BATCH202403001、20240301-B1、240301001 等多种格式，需要先标准化再存储\n3. **温度单位陷阱** - 有些设备输出摄氏度，有些是华氏度，必须显式转换\n4. **纯度阈值争议** - 不同客户对纯度要求不同（99.5% vs 99.9%），不能硬编码，必须从配置读取\n5. **重复检测问题** - 同一批次可能被多次检测（初检/复检），需要检查 `inspection_history.log` 避免重复记录\n\n## 核心工作流\n\n### 1. 数据获取\n\n使用 `scripts/data_loader.py` 中的辅助函数：\n\n```python\nfrom scripts.data_loader import load_spectrum_data, validate_batch_id\n\n# 加载光谱数据（自动处理不同格式）\nspectrum = load_spectrum_data(file_path, device_type='NIR')\n\n# 验证并标准化批次号\nbatch_id = validate_batch_id(raw_batch_id)\n```\n\n### 2. 数据分析\n\n```python\nfrom scripts.analyzer import calculate_purity, detect_contaminants\n\n# 计算纯度（自动加载对应材料的模型）\npurity_score = calculate_purity(spectrum, material_type='Li2CO3')\n\n# 检测污染物\ndetected = detect_contaminants(spectrum, threshold=0.001)\n```\n\n### 3. 报告生成\n\n```python\nfrom scripts.report_generator import generate_inspection_report\n\n# 生成报告（自动应用配置的模板）\nreport = generate_inspection_report(\n    batch_id=batch_id,\n    results={'purity': purity_score, 'contaminants': detected},\n    template=config['report_template']\n)\n```\n\n### 4. 记录保存\n\n```python\nfrom scripts.history_manager import log_inspection\n\n# 记录到历史日志（用于追踪变化和避免重复）\nlog_inspection(batch_id, results, log_file='inspection_history.log')\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| material_type | string | 是 | 原料类型，如Li2CO3、LiOH等 |\n| batch_id | string | 是 | 批次编号，唯一标识 |\n| spectrum_data | array | 是 | 光谱数据数组 |\n| purity_threshold | number | 否 | 纯度阈值(%)，默认从配置读取 |\n| inspection_mode | string | 否 | 检测模式：auto/quick/deep |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| purity_score | number | 纯度评分(0-100) |\n| contaminants | array | 污染物列表 |\n| is_passed | boolean | 是否通过检测 |\n| confidence | number | 模型置信度(0-1) |\n| spectra_data | object | 原始光谱数据 |\n| visual_report | string | 视觉检测报告URL |\n\n## 依赖的Skill\n\n- `data-quality-check` - 数据质量预检查\n- `batch-normalizer` - 批次号标准化\n\n## 参考文档\n\n- 《GB/T 11064-2018 碳酸锂、单水氢氧化锂、氯化锂化学分析方法》\n- 《GB/T 24533-2019 锂离子电池石墨类负极材料》\n- 《YS/T 582-2013 电池级碳酸锂》\n- 《锂电池原材料来料检验规范 V3.2》",
       config: "{\"model\": \"purity_net_v2\", \"threshold\": 0.99}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    material_purity_check_v2 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -43,9 +87,39 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 50,
     accuracy_score: 0.94,
     dependencies: [],
-    description: "根据搅拌工艺参数实时预测浆料粘度趋势。",
+    description: "当需要预测浆料粘度、优化搅拌工艺参数、或判断浆料是否达到涂布要求时调用此 Skill。特别适用于：搅拌过程中粘度异常波动、调整固含量后预测粘度变化、确定最佳搅拌转速、涂布前浆料质量预检。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在浆料搅拌工序，当固含量、温度、搅拌速度等参数发生变化时触发",
+      examples: ["预测当前浆料粘度", "固含量调整到65%后的粘度是多少", "最佳搅拌转速应该是多少"],
+      keywords: ["粘度", "浆料", "搅拌", "固含量", "预测", "流变"]
+    },
+    gotchas: [
+      {
+        id: "sensor_calibration",
+        title: "温度传感器漂移",
+        description: "搅拌罐温度传感器长期使用后会产生漂移，导致粘度预测偏差",
+        severity: "medium",
+        solution: "定期校准温度传感器，在预测前验证温度读数合理性"
+      },
+      {
+        id: "shear_thinning",
+        title: "剪切稀化效应",
+        description: "浆料在高速搅拌下会表现剪切稀化特性，粘度读数与静态粘度不同",
+        severity: "high",
+        solution: "明确标注是动态粘度还是静态粘度，在报告中说明测试条件"
+      },
+      {
+        id: "aging_effect",
+        title: "浆料老化影响",
+        description: "浆料静置时间过长会导致粘度变化，模型需要输入搅拌时长",
+        severity: "medium",
+        solution: "记录浆料从搅拌开始到检测的时间，超过2小时的浆料需重新评估"
+      }
+    ],
+    dependsOn: ["process-parameter-monitor"],
     files: {
-      readme: "# 浆料粘度预测\n\n## 1. 概述\n\n### 1.1 业务价值\n浆料粘度是锂电池极片制造的关键工艺参数，直接影响涂布均匀性和极片质量。本技能通过实时预测浆料粘度，帮助工艺工程师提前调整搅拌参数，减少停机取样检测次数，提升产线OEE 15%以上，降低不良品率。\n\n### 1.2 技术原理\n基于LSTM时序神经网络，融合搅拌转速、温度、固含量、分散时间等多维工艺参数，建立粘度动态预测模型。模型考虑浆料老化特性和剪切稀化效应，实现非线性粘度变化趋势的精准预测。\n\n### 1.3 应用场景\n- 正极浆料（LFP/NCM）粘度在线监控\n- 负极浆料（石墨/硅碳）流变特性预测\n- 搅拌工艺参数优化建议\n- 涂布前浆料质量预检\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 默认值 | 说明 |\n|--------|------|------|--------|------|\n| solid_content | number | 是 | - | 固含量(%)，范围40-70 |\n| temperature | number | 是 | - | 浆料温度(°C)，范围15-45 |\n| mixing_speed | number | 是 | - | 搅拌转速(rpm)，范围50-300 |\n| dispersion_time | number | 否 | 0 | 分散时间(分钟) |\n| material_type | string | 否 | 'NCM' | 材料类型：LFP/NCM/Graphite/SiC |\n| solvent_ratio | number | 否 | 0.5 | 溶剂比例，范围0.4-0.6 |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| predicted_viscosity | number | 预测粘度值(mPa·s) |\n| viscosity_trend | string | 粘度趋势：rising/stable/falling |\n| confidence | number | 预测置信度(0-1) |\n| optimal_mixing_speed | number | 建议搅拌转速(rpm) |\n| warning_flag | boolean | 是否超出工艺窗口 |\n| time_to_target | number | 预计达到目标粘度时间(分钟) |\n\n## 4. 性能指标\n\n| 指标 | 数值 |\n|------|------|\n| 预测精度 | ±5% |\n| 响应时间 | <50ms |\n| 预测 horizon | 30分钟 |\n| MAPE | <3% |\n| R² | >0.95 |\n\n## 5. 使用示例\n\n### 5.1 基础调用\n`skill.invoke({ solid_content: 65, temperature: 25, mixing_speed: 150 })`\n\n### 5.2 完整参数调用\n`skill.invoke({ solid_content: 68, temperature: 28, mixing_speed: 180, dispersion_time: 120, material_type: 'NCM', solvent_ratio: 0.52 })`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| Visc_001 | 输入参数超出范围 | 检查solid_content是否在40-70范围内 |\n| Visc_002 | 模型推理失败 | 检查模型服务状态，尝试降低输入维度 |\n| Visc_003 | 温度传感器异常 | 检查温度传感器校准状态 |\n| Visc_004 | 历史数据不足 | 积累至少100条历史记录后再调用 |\n| Visc_005 | 材料类型不支持 | 使用支持的材料类型：LFP/NCM/Graphite/SiC |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更内容 |\n|------|------|----------|\n| v1.0.0 | 2023-08 | 初始版本，基于规则公式预测 |\n| v2.0.0 | 2024-01 | 引入LSTM模型，提升预测精度 |\n| v3.0.0 | 2024-06 | 增加趋势预测和工艺建议功能 |\n| v3.0.1 | 2024-09 | 优化模型推理速度，降低延迟 |\n\n## 8. 依赖与前置条件\n\n- 硬件：温度传感器、转速编码器、PLC数据采集模块\n- 软件：Python 3.9+、PyTorch 2.0+、ONNX Runtime\n- 数据：至少100条历史工艺-粘度对应数据用于模型校准\n- 网络：可访问时序数据库和模型推理服务\n- 权限：需要工艺工程师角色权限\n- 前置流程：搅拌工序启动，温度达到稳定状态",
+      readme: "# 浆料粘度预测\n\n## 描述\n\n当需要预测浆料粘度、优化搅拌工艺参数、或判断浆料是否达到涂布要求时调用此 Skill。特别适用于：搅拌过程中粘度异常波动、调整固含量后预测粘度变化、确定最佳搅拌转速、涂布前浆料质量预检。\n\n## 使用场景\n\n- 搅拌过程中需要实时预测当前粘度，避免停机取样\n- 调整固含量后，预测新的粘度值是否达标\n- 优化搅拌转速，找到粘度与效率的最佳平衡点\n- 涂布前快速判断浆料是否适合上机\n\n## 初始化\n\n首次使用时，检查 `config.json` 是否存在。如不存在，询问用户：\n1. 目标粘度范围（mPa·s）\n2. 材料类型默认配置（LFP/NCM/Graphite）\n3. 温度传感器校准参数\n4. 预测模型版本（v3标准版/v3-light快速版）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **温度传感器漂移** - 搅拌罐温度传感器长期使用后会产生漂移，导致粘度预测偏差，必须定期校准\n2. **剪切稀化效应** - 浆料在高速搅拌下会表现剪切稀化特性，粘度读数与静态粘度不同，必须明确标注测试条件\n3. **浆料老化影响** - 浆料静置时间过长会导致粘度变化，模型需要输入搅拌时长，超过2小时的浆料需重新评估\n4. **固含量测量误差** - 固含量测量存在±0.5%误差，会显著影响粘度预测，建议使用在线固含量检测仪\n5. **材料批次差异** - 不同批次的原材料（尤其是粘结剂）会导致粘度特性变化，需要定期更新模型\n\n## 核心工作流\n\n### 1. 数据采集\n\n使用 `scripts/data_loader.py` 中的辅助函数：\n\n```python\nfrom scripts.data_loader import get_process_parameters\n\n# 获取实时工艺参数\nparams = get_process_parameters(\n    solid_content=sensor_data['solid_content'],\n    temperature=sensor_data['temperature'],\n    mixing_speed=sensor_data['rpm'],\n    dispersion_time=sensor_data['mixing_time']\n)\n```\n\n### 2. 数据验证\n\n```python\nfrom shared.validator import InputValidator\n\nvalidator = InputValidator()\nresults = validator.run_all_validations(params, {\n    'required': ['solid_content', 'temperature', 'mixing_speed'],\n    'types': {'solid_content': (int, float), 'temperature': (int, float)},\n    'ranges': {\n        'solid_content': {'min': 40, 'max': 70},\n        'temperature': {'min': 15, 'max': 45}\n    }\n})\n```\n\n### 3. 粘度预测\n\n```python\nfrom scripts.viscosity_model import predict_viscosity\n\n# 加载模型并预测\nmodel = load_model(config['model_version'])\nprediction = model.predict(params)\n\nviscosity = prediction['value']\nconfidence = prediction['confidence']\ntrend = prediction['trend']\n```\n\n### 4. 工艺建议\n\n```python\n# 判断是否需要调整\nif viscosity < config['target_range'][0]:\n    suggestion = {\n        'action': 'increase_speed',\n        'message': f\"粘度偏低，建议提高转速至{params[\\'mixing_speed\\'] + 20}rpm\"\n    }\nelif viscosity > config['target_range'][1]:\n    suggestion = {\n        'action': 'decrease_speed',\n        'message': f\"粘度偏高，建议降低转速或添加溶剂\"\n    }\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| solid_content | number | 是 | 固含量(%)，范围40-70 |\n| temperature | number | 是 | 浆料温度(°C)，范围15-45 |\n| mixing_speed | number | 是 | 搅拌转速(rpm)，范围50-300 |\n| dispersion_time | number | 否 | 分散时间(分钟) |\n| material_type | string | 否 | 材料类型：LFP/NCM/Graphite |\n| solvent_ratio | number | 否 | 溶剂比例，范围0.4-0.6 |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| predicted_viscosity | number | 预测粘度值(mPa·s) |\n| viscosity_trend | string | 粘度趋势：rising/stable/falling |\n| confidence | number | 预测置信度(0-1) |\n| optimal_mixing_speed | number | 建议搅拌转速(rpm) |\n| warning_flag | boolean | 是否超出工艺窗口 |\n| time_to_target | number | 预计达到目标粘度时间(分钟) |\n\n## 依赖的Skill\n\n- `process-parameter-monitor` - 工艺参数监测\n- `temperature-sensor-calibration` - 温度传感器校准\n\n## 参考文档\n\n- 《锂电池制造工艺标准 V4.1》\n- 《浆料搅拌工艺操作规程》\n- 《极片涂布工艺参数手册》\n- 《GB/T 36276-2018 电力储能用锂离子电池》",
       config: "{\"model\": \"visc_lstm_v3\"}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    viscosity_prediction_v3 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -65,9 +139,39 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 30,
     accuracy_score: 0.99,
     dependencies: [],
-    description: "基于β射线测厚仪数据的模头间隙自动调节算法。",
+    description: "当涂布厚度出现偏差、需要自动调整模头间隙、或优化涂布闭环控制时调用此 Skill。特别适用于：涂布厚度CPK低于1.33、换卷后厚度快速收敛、边缘削薄区厚度控制、多规格产品切换时的参数调整。",
+    category: "workflow",
+    triggerConditions: {
+      description: "在涂布工序，当β射线测厚仪检测到厚度偏差超过阈值时触发",
+      examples: ["厚度偏差超过2μm，启动自动调节", "换卷后快速收敛厚度", "优化CPK值"],
+      keywords: ["涂布", "厚度", "模头", "闭环", "测厚", "调节"]
+    },
+    gotchas: [
+      {
+        id: "mpc_divergence",
+        title: "MPC控制算法发散",
+        description: "在某些极端工况下，模型预测控制可能发散导致调整量过大",
+        severity: "critical",
+        solution: "设置调整量上限，当连续3次调整效果不佳时切换至manual模式"
+      },
+      {
+        id: "measurement_noise",
+        title: "测厚仪测量噪声",
+        description: "β射线测厚仪在材料接头处会产生读数跳变",
+        severity: "medium",
+        solution: "在接头前后10cm范围内暂停闭环控制，使用历史平均值"
+      },
+      {
+        id: "actuator_delay",
+        title: "执行器响应延迟",
+        description: "伺服电机调整模头螺栓存在机械延迟，过快调整会导致振荡",
+        severity: "high",
+        solution: "在MPC模型中加入延迟补偿环节，调整周期设为100ms"
+      }
+    ],
+    dependsOn: ["thickness-measurement"],
     files: {
-      readme: "# 涂布厚度闭环控制\n\n## 1. 概述\n\n### 1.1 业务价值\n涂布厚度一致性是锂电池极片质量的核心指标，直接影响电芯容量和循环寿命。本技能通过β射线测厚仪实时监测涂布厚度，结合MPC模型预测控制算法，实现模头间隙的自动闭环调节，将厚度CPK从1.33提升至1.67以上，减少人工干预90%。\n\n### 1.2 技术原理\n采用模型预测控制(MPC)算法，结合β射线测厚仪的实时扫描数据，建立涂布厚度-模头间隙动态模型。控制器预测未来N步的厚度偏差，优化求解模头螺栓调整量，实现快速、稳定的厚度闭环控制，控制周期100ms。\n\n### 1.3 应用场景\n- 正极双面涂布厚度控制\n- 负极双面涂布厚度控制\n- 极片边缘削薄区厚度控制\n- 涂布换卷时的厚度快速收敛\n\n## 2. 输入规范\n\n| 参数名 | 类型 | 必填 | 默认值 | 说明 |\n|--------|------|------|--------|------|\n| beta_ray_reading | array | 是 | - | β射线测厚仪扫描数据数组(μm) |\n| current_gap | number | 是 | - | 当前模头间隙(μm) |\n| target_thickness | number | 否 | 150 | 目标涂布厚度(μm) |\n| line_speed | number | 否 | 30 | 涂布线速度(m/min) |\n| coating_width | number | 否 | 600 | 涂布宽度(mm) |\n| control_mode | string | 否 | 'auto' | 控制模式：auto/manual/adaptive |\n\n## 3. 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| adjustment_microns | number | 模头间隙调整量(μm)，正值为增大 |\n| predicted_thickness | number | 预测调整后的厚度(μm) |\n| control_action | string | 控制动作：increase/decrease/hold |\n| confidence | number | 控制决策置信度(0-1) |\n| cpk_current | number | 当前CPK值 |\n| adjustment_map | array | 各螺栓位置调整量分布 |\n\n## 4. 性能指标\n\n| 指标 | 数值 |\n|------|------|\n| 控制精度 | ±1μm |\n| 响应时间 | <100ms |\n| 超调量 | <2% |\n| 稳态误差 | <0.5μm |\n| CPK提升 | 从1.33到1.67+ |\n\n## 5. 使用示例\n\n### 5.1 基础调用\n`skill.invoke({ beta_ray_reading: [148, 149, 151, 152, 150], current_gap: 250 })`\n\n### 5.2 完整参数调用\n`skill.invoke({ beta_ray_reading: [148, 149, 151, 152, 150], current_gap: 250, target_thickness: 150, line_speed: 35, coating_width: 650, control_mode: 'adaptive' })`\n\n## 6. 故障处理\n\n| 错误码 | 说明 | 处理建议 |\n|--------|------|----------|\n| Coat_001 | 测厚仪通信中断 | 检查β射线测厚仪网络连接 |\n| Coat_002 | 模头执行器故障 | 检查伺服电机和传动机构 |\n| Coat_003 | 厚度偏差超限 | 检查浆料供应稳定性，确认target_thickness设置 |\n| Coat_004 | 控制算法发散 | 切换至manual模式，联系工艺工程师 |\n| Coat_005 | 输入数据异常 | 检查beta_ray_reading数组长度和数值范围 |\n\n## 7. 版本历史\n\n| 版本 | 日期 | 变更内容 |\n|------|------|----------|\n| v1.0.0 | 2023-06 | 初始版本，基于PID控制 |\n| v1.2.0 | 2023-12 | 引入前馈补偿，提升响应速度 |\n| v1.5.0 | 2024-06 | 升级为MPC控制，支持多变量优化 |\n\n## 8. 依赖与前置条件\n\n- 硬件：β射线测厚仪、伺服电机驱动的模头调节机构、PLC控制器\n- 软件：TwinCAT 3、MATLAB/Simulink Runtime、Python 3.9+\n- 网络：EtherCAT实时以太网、OPC UA数据接口\n- 权限：需要设备操作员或工艺工程师角色权限\n- 前置流程：涂布机运行稳定，测厚仪校准完成，浆料供应正常",
+      readme: "# 涂布厚度闭环控制\n\n## 描述\n\n当涂布厚度出现偏差、需要自动调整模头间隙、或优化涂布闭环控制时调用此 Skill。特别适用于：涂布厚度CPK低于1.33、换卷后厚度快速收敛、边缘削薄区厚度控制、多规格产品切换时的参数调整。\n\n## 使用场景\n\n- 涂布过程中厚度波动超过±2μm，需要启动自动调节\n- 换卷后需要快速收敛到新卷的稳定厚度\n- 极片边缘削薄区厚度控制\n- 不同规格产品切换时快速调整参数\n\n## 初始化\n\n首次使用时，检查 `config.json` 是否存在。如不存在，询问用户：\n1. 目标涂布厚度（μm）\n2. 厚度允许偏差范围（±μm）\n3. 模头间隙调整上限（μm）\n4. 控制模式（auto/manual/adaptive）\n5. CPK目标值（默认1.67）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **MPC控制算法发散** - 在某些极端工况下，模型预测控制可能发散导致调整量过大，必须设置调整量上限\n2. **测厚仪测量噪声** - β射线测厚仪在材料接头处会产生读数跳变，必须在接头前后10cm范围内暂停闭环控制\n3. **执行器响应延迟** - 伺服电机调整模头螺栓存在机械延迟，过快调整会导致振荡，需要在模型中加入延迟补偿\n4. **浆料粘度变化** - 浆料粘度变化会影响厚度响应特性，需要定期重新标定模型\n5. **温度漂移** - 设备温度变化会导致机械部件热胀冷缩，影响间隙控制精度\n\n## 核心工作流\n\n### 1. 数据采集\n\n使用 `scripts/data_loader.py` 中的辅助函数：\n\n```python\nfrom scripts.data_loader import get_thickness_data, get_gap_position\n\n# 获取测厚仪数据\nthickness_data = get_thickness_data(scan_id='latest')\ncurrent_gap = get_gap_position(die_id='main')\n```\n\n### 2. 偏差计算\n\n```python\n# 计算厚度偏差\ntarget = config['target_thickness']\nactual = calculate_average_thickness(thickness_data)\ndeviation = actual - target\n\n# 判断是否触发调整\nif abs(deviation) > config['tolerance']:\n    trigger_adjustment = True\n```\n\n### 3. MPC控制计算\n\n```python\nfrom scripts.mpc_controller import calculate_adjustment\n\n# 使用MPC计算最优调整量\nadjustment = calculate_adjustment(\n    deviation=deviation,\n    current_gap=current_gap,\n    line_speed=line_speed,\n    model_params=config['mpc_params']\n)\n\n# 安全检查\nif abs(adjustment) > config['max_adjustment']:\n    adjustment = sign(adjustment) * config['max_adjustment']\n```\n\n### 4. 执行调整\n\n```python\n# 发送调整指令\nnew_gap = current_gap + adjustment\nset_die_gap(new_gap)\n\n# 记录调整历史\nlog_adjustment(\n    timestamp=now(),\n    old_gap=current_gap,\n    new_gap=new_gap,\n    reason=f\"厚度偏差{deviation}μm\"\n)\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| beta_ray_reading | array | 是 | β射线测厚仪扫描数据数组(μm) |\n| current_gap | number | 是 | 当前模头间隙(μm) |\n| target_thickness | number | 否 | 目标涂布厚度(μm)，默认从配置读取 |\n| line_speed | number | 否 | 涂布线速度(m/min) |\n| coating_width | number | 否 | 涂布宽度(mm) |\n| control_mode | string | 否 | 控制模式：auto/manual/adaptive |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| adjustment_microns | number | 模头间隙调整量(μm) |\n| predicted_thickness | number | 预测调整后的厚度(μm) |\n| control_action | string | 控制动作：increase/decrease/hold |\n| confidence | number | 控制决策置信度(0-1) |\n| cpk_current | number | 当前CPK值 |\n| adjustment_map | array | 各螺栓位置调整量分布 |\n\n## 依赖的Skill\n\n- `thickness-measurement` - 厚度测量数据获取\n- `die-gap-control` - 模头间隙控制\n\n## 参考文档\n\n- 《锂电池制造工艺标准 V4.1》\n- 《极片涂布工艺参数手册》\n- 《GB/T 36276-2018 电力储能用锂离子电池》\n- 《MPC模型预测控制应用指南》",
       config: "{\"target_thickness\": 150, \"control_period\": \"100ms\"}",
       script: "/**\n * coating_thickness_loop_v1 - 确定性执行脚本\n * 核心原则：相同输入 + 相同状态 = 相同输出\n */\n\nclass SkillExecutor {\n  constructor(config = {}) {\n    this.config = config;\n    this.startTime = Date.now();\n  }\n\n  /**\n   * 输入参数校验\n   */\n  validateInput(event) {\n    if (typeof event !== 'object' || event === null) {\n      return { valid: false, error: 'INPUT_MUST_BE_OBJECT' };\n    }\n    return { valid: true };\n  }\n\n  /**\n   * 执行逻辑 - 必须是确定性的\n   * 不允许使用 Math.random()、Date.now() 等不确定因素\n   */\n  execute(event) {\n    // 1. 输入校验\n    const validation = this.validateInput(event);\n    if (!validation.valid) {\n      return { error: validation.error, status: 'FAILED' };\n    }\n\n    // 2. 业务逻辑执行\n    const result = this.businessLogic(event);\n\n    // 3. 构建确定性输出\n    return {\n      status: 'SUCCESS',\n      result,\n      executionTimeMs: Date.now() - this.startTime\n    };\n  }\n\n  /**\n   * 业务逻辑实现\n   */\n  businessLogic(event) {\n    // 根据具体技能实现业务逻辑\n    return event;\n  }\n}\n\n/**\n * 技能入口函数\n */\nfunction handler(event, context = {}) {\n  const executor = new SkillExecutor(context.config);\n  return executor.execute(event);\n}\n\nmodule.exports = { handler, SkillExecutor };",
       scriptLang: "javascript",
@@ -87,9 +191,32 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 200,
     accuracy_score: 0.92,
     dependencies: [],
-    description: "根据来料厚度波动调整辊压压力以保证压实密度一致性。",
+    description: "当需要调整辊压压力、维持压实密度稳定、或根据来料厚度变化优化辊压工艺时调用此 Skill。特别适用于：来料厚度波动较大、需要维持恒定压实密度、不同材料切换时的参数调整、辊压后极片质量异常。",
+    category: "workflow",
+    triggerConditions: {
+      description: "在辊压工序，当来料厚度检测值与目标值偏差超过阈值时触发",
+      examples: ["来料厚度偏差5μm，调整辊压压力", "维持压实密度1.65g/cm³", "换卷后重新设定压力"],
+      keywords: ["辊压", "压力", "压实密度", "极片", "厚度", "调整"]
+    },
+    gotchas: [
+      {
+        id: "pressure_limit",
+        title: "压力上限保护",
+        description: "过高的辊压压力会损伤极片，导致活性物质脱落",
+        severity: "critical",
+        solution: "设置压力上限报警，超过阈值时停止调整并通知工艺工程师"
+      },
+      {
+        id: "roller_wear",
+        title: "辊轮磨损补偿",
+        description: "辊轮长期使用后会产生磨损，相同的压力设定会产生不同的压实效果",
+        severity: "medium",
+        solution: "定期校准辊轮间隙-压力曲线，在模型中加入磨损补偿系数"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Roller Pressure Optimization\n\n维持极片压实密度恒定。",
+      readme: "# 辊压压力自适应优化\n\n## 描述\n\n当需要调整辊压压力、维持压实密度稳定、或根据来料厚度变化优化辊压工艺时调用此 Skill。特别适用于：来料厚度波动较大、需要维持恒定压实密度、不同材料切换时的参数调整、辊压后极片质量异常。\n\n## 使用场景\n\n- 来料厚度波动±5μm以上，需要动态调整压力\n- 更换材料类型（如NCM切到LFP），需要重新设定压力参数\n- 辊压后极片出现裂纹或过压，需要优化压力曲线\n- 连续生产中发现压实密度漂移，需要闭环控制\n\n## 初始化\n\n首次使用时，询问用户：\n1. 目标压实密度（g/cm³）\n2. 压力上下限安全阈值（kN）\n3. 来料厚度基准值（μm）\n4. 辊轮直径和材质（影响压力计算）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **压力上限保护** - 过高的辊压压力会损伤极片，导致活性物质脱落，必须设置压力上限并配置紧急停机\n2. **辊轮磨损补偿** - 辊轮长期使用后会产生磨损，相同的压力设定会产生不同的压实效果，需要定期校准\n3. **温度影响** - 极片温度影响其延展性，冷态和热态下相同压力会产生不同压实密度\n4. **速度-压力耦合** - 走带速度与压力相互影响，快速调整可能导致张力波动\n5. **来料厚度跳变** - 换卷时来料厚度可能突变，需要渐变调整而非阶跃调整\n\n## 核心工作流\n\n### 1. 数据采集\n```python\n# 获取实时数据\nincoming_thickness = get_thickness_sensor_data()\ncurrent_pressure = get_hydraulic_pressure()\ncurrent_density = get_density_measurement()\nline_speed = get_line_speed()\n```\n\n### 2. 压力计算\n```python\n# 计算所需压力\nthickness_deviation = incoming_thickness - target_thickness\npressure_adjustment = calculate_pressure_adjustment(\n    thickness_deviation, \n    current_density,\n    target_density\n)\nnew_pressure = current_pressure + pressure_adjustment\n\n# 安全检查\nif new_pressure > config['max_pressure']:\n    new_pressure = config['max_pressure']\n    alert_manager.send(\"压力达到上限\")\n```\n\n### 3. 执行调整\n```python\n# 渐变调整避免冲击\nif abs(pressure_adjustment) > 10:\n    # 大调整分步执行\n    step_adjust(pressure_adjustment, steps=5, interval=2)\nelse:\n    set_hydraulic_pressure(new_pressure)\n\n# 记录调整\nlog_adjustment(batch_id, current_pressure, new_pressure, reason)\n```\n\n### 4. 效果验证\n```python\n# 等待稳定后验证\ntime.sleep(5)\nnew_density = get_density_measurement()\ndensity_error = abs(new_density - target_density) / target_density\n\nif density_error < 0.01:\n    return {\"status\": \"success\", \"message\": \"压实密度达标\"}\nelse:\n    return {\"status\": \"adjusting\", \"message\": \"继续微调\"}\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| target_density | number | 是 | 目标压实密度（g/cm³） |\n| incoming_thickness | number | 是 | 来料厚度（μm） |\n| current_pressure | number | 否 | 当前压力（kN），不填则读取设备 |\n| line_speed | number | 否 | 走带速度（m/min），用于速度补偿 |\n| material_type | string | 否 | 材料类型（LFP/NCM/Graphite） |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| hydraulic_pressure | number | 建议液压压力（kN） |\n| pressure_adjustment | number | 压力调整量（kN） |\n| predicted_density | number | 预测压实密度（g/cm³） |\n| adjustment_confidence | number | 调整置信度（0-1） |\n| warning_flags | array | 警告标志列表 |\n\n## 依赖的Skill\n\n- `thickness-measurement` - 厚度测量数据获取\n- `density-measurement` - 压实密度测量\n\n## 参考文档\n\n- 《极片辊压工艺技术规范》\n- 《锂电池极片压实密度控制标准》\n- 《辊压机操作规程 V2.0》\n- 《极片机械强度测试方法》",
       config: "{\"target_density\": 1.5}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    roller_pressure_opt_v2 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -109,9 +236,32 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 10,
     accuracy_score: 0.95,
     dependencies: [],
-    description: "高速卷绕过程中的动态张力补偿算法。",
+    description: "当卷绕过程中出现张力波动、需要补偿卷针非圆效应、或优化卷绕质量时调用此 Skill。特别适用于：高速卷绕时张力不稳定、卷芯变形、卷绕起皱、卷针偏心导致的周期性波动。",
+    category: "workflow",
+    triggerConditions: {
+      description: "在卷绕工序，当张力传感器检测到周期性波动或超出设定范围时触发",
+      examples: ["张力波动超过±10%", "补偿卷针非圆效应", "优化卷绕速度"],
+      keywords: ["卷绕", "张力", "补偿", "卷针", "波动", "控制"]
+    },
+    gotchas: [
+      {
+        id: "pid_tuning",
+        title: "PID参数整定困难",
+        description: "不同卷绕速度下最优PID参数不同，固定参数无法满足全速域",
+        severity: "high",
+        solution: "采用增益调度PID，根据速度区间自动切换参数组"
+      },
+      {
+        id: "encoder_resolution",
+        title: "编码器分辨率不足",
+        description: "低分辨率编码器无法准确检测卷针位置，影响前馈补偿精度",
+        severity: "medium",
+        solution: "使用高分辨率编码器(≥2000ppr)，或在算法中加入插值补偿"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Tension Control\n\nPID + 前馈控制算法，用于消除卷针非圆效应引起的张力波动。",
+      readme: "# 卷绕张力波动抑制\n\n## 描述\n\n当卷绕过程中出现张力波动、需要补偿卷针非圆效应、或优化卷绕质量时调用此 Skill。特别适用于：高速卷绕时张力不稳定、卷芯变形、卷绕起皱、卷针偏心导致的周期性波动。\n\n## 使用场景\n\n- 高速卷绕（>2000mm/s）时出现张力周期性波动\n- 卷芯出现\"菊花芯\"或\"宝塔芯\"变形\n- 极片出现起皱或层间错位\n- 卷针更换后需要重新校准补偿参数\n\n## 初始化\n\n首次使用时，询问用户：\n1. 卷绕机型号和卷针直径（mm）\n2. 目标张力范围（N）\n3. 卷针偏心补偿参数（根据设备标定）\n4. 速度分段PID参数组\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **PID参数整定困难** - 不同卷绕速度下最优PID参数不同，固定参数无法满足全速域，建议采用增益调度\n2. **编码器分辨率不足** - 低分辨率编码器无法准确检测卷针位置，影响前馈补偿精度，建议使用≥2000ppr编码器\n3. **卷针磨损** - 长期使用后卷针会产生偏心磨损，需要定期重新标定补偿参数\n4. **极片模量变化** - 不同批次极片的弹性模量可能存在差异，影响张力响应\n5. **加速度冲击** - 启停和加减速时惯性力会导致张力突变，需要专门的前馈补偿\n\n## 核心工作流\n\n### 1. 数据采集\n```python\n# 获取实时数据\ntension_data = get_tension_sensor_data()\nspindle_position = get_spindle_encoder()\nline_speed = get_line_speed()\nacceleration = get_acceleration()\n```\n\n### 2. 非圆补偿计算\n```python\n# 计算卷针位置对应的前馈补偿\n# 卷针每转一圈产生一次周期性波动\nrotation_angle = spindle_position % 360\neccentric_compensation = calculate_eccentric_compensation(\n    rotation_angle,\n    config['eccentric_amplitude'],\n    config['eccentric_phase']\n)\n```\n\n### 3. PID控制\n```python\n# 根据速度区间选择PID参数\nif line_speed < 1000:\n    pid_params = config['pid_low_speed']\nelif line_speed < 2000:\n    pid_params = config['pid_mid_speed']\nelse:\n    pid_params = config['pid_high_speed']\n\n# 计算PID输出\ntension_error = target_tension - current_tension\npid_output = pid_controller.compute(tension_error, pid_params)\n```\n\n### 4. 扭矩输出\n```python\n# 综合前馈和反馈\ntotal_compensation = pid_output + eccentric_compensation + inertia_compensation\n\n# 输出到伺服驱动器\nset_torque_output(total_compensation)\n\n# 记录数据用于分析\nlog_tension_control(timestamp, tension_data, total_compensation)\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| real_time_tension | array | 是 | 张力传感器实时数据（N） |\n| speed | number | 是 | 当前卷绕速度（mm/s） |\n| spindle_position | number | 是 | 卷针角度位置（°） |\n| target_tension | number | 否 | 目标张力（N），默认5N |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| torque_compensation | number | 扭矩补偿值（Nm） |\n| pid_component | number | PID控制分量 |\n| feedforward_component | number | 前馈补偿分量 |\n| tension_variance | number | 张力波动方差 |\n| control_mode | string | 控制模式：normal/adaptive |\n\n## 依赖的Skill\n\n- `tension-sensor-calibration` - 张力传感器校准\n- `spindle-position-monitor` - 卷针位置监测\n\n## 参考文档\n\n- 《锂电池卷绕工艺标准》\n- 《电芯装配工艺规程》\n- 《张力控制技术在锂电制造中的应用》\n- 《卷绕机操作与维护手册》",
       config: "{\"kp\": 0.5, \"ki\": 0.1}",
       script: "/**\n * tension_control_algo_v1 - 确定性执行脚本\n * 核心原则：相同输入 + 相同状态 = 相同输出\n */\n\nclass SkillExecutor {\n  constructor(config = {}) {\n    this.config = config;\n    this.startTime = Date.now();\n  }\n\n  /**\n   * 输入参数校验\n   */\n  validateInput(event) {\n    if (typeof event !== 'object' || event === null) {\n      return { valid: false, error: 'INPUT_MUST_BE_OBJECT' };\n    }\n    return { valid: true };\n  }\n\n  /**\n   * 执行逻辑 - 必须是确定性的\n   * 不允许使用 Math.random()、Date.now() 等不确定因素\n   */\n  execute(event) {\n    // 1. 输入校验\n    const validation = this.validateInput(event);\n    if (!validation.valid) {\n      return { error: validation.error, status: 'FAILED' };\n    }\n\n    // 2. 业务逻辑执行\n    const result = this.businessLogic(event);\n\n    // 3. 构建确定性输出\n    return {\n      status: 'SUCCESS',\n      result,\n      executionTimeMs: Date.now() - this.startTime\n    };\n  }\n\n  /**\n   * 业务逻辑实现\n   */\n  businessLogic(event) {\n    // 根据具体技能实现业务逻辑\n    return event;\n  }\n}\n\n/**\n * 技能入口函数\n */\nfunction handler(event, context = {}) {\n  const executor = new SkillExecutor(context.config);\n  return executor.execute(event);\n}\n\nmodule.exports = { handler, SkillExecutor };",
       scriptLang: "javascript",
@@ -131,9 +281,32 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 600,
     accuracy_score: 0.89,
     dependencies: [],
-    description: "预测电解液在电芯内部的浸润程度。",
+    description: "当需要预测注液浸润效果、评估化成前电芯状态、或优化注液工艺参数时调用此 Skill。特别适用于：注液量调整后评估效果、真空静置时间优化、新电解液配方的浸润性评估。",
+    category: "validation",
+    triggerConditions: {
+      description: "在注液工序完成后，化成工序开始前，评估电芯浸润状态时触发",
+      examples: ["评估这批电芯的浸润效果", "注液量5.2g后的浸润评分", "优化真空静置时间"],
+      keywords: ["注液", "浸润", "电解液", "真空", "静置", "评估"]
+    },
+    gotchas: [
+      {
+        id: "electrolyte_viscosity",
+        title: "电解液粘度变化",
+        description: "不同温度下电解液粘度差异大，影响浸润速度",
+        severity: "medium",
+        solution: "记录注液环境温度，模型中加入温度修正系数"
+      },
+      {
+        id: "cell_variation",
+        title: "电芯个体差异",
+        description: "极片孔隙率存在批次差异，相同的注液量可能产生不同的浸润效果",
+        severity: "high",
+        solution: "结合极片批次信息进行综合评估，设置置信区间"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Soaking Prediction\n\n基于注液量和真空静置时间，预测电解液浸润质量。",
+      readme: "# 注液浸润效果预测\n\n## 描述\n\n当需要预测注液浸润效果、评估化成前电芯状态、或优化注液工艺参数时调用此 Skill。特别适用于：注液量调整后评估效果、真空静置时间优化、新电解液配方的浸润性评估。\n\n## 使用场景\n\n- 调整注液量后，需要评估是否达到目标浸润度\n- 优化真空静置工艺参数（真空度、保持时间）\n- 新型电解液配方验证，评估其浸润性能\n- 化成前筛选浸润不良的电芯，避免批量不良\n\n## 初始化\n\n首次使用时，询问用户：\n1. 目标浸润评分阈值（0-100）\n2. 电解液类型（碳酸酯/醚类/混合）\n3. 极片孔隙率参考值（%）\n4. 浸润评分模型版本（v1/v2）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **电解液粘度变化** - 不同温度下电解液粘度差异大，影响浸润速度，模型必须包含温度修正\n2. **电芯个体差异** - 极片孔隙率存在批次差异，相同的注液量可能产生不同的浸润效果，需要设置置信区间\n3. **真空度波动** - 真空静置过程中真空度不稳定会影响浸润均匀性，需要监控真空曲线\n4. **注液嘴残留** - 注液嘴残留电解液会导致实际注液量偏差，影响预测准确性\n5. **静置时间不足** - 部分电解液需要较长静置时间才能充分浸润，过早评估会误判\n\n## 核心工作流\n\n### 1. 数据采集\n```python\n# 获取注液和静置数据\ninjection_amount = get_injection_amount(cell_id)\nvacuum_data = get_vacuum_curve(cell_id)\nrest_time = get_rest_duration(cell_id)\ncell_weight_before = get_weight_before(cell_id)\ncell_weight_after = get_weight_after(cell_id)\n\n# 计算实际吸液量\nactual_absorption = cell_weight_after - cell_weight_before\nabsorption_rate = actual_absorption / injection_amount\n```\n\n### 2. 特征提取\n```python\n# 提取真空曲线特征\nvacuum_features = extract_vacuum_features(vacuum_data)\n# 包括：达到目标真空度时间、真空保持稳定性、破真空速率等\n\n# 计算理论吸液量\ntheoretical_absorption = calculate_theoretical_absorption(\n    electrode_porosity=config['porosity'],\n    electrolyte_density=config['electrolyte_density'],\n    cell_volume=get_cell_volume()\n)\n```\n\n### 3. 浸润评分\n```python\n# 使用模型预测浸润质量\nmodel_input = {\n    'injection_amount': injection_amount,\n    'vacuum_features': vacuum_features,\n    'rest_time': rest_time,\n    'absorption_rate': absorption_rate,\n    'temperature': get_ambient_temperature()\n}\n\nsoaking_score = soaking_model.predict(model_input)\n\n# 判断是否达标\nis_qualified = soaking_score >= config['threshold']\n```\n\n### 4. 建议生成\n```python\nif not is_qualified:\n    # 生成改进建议\n    suggestions = []\n    if rest_time < config['min_rest_time']:\n        suggestions.append(f\"建议延长静置时间至{config['min_rest_time']}小时\")\n    if absorption_rate < 0.95:\n        suggestions.append(\"建议检查真空度是否达标\")\n    if soaking_score < config['threshold'] * 0.9:\n        suggestions.append(\"建议增加注液量5-8%\")\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| injection_amount | number | 是 | 注液量（g） |\n| vacuum_time | number | 是 | 真空静置时间（h） |\n| cell_weight | number | 是 | 电芯重量（g） |\n| vacuum_pressure | number | 否 | 真空度（kPa），默认-95kPa |\n| rest_temperature | number | 否 | 静置环境温度（℃） |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| soaking_score | number | 浸润评分（0-100） |\n| soaking_level | string | 浸润等级：excellent/good/fair/poor |\n| absorption_rate | number | 吸液率（0-1） |\n| is_qualified | boolean | 是否达到标准 |\n| suggestions | array | 改进建议列表 |\n| confidence | number | 预测置信度（0-1） |\n\n## 依赖的Skill\n\n- `injection-monitor` - 注液量监测\n- `vacuum-chamber-monitor` - 真空静置室监测\n\n## 参考文档\n\n- 《电解液注入工艺规范》\n- 《锂电池化成工艺标准》\n- 《浸润效果评估方法》\n- 《化成设备操作规程》",
       config: "{}",
       script: "/**\n * electrolyte_soaking_pred_v1 - 确定性执行脚本\n * 核心原则：相同输入 + 相同状态 = 相同输出\n */\n\nclass SkillExecutor {\n  constructor(config = {}) {\n    this.config = config;\n    this.startTime = Date.now();\n  }\n\n  /**\n   * 输入参数校验\n   */\n  validateInput(event) {\n    if (typeof event !== 'object' || event === null) {\n      return { valid: false, error: 'INPUT_MUST_BE_OBJECT' };\n    }\n    return { valid: true };\n  }\n\n  /**\n   * 执行逻辑 - 必须是确定性的\n   * 不允许使用 Math.random()、Date.now() 等不确定因素\n   */\n  execute(event) {\n    // 1. 输入校验\n    const validation = this.validateInput(event);\n    if (!validation.valid) {\n      return { error: validation.error, status: 'FAILED' };\n    }\n\n    // 2. 业务逻辑执行\n    const result = this.businessLogic(event);\n\n    // 3. 构建确定性输出\n    return {\n      status: 'SUCCESS',\n      result,\n      executionTimeMs: Date.now() - this.startTime\n    };\n  }\n\n  /**\n   * 业务逻辑实现\n   */\n  businessLogic(event) {\n    // 根据具体技能实现业务逻辑\n    return event;\n  }\n}\n\n/**\n * 技能入口函数\n */\nfunction handler(event, context = {}) {\n  const executor = new SkillExecutor(context.config);\n  return executor.execute(event);\n}\n\nmodule.exports = { handler, SkillExecutor };",
       scriptLang: "javascript",
@@ -153,9 +326,39 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 1000,
     accuracy_score: 0.96,
     dependencies: [],
-    description: "基于化成阶段的电压电流曲线预测最终分容容量，缩短分容时间。",
+    description: "当需要预测电芯容量、提前识别不良品、或优化分容工艺时调用此 Skill。特别适用于：化成阶段提前预测容量、筛选低容量电芯、减少分容时间、容量分级。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在化成工序进行中，当获取到完整的化成曲线数据时触发",
+      examples: ["预测这批电芯的容量", "筛选容量低于2000mAh的电芯", "优化分容策略"],
+      keywords: ["容量", "化成", "预测", "分容", "曲线", "分级"]
+    },
+    gotchas: [
+      {
+        id: "curve_quality",
+        title: "化成曲线质量问题",
+        description: "化成设备采样频率不一致可能导致曲线特征提取不准确",
+        severity: "high",
+        solution: "统一采样频率为1Hz，对低频数据进行插值处理"
+      },
+      {
+        id: "temperature_effect",
+        title: "化成温度影响",
+        description: "化成温度直接影响容量预测精度，不同温度下相同曲线可能对应不同容量",
+        severity: "critical",
+        solution: "将化成温度作为模型输入特征，建立温度-容量补偿模型"
+      },
+      {
+        id: "model_drift",
+        title: "模型漂移",
+        description: "随着材料批次变化，预测模型可能产生漂移",
+        severity: "medium",
+        solution: "定期使用最新分容数据重新训练模型，监控预测误差趋势"
+      }
+    ],
+    dependsOn: ["formation-curve-extractor"],
     files: {
-      readme: "# Capacity Prediction v5\n\n利用充电曲线特征（dV/dQ）预测电池容量。",
+      readme: "# 化成容量预测模型\n\n## 描述\n\n当需要预测电芯容量、提前识别不良品、或优化分容工艺时调用此 Skill。特别适用于：化成阶段提前预测容量、筛选低容量电芯、减少分容时间、容量分级。\n\n## 使用场景\n\n- 化成进行到80%时，提前预测最终容量，筛选不良品\n- 根据预测容量进行预分级，优化分容柜利用率\n- 分析化成曲线异常，识别工艺问题\n- 评估新配方或新工艺对容量的影响\n\n## 初始化\n\n首次使用时，询问用户：\n1. 容量分级标准（A/B/C级对应的容量范围）\n2. 预测模型版本（v5标准版/v5-light快速版）\n3. 预测触发时点（化成60%/80%/100%）\n4. 不良品筛选阈值（如预测容量<2000mAh标记为不良）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **化成曲线质量问题** - 化成设备采样频率不一致可能导致曲线特征提取不准确，必须统一为1Hz\n2. **化成温度影响** - 化成温度直接影响容量预测精度，不同温度下相同曲线可能对应不同容量，必须将温度作为特征\n3. **模型漂移** - 随着材料批次变化，预测模型可能产生漂移，需要定期用新数据重训练\n4. **异常曲线干扰** - 化成过程中的异常（如微短路）会导致曲线畸变，需要先做异常检测\n5. **SOC估算误差** - 化成初期SOC估算不准会影响特征提取，建议从化成60%后开始预测\n\n## 核心工作流\n\n### 1. 数据获取与预处理\n```python\n# 获取化成曲线\nformation_curve = get_formation_curve(cell_id)\n\n# 标准化采样频率\nif formation_curve.sample_rate != 1.0:\n    formation_curve = resample(formation_curve, target_rate=1.0)\n\n# 数据清洗\nformation_curve = remove_outliers(formation_curve)\nformation_curve = fill_missing(formation_curve)\n```\n\n### 2. 特征提取\n```python\n# 提取dV/dQ曲线特征\ndv_dq_curve = calculate_dv_dq(formation_curve)\n\n# 提取关键特征点\nfeatures = {\n    'peak_positions': extract_peaks(dv_dq_curve),\n    'peak_heights': extract_peak_heights(dv_dq_curve),\n    'curve_area': calculate_curve_area(dv_dq_curve),\n    'ocv_drop': calculate_ocv_drop(formation_curve),\n    'cc_ratio': calculate_cc_ratio(formation_curve),\n    'formation_temp': get_average_temperature(cell_id)\n}\n```\n\n### 3. 容量预测\n```python\n# 使用模型预测\nmodel = load_model(config['model_version'])\npredicted_capacity = model.predict(features)\n\n# 获取置信度\nconfidence = model.get_confidence(features)\n\n# 容量分级\ngrade = classify_capacity(predicted_capacity, config['grade_thresholds'])\n```\n\n### 4. 不良品判断\n```python\n# 判断是否不良\nis_abnormal = False\nabnormal_reasons = []\n\nif predicted_capacity < config['defect_threshold']:\n    is_abnormal = True\n    abnormal_reasons.append(f\"预测容量{predicted_capacity:.0f}mAh低于阈值\")\n\nif confidence < 0.7:\n    abnormal_reasons.append(\"预测置信度低，建议完整化成\")\n\n# 检查曲线异常\nif detect_curve_anomaly(formation_curve):\n    is_abnormal = True\n    abnormal_reasons.append(\"化成曲线异常\")\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| formation_curve | array | 是 | 化成电压-电流-时间曲线 |\n| ocv_drop | number | 是 | 开路电压降（mV） |\n| cell_temperature | number | 否 | 化成平均温度（℃） |\n| formation_stage | string | 否 | 化成阶段：60%/80%/100% |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| predicted_capacity | number | 预测容量（mAh） |\n| grade | string | 容量等级：A/B/C/D |\n| confidence | number | 预测置信度（0-1） |\n| is_abnormal | boolean | 是否异常 |\n| abnormal_reasons | array | 异常原因列表 |\n| estimated_formation_time | number | 预计完成化成时间（min） |\n\n## 依赖的Skill\n\n- `formation-curve-extractor` - 化成曲线数据获取\n- `curve-anomaly-detector` - 曲线异常检测\n\n## 参考文档\n\n- 《锂电池容量分选标准》\n- 《化成曲线分析方法》\n- 《电池一致性评价方法》\n- 《容量预测模型技术规范》",
       config: "{\"feature_extraction\": \"standard\"}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    capacity_prediction_v5 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -175,9 +378,39 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 50,
     accuracy_score: 0.99,
     dependencies: [],
-    description: "Pack下线测试中的热失控风险实时评估。",
+    description: "当需要评估Pack热失控风险、监测电芯温升异常、或进行下线安全检测时调用此 Skill。特别适用于：Pack下线前的安全评估、热测试过程中的风险监测、异常温升预警、电池包安全等级评估。",
+    category: "validation",
+    triggerConditions: {
+      description: "在Pack下线测试过程中，当温度或电压数据更新时实时触发",
+      examples: ["评估Pack热失控风险", "监测温升是否异常", "下线安全检测"],
+      keywords: ["热失控", "Pack", "温度", "风险", "安全", "预警"]
+    },
+    gotchas: [
+      {
+        id: "false_positive",
+        title: "误报率控制",
+        description: "过于敏感的阈值会导致大量误报，影响生产效率",
+        severity: "high",
+        solution: "采用多级预警机制（提示/警告/紧急），根据风险等级采取不同措施"
+      },
+      {
+        id: "sensor_failure",
+        title: "温度传感器故障",
+        description: "单个传感器故障可能导致误判",
+        severity: "critical",
+        solution: "使用多个传感器交叉验证，当某传感器读数与其他差异过大时标记为异常"
+      },
+      {
+        id: "environmental_interference",
+        title: "环境干扰",
+        description: "测试环境温度波动可能影响评估结果",
+        severity: "medium",
+        solution: "记录环境温度，在模型中加入环境补偿，确保测试环境稳定"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Thermal Runaway Warning\n\n监测电芯温升速率 (dT/dt) 和电压压差。",
+      readme: "# Pack热失控预警\n\n## 描述\n\n当需要评估Pack热失控风险、监测电芯温升异常、或进行下线安全检测时调用此 Skill。特别适用于：Pack下线前的安全评估、热测试过程中的风险监测、异常温升预警、电池包安全等级评估。\n\n## 使用场景\n\n- Pack下线前的最终安全检测\n- 热滥用测试过程中实时监控\n- 充电过程中异常温升检测\n- 存储状态下的安全状态评估\n\n## 初始化\n\n首次使用时，询问用户：\n1. 预警阈值设置（温升速率、温差、电压压差）\n2. 预警级别定义（提示/警告/紧急）\n3. 响应动作配置（记录/告警/停机）\n4. 传感器配置（数量、位置、采样频率）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **误报率控制** - 过于敏感的阈值会导致大量误报，影响生产效率，建议采用多级预警机制\n2. **温度传感器故障** - 单个传感器故障可能导致误判，必须使用多传感器交叉验证\n3. **环境干扰** - 测试环境温度波动可能影响评估结果，需要环境补偿\n4. **热惯性延迟** - 电芯内部温度与表面温度存在差异，表面温度变化滞后于内部\n5. **充电状态影响** - 充电过程中的温升与热失控温升特征不同，需要区分判断\n\n## 核心工作流\n\n### 1. 数据采集\n```python\n# 获取实时数据\ncell_temperatures = get_all_temperature_sensors(pack_id)\ncell_voltages = get_all_voltage_sensors(pack_id)\nenvironment_temp = get_environment_temperature()\ntimestamp = get_timestamp()\n\n# 计算关键指标\ndt_dt = calculate_temp_rise_rate(cell_temperatures, timestamp)\ntemp_diff = max(cell_temperatures) - min(cell_temperatures)\nvoltage_diff = max(cell_voltages) - min(cell_voltages)\n```\n\n### 2. 风险评估\n```python\n# 多维度风险评估\nrisks = []\n\n# 温升速率判断\nif dt_dt > config['dt_dt_threshold']:\n    risks.append({\n        'type': 'temperature_rise',\n        'level': 'critical',\n        'value': dt_dt,\n        'message': f'温升速率{dt_dt:.2f}℃/min超过阈值'\n    })\n\n# 温差判断\nif temp_diff > config['temp_diff_threshold']:\n    risks.append({\n        'type': 'temperature_diff',\n        'level': 'warning',\n        'value': temp_diff,\n        'message': f'电芯间温差{temp_diff:.1f}℃超过阈值'\n    })\n\n# 电压压差判断\nif voltage_diff > config['voltage_diff_threshold']:\n    risks.append({\n        'type': 'voltage_diff',\n        'level': 'high',\n        'value': voltage_diff,\n        'message': f'电压压差{voltage_diff:.3f}V超过阈值'\n    })\n```\n\n### 3. 综合评分\n```python\n# 计算综合风险等级\nif any(r['level'] == 'critical' for r in risks):\n    risk_level = 4  # 紧急\nelif any(r['level'] == 'high' for r in risks):\n    risk_level = 3  # 高危\nelif any(r['level'] == 'warning' for r in risks):\n    risk_level = 2  # 警告\nelif len(risks) > 0:\n    risk_level = 1  # 提示\nelse:\n    risk_level = 0  # 正常\n\n# 生成预警信息\nwarning_msg = generate_warning_message(risks)\n```\n\n### 4. 响应执行\n```python\n# 根据风险等级执行响应\nif risk_level >= 4:\n    # 紧急响应\n    emergency_stop(pack_id)\n    alert_manager.send_urgent(warning_msg)\n    log_incident(pack_id, risks, level='critical')\nelif risk_level >= 2:\n    # 警告响应\n    alert_manager.send_warning(warning_msg)\n    log_incident(pack_id, risks, level='warning')\nelse:\n    # 记录日志\n    log_incident(pack_id, risks, level='info')\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| cell_temperatures | array | 是 | 各电芯温度（℃） |\n| cell_voltages | array | 是 | 各电芯电压（V） |\n| pack_id | string | 是 | Pack唯一标识 |\n| environment_temp | number | 否 | 环境温度（℃），默认25℃ |\n| charge_current | number | 否 | 充电电流（A），用于判断充电状态 |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| risk_level | number | 风险等级：0-4（正常-紧急） |\n| warning_msg | string | 预警信息 |\n| risks | array | 风险详情列表 |\n| dt_dt | number | 温升速率（℃/min） |\n| max_temp | number | 最高温度（℃） |\n| max_temp_diff | number | 最大温差（℃） |\n| recommended_action | string | 建议操作 |\n\n## 依赖的Skill\n\n- `temperature-sensor-monitor` - 温度传感器监测\n- `voltage-sensor-monitor` - 电压传感器监测\n\n## 参考文档\n\n- 《GB 38031-2020 电动汽车用动力蓄电池安全要求》\n- 《锂电池热失控预警系统设计规范》\n- 《Pack级安全检测标准》\n- 《热失控机理及防控技术》",
       config: "{\"max_temp_diff\": 5.0}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    thermal_runaway_warning_v2 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -197,7 +430,37 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 2000,
     accuracy_score: 0.93,
     dependencies: [],
-    description: "针对锂电制造场景，综合化成段瓶颈、静置室库位及正极材料供应，生成最优排产计划。",
+    description: "当需要生成生产计划、平衡产销需求、或优化资源配置时调用此 Skill。特别适用于：月度/周度排产计划制定、化成段瓶颈分析、静置室库位规划、正极材料JIT供应匹配。",
+    category: "workflow",
+    triggerConditions: {
+      description: "在制定生产计划时，当销售预测、库存水平、产能约束等数据就绪时触发",
+      examples: ["制定下周排产计划", "分析化成段瓶颈", "优化正极材料采购计划"],
+      keywords: ["排产", "计划", "产销", "瓶颈", "优化", "S&OP"]
+    },
+    gotchas: [
+      {
+        id: "formation_bottleneck",
+        title: "化成段瓶颈动态变化",
+        description: "化成柜可用数量会因设备维护而动态变化，静态模型可能失效",
+        severity: "high",
+        solution: "实时获取化成柜OEE数据，在约束条件中动态调整可用产能"
+      },
+      {
+        id: "material_lead_time",
+        title: "正极材料交期波动",
+        description: "不同供应商的交期差异大，且受市场影响波动",
+        severity: "medium",
+        solution: "维护供应商交期数据库，设置安全库存缓冲"
+      },
+      {
+        id: "aging_room_constraint",
+        title: "静置室库位约束",
+        description: "高温静置室库位是硬约束，超容会导致产线停滞",
+        severity: "critical",
+        solution: "实时监控库位占用率，当接近上限时触发预警并调整前端产出"
+      }
+    ],
+    dependsOn: ["demand-forecast", "capacity-evaluation"],
     files: {
       readme: "# S&OP Balancer (Lithium Battery Edition)\n\n## 概述\n锂电制造典型的TOC（瓶颈管理）场景优化器。针对后端化成（Formation）产能受限和中间品高温静置（Aging）周期长的特点，平衡前端极片制造速度与后端Pack交付需求。\n\n## 关键约束模型\n1. **化成柜OEE**: 限制电芯下线速度的硬约束。\n2. **静置室库位**: 限制WIP（在制品）积压上限。\n3. **正极材料供应**: LFP/NCM 昂贵主材的JIT到货匹配。\n\n## 业务价值\n* 消除化成段“堵柜”现象\n* 降低高价值正极材料库存资金占用\n* 确保 Pack 订单的齐套率",
       config: "{\"solver\": \"cbc\", \"time_horizon\": \"12 weeks\", \"constraints\": [\"formation_capacity\", \"aging_room_slots\"]}",
@@ -219,7 +482,37 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 150,
     accuracy_score: 0.91,
     dependencies: [],
-    description: "利用振动和油液分析数据，预测关键设备（如涂布机辊轴）的剩余寿命。",
+    description: "当需要评估设备健康状态、预测设备故障时间、或制定预防性维护计划时调用此 Skill。特别适用于：关键设备（涂布机、辊压机）的RUL预测、维护计划优化、备件采购决策、设备更换评估。",
+    category: "validation",
+    triggerConditions: {
+      description: "在设备运行过程中，当振动频谱或油液分析数据更新时触发",
+      examples: ["预测涂布机辊轴剩余寿命", "评估设备健康状态", "制定维护计划"],
+      keywords: ["RUL", "剩余寿命", "振动", "设备", "预测", "维护"]
+    },
+    gotchas: [
+      {
+        id: "data_quality",
+        title: "传感器数据质量",
+        description: "振动传感器安装位置不当或松动会导致频谱失真",
+        severity: "high",
+        solution: "定期检查传感器安装状态，在数据采集前进行质量校验"
+      },
+      {
+        id: "operating_conditions",
+        title: "工况差异",
+        description: "不同负载、转速下的振动特征不同，模型需要工况标签",
+        severity: "medium",
+        solution: "记录设备运行工况，建立多工况退化模型"
+      },
+      {
+        id: "failure_mode_complexity",
+        title: "故障模式多样性",
+        description: "同一设备可能存在多种故障模式，单一模型难以覆盖",
+        severity: "high",
+        solution: "采用多任务学习，同时预测多种故障模式的概率"
+      }
+    ],
+    dependsOn: ["vibration-analyzer", "oil-analysis"],
     files: {
       readme: "# Equipment RUL Prediction\n\n## 概述\nRemaining Useful Life (RUL) 预测模型。\n\n## 输入数据\n* **振动频谱**: 频域特征用于识别轴承磨损。\n* **油液分析**: 铁谱分析数据用于检测齿轮箱磨损。\n\n## 算法\n结合 CNN (提取频域特征) 和 LSTM (时序退化建模) 的混合网络。",
       config: "{\"model_path\": \"s3://models/rul_hybrid_v2.pt\", \"threshold_alert\": 7}",
@@ -246,7 +539,37 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 80,
     accuracy_score: 0.88,
     dependencies: [],
-    description: "综合历史工单、专家排班及备件位置距离，精准预测故障恢复时间(MTTR)。",
+    description: "当设备发生故障需要维修、需要估算修复时间、或调度维修资源时调用此 Skill。特别适用于：设备停机后的快速响应、维修工时估算、专家调度决策、备件物流时间评估。",
+    category: "workflow",
+    triggerConditions: {
+      description: "在设备发生故障报修时，当故障代码和现场信息录入系统时触发",
+      examples: ["估算这次故障的修复时间", "调度最近的维修专家", "评估备件到货时间"],
+      keywords: ["维修", "故障", "MTTR", "工时", "调度", "备件"]
+    },
+    gotchas: [
+      {
+        id: "historical_variance",
+        title: "历史工单差异大",
+        description: "相同故障代码可能对应不同严重程度的故障，历史工时差异很大",
+        severity: "medium",
+        solution: "使用聚类分析区分故障严重程度，分别估算工时"
+      },
+      {
+        id: "expert_availability",
+        title: "专家可用性动态变化",
+        description: "维修专家的排班和当前工单状态实时变化",
+        severity: "high",
+        solution: "实时同步专家排班系统，考虑当前工单预计完成时间"
+      },
+      {
+        id: "parts_availability",
+        title: "备件库存不确定性",
+        description: "备件可能缺货或需要从其他仓库调拨",
+        severity: "high",
+        solution: "实时查询ERP库存，当缺货时自动计算调拨时间"
+      }
+    ],
+    dependsOn: [],
     files: {
       readme: "# Repair Time Estimator\n\n## 概述\n当设备发生停机故障时，该技能用于快速估算预计修复时间 (Time-to-Repair)，辅助生产调度决策。\n\n## 核心逻辑\n1. **历史回溯**: 查询知识图谱中具有相同 `failure_code` 的历史工单，计算平均修复工时。\n2. **专家匹配**: 根据故障类型匹配技能矩阵，检查专家的当前工单状态及排班表。\n3. **备件物流**: \n   - 检查备件库存充足度。\n   - 计算从备件库（或供应商）到产线的物流距离和配送时间。\n\n## 场景示例\n涂布机模头堵塞，系统自动计算出清洗所需垫片库存充足，最近的熟练维修工在500米外的2号车间，预计总修复时间为 45 分钟。",
       config: "{\"search_radius\": \"factory_zone_a\", \"expert_skills_matrix\": \"db_ref_v1\", \"agv_speed\": \"1.5m/s\"}",
@@ -268,9 +591,32 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 500,
     accuracy_score: 0.95,
     dependencies: [],
-    description: "实时计算分段工序的能耗与物料成本，生成单瓦时(Wh)制造成本报表。",
+    description: "当需要分析制造成本、识别成本异常、或生成成本报表时调用此 Skill。特别适用于：月度成本分析、能耗异常识别、单Wh成本核算、成本结构优化。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在成本核算周期结束时，当能耗和物料数据汇总完成时触发",
+      examples: ["计算本月单Wh制造成本", "分析能耗异常", "生成成本报表"],
+      keywords: ["成本", "能耗", "核算", "分析", "报表", "制造成本"]
+    },
+    gotchas: [
+      {
+        id: "allocation_method",
+        title: "成本分摊方法选择",
+        description: "不同分摊方法（工时/产量/作业）会导致不同的成本结果",
+        severity: "medium",
+        solution: "在配置中明确分摊方法，保持一致性"
+      },
+      {
+        id: "data_lag",
+        title: "数据采集延迟",
+        description: "SCADA数据可能存在延迟，导致实时成本计算不准确",
+        severity: "low",
+        solution: "设置数据同步等待时间，或使用批量计算模式"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Cost Realtime Analyzer\n\n聚合SCADA能耗数据与MES投料数据，实时计算单吨成本。",
+      readme: "# 单吨制造成本实时分析\n\n## 描述\n\n当需要分析制造成本、识别成本异常、或生成成本报表时调用此 Skill。特别适用于：月度成本分析、能耗异常识别、单Wh成本核算、成本结构优化、降本增效评估。\n\n## 使用场景\n\n- 月末成本核算，需要快速生成分工序成本报表\n- 发现某批次产品成本异常偏高，需要分析原因\n- 评估节能改造措施的实际效果\n- 对比不同产线、不同班次的成本差异\n- 计算特定订单的实际制造成本\n\n## 初始化\n\n首次使用时，检查 `config.json` 是否存在。如不存在，询问用户：\n1. 成本分摊方法（工时法/产量法/作业成本法）\n2. 标准成本版本（2024A/2024B/自定义）\n3. 成本报表格式（PDF/Excel/JSON）\n4. 异常阈值设置（如：超过标准成本10%标记为异常）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **成本分摊方法争议** - 不同部门对制造费用分摊口径可能不同（如设备折旧按工时还是按产量分摊），必须在配置中明确并保持一致\n2. **能耗数据延迟** - SCADA数据采集可能存在5-15分钟延迟，\"实时\"成本实际是准实时，需明确标注数据时间戳\n3. **在制品折算** - 期末在制品需要按约当产量折算，计算复杂且容易出错，必须与财务部门确认折算系数\n4. **标准成本更新滞后** - 标准成本通常季度更新，而实际成本波动频繁，可能导致异常误报\n5. **多产品混线生产** - 同一产线生产多种产品时，共用成本的分摊需要准确的工艺路线数据\n\n## 核心工作流\n\n### 1. 数据采集\n\n使用共享脚本获取数据：\n```python\nfrom shared.data_loader import auto_load_data\n\n# 从SCADA获取能耗数据\nenergy_data = auto_load_data('scada_export.csv')\n\n# 从MES获取物料数据\nmaterial_data = auto_load_data('mes_material.xlsx')\n```\n\n### 2. 数据验证\n\n```python\nfrom shared.validator import InputValidator\n\nvalidator = InputValidator()\nresults = validator.run_all_validations(energy_data, {\n    'required': ['timestamp', 'equipment_id', 'energy_kwh'],\n    'types': {'energy_kwh': (int, float)},\n    'ranges': {'energy_kwh': {'min': 0}}\n})\n```\n\n### 3. 成本计算\n\n```python\n# 计算分项成本\nmaterial_cost = calculate_material_cost(material_data)\nenergy_cost = calculate_energy_cost(energy_data, electricity_price)\nlabor_cost = calculate_labor_cost(production_hours, labor_rate)\noverhead_cost = calculate_overhead(equipment_depreciation, maintenance_cost)\n\n# 计算单Wh成本\ntotal_cost = material_cost + energy_cost + labor_cost + overhead_cost\ncost_per_wh = total_cost / total_capacity_wh\n```\n\n### 4. 异常检测\n\n```python\n# 对比标准成本\nstandard_cost = get_standard_cost(product_type)\nvariance = (cost_per_wh - standard_cost) / standard_cost\n\nif abs(variance) > config['alert_threshold']:\n    alert_manager.send(f\"成本异常: {variance*100:.1f}%\")\n```\n\n### 5. 报告生成\n\n```python\nfrom shared.report_generator import ReportGenerator, ReportTemplate\n\ngenerator = ReportGenerator()\nsections = ReportTemplate.create_summary_report(\n    period=\"2024-03\",\n    metrics={\"单Wh成本\": cost_per_wh, \"材料占比\": material_ratio},\n    highlights=[\"本月成本下降5%\", \"能耗占比上升2%\"]\n)\n\nreport_path = generator.save_report(\n    generator.generate_markdown_report(\"成本分析报告\", sections),\n    filename=\"cost_report_202403\",\n    format=ReportFormat.MARKDOWN\n)\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| period | string | 是 | 核算周期（如 \"2024-03\"） |\n| production_line | string | 否 | 产线标识，不填则汇总所有 |\n| product_type | string | 否 | 产品类型（如LFP-100Ah） |\n| include_wip | boolean | 否 | 是否包含在制品成本，默认true |\n| detail_level | string | 否 | 详细程度：summary/detailed |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| cost_per_wh | number | 单Wh制造成本（元/Wh） |\n| total_cost | number | 总成本（元） |\n| material_cost | number | 材料成本（元） |\n| energy_cost | number | 能耗成本（元） |\n| labor_cost | number | 人工成本（元） |\n| overhead_cost | number | 制造费用（元） |\n| variance_analysis | object | 与标准成本对比分析 |\n| cost_structure | array | 成本结构占比 |\n| trend | string | 环比趋势：up/down/stable |\n\n## 依赖的Skill\n\n- `data-quality-check` - 数据质量预检查\n- `mes-data-connector` - MES系统数据获取\n- `scada-data-connector` - SCADA数据获取\n\n## 参考文档\n\n- 《生产成本核算规范》\n- 《成本分析与控制方法》\n- 《标准成本制定指南》\n- 《降本增效实施方案》",
       config: "{\"currency\": \"CNY\", \"allocation_rule\": \"activity_based\"}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    cost_realtime_analyzer_v1 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -290,9 +636,32 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 1200,
     accuracy_score: 0.91,
     dependencies: [],
-    description: "分析呆滞物料风险，提供基于安全库存水位的采购与排产建议。",
+    description: "当需要优化库存水平、识别呆滞物料、或制定采购计划时调用此 Skill。特别适用于：月度库存盘点、呆滞物料预警、安全水位调整、采购计划优化。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在库存管理周期中，当库存数据更新或需求预测变化时触发",
+      examples: ["分析库存周转率", "识别呆滞物料", "优化安全库存"],
+      keywords: ["库存", "周转", "呆滞", "采购", "优化", "安全库存"]
+    },
+    gotchas: [
+      {
+        id: "demand_volatility",
+        title: "需求波动性",
+        description: "客户需求波动大时，固定的安全库存策略可能失效",
+        severity: "high",
+        solution: "采用动态安全库存，根据需求预测误差调整安全水位"
+      },
+      {
+        id: "shelf_life",
+        title: "物料保质期",
+        description: "电解液等物料有保质期限制，不能简单按库存天数判断呆滞",
+        severity: "critical",
+        solution: "在呆滞判断中考虑物料保质期，优先使用临期物料"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Inventory Optimizer\n\n识别库龄超标物料，并结合需求预测给出库存优化建议。",
+      readme: "# 库存周转率优化建议\n\n## 描述\n\n当需要优化库存水平、识别呆滞物料、或制定采购计划时调用此 Skill。特别适用于：月度库存盘点、呆滞物料预警、安全水位调整、采购计划优化。\n\n## 使用场景\n\n- 月末库存盘点，识别呆滞物料\n- 制定下月采购计划，优化采购批量\n- 分析库存周转率下降趋势的原因\n- 设置合理的安全库存水位\n\n## 初始化\n\n首次使用时，询问用户：\n1. 呆滞物料判定标准（库龄≥90天）\n2. 目标库存周转率（次/年）\n3. 服务水平目标（订单满足率≥98%）\n4. 物料分类策略（ABC分类）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **需求波动性** - 客户需求波动大时，固定的安全库存策略可能失效，需要采用动态安全库存\n2. **物料保质期** - 电解液等物料有保质期限制，不能简单按库存天数判断呆滞\n3. **采购MOQ限制** - 供应商的最小订单量可能限制优化空间，需要协商或寻找替代供应商\n4. **价格趋势影响** - 原材料价格快速上涨时，提前囤货可能是更优策略\n5. **多地点库存** - 不同仓库的库存不能简单相加，需要考虑调拨成本\n\n## 核心工作流\n\n### 1. 库存数据分析\n```python\n# 获取当前库存数据\ninventory = get_current_inventory()\nsales_history = get_sales_history(months=12)\n\n# 计算库存指标\nfor item in inventory:\n    item['inventory_days'] = calculate_inventory_days(item, sales_history)\n    item['turnover_rate'] = calculate_turnover_rate(item, sales_history)\n    item['abc_class'] = classify_abc(item, sales_history)\n```\n\n### 2. 呆滞物料识别\n```python\ndead_stock = []\nfor item in inventory:\n    if item['inventory_days'] > config['dead_stock_threshold']:\n        # 检查是否有过期风险\n        if item['shelf_life'] and item['shelf_life'] - item['inventory_days'] < 30:\n            risk = 'expiring_soon'\n        else:\n            risk = 'slow_moving'\n        \n        dead_stock.append({\n            'item_code': item['code'],\n            'inventory_days': item['inventory_days'],\n            'quantity': item['quantity'],\n            'value': item['quantity'] * item['unit_cost'],\n            'risk': risk\n        })\n```\n\n### 3. 安全库存计算\n```python\n# 基于需求波动计算动态安全库存\nfor item in inventory:\n    demand_mean = calculate_average_demand(item, months=3)\n    demand_std = calculate_demand_std(item, months=3)\n    lead_time = item['lead_time_days']\n    \n    # 使用正态分布计算安全库存\n    service_level = config['service_level']\n    z_score = get_z_score(service_level)\n    \n    safety_stock = z_score * demand_std * math.sqrt(lead_time)\n    reorder_point = demand_mean * lead_time + safety_stock\n    \n    item['recommended_safety_stock'] = safety_stock\n    item['recommended_reorder_point'] = reorder_point\n```\n\n### 4. 生成建议\n```python\nrecommendations = []\n\nfor item in inventory:\n    if item['quantity'] > item['recommended_reorder_point'] * 2:\n        recommendations.append({\n            'item': item['code'],\n            'action': 'reduce',\n            'suggestion': f\"库存过高，建议暂停采购{item['inventory_days'] - item['recommended_reorder_point']}天\"\n        })\n    elif item['quantity'] < item['recommended_reorder_point']:\n        recommendations.append({\n            'item': item['code'],\n            'action': 'purchase',\n            'suggestion': f\"库存偏低，建议采购{recommended_order_qty}件\"\n        })\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| current_stock | object | 是 | 当前库存数据 |\n| sales_rate | array | 是 | 历史销售速率 |\n| lead_times | object | 否 | 各物料交期 |\n| price_forecast | object | 否 | 价格预测（用于囤货决策） |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| recommended_stock_level | object | 建议库存水位 |\n| dead_stock_alert | array | 呆滞物料预警 |\n| turnover_analysis | object | 周转率分析 |\n| purchase_suggestions | array | 采购建议 |\n| inventory_value | number | 库存总金额 |\n| optimization_potential | number | 优化潜力（元） |\n\n## 依赖的Skill\n\n- `demand-forecast` - 需求预测\n- `supplier-leadtime` - 供应商交期查询\n\n## 参考文档\n\n- 《库存管理策略与实施》\n- 《安全库存计算方法》\n- 《正极材料JIT供应管理》\n- 《库存周转优化实践》",
       config: "{\"dead_stock_threshold_days\": 90}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    inventory_turnover_opt_v2 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
@@ -312,14 +681,311 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 300,
     accuracy_score: 0.93,
     dependencies: [],
-    description: "监控非生产时段的设备待机能耗，识别能源浪费点。",
+    description: "当需要监控能耗、识别能源浪费、或进行节能审计时调用此 Skill。特别适用于：非生产时段能耗监控、待机功耗分析、节能潜力评估、异常能耗预警。",
+    category: "validation",
+    triggerConditions: {
+      description: "在非生产时段，当能耗数据更新时触发",
+      examples: ["监控夜间能耗", "识别待机能耗异常", "节能审计"],
+      keywords: ["能耗", "节能", "待机", "监控", "审计", "浪费"]
+    },
+    gotchas: [
+      {
+        id: "baseline_setting",
+        title: "基线设置困难",
+        description: "不同季节、不同生产模式的基线能耗差异大",
+        severity: "medium",
+        solution: "建立动态基线模型，根据生产计划和季节调整"
+      },
+      {
+        id: "measurement_accuracy",
+        title: "计量精度不足",
+        description: "部分老旧设备缺乏分项计量，无法精确定位浪费点",
+        severity: "low",
+        solution: "优先对高能耗设备安装分项计量，使用估算方法补充缺失数据"
+      }
+    ],
+    dependsOn: [],
     files: {
-      readme: "# Energy Audit\n\n基于设备状态机监测能源浪费（如停机未断电）。",
+      readme: "# 产线能耗异常审计\n\n## 描述\n\n当需要监控能耗、识别能源浪费、或进行节能审计时调用此 Skill。特别适用于：非生产时段能耗监控、待机功耗分析、节能潜力评估、异常能耗预警。\n\n## 使用场景\n\n- 夜班/周末非生产时段，监控设备待机能耗\n- 识别长时间未生产但未断电的设备\n- 评估节能改造措施的实际效果\n- 发现能耗异常波动并定位原因\n\n## 初始化\n\n首次使用时，询问用户：\n1. 正常生产基线能耗（kWh/小时）\n2. 待机状态允许能耗（占生产状态的百分比，如≤10%）\n3. 审计时段设置（如22:00-06:00）\n4. 预警阈值（如超出基线20%触发预警）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **基线设置困难** - 不同季节、不同生产模式的基线能耗差异大，需要建立动态基线模型\n2. **计量精度不足** - 部分老旧设备缺乏分项计量，无法精确定位浪费点\n3. **设备状态误判** - 设备实际运行但被标记为待机，或反之，导致误判\n4. **多设备关联** - 某些设备必须保持运行以维持环境条件（如空调、除湿机），不能简单断电\n5. **数据采集中断** - 计量设备通信中断会导致数据缺失，可能被误判为零能耗\n\n## 核心工作流\n\n### 1. 数据采集\n```python\n# 获取能耗数据\nmeter_readings = get_meter_readings(time_range='last_24h')\nproduction_status = get_production_schedule()\n\n# 标记生产/非生产时段\nfor reading in meter_readings:\n    reading['is_production'] = check_production_status(\n        reading['timestamp'], production_status\n    )\n```\n\n### 2. 基线计算\n```python\n# 计算动态基线\nproduction_readings = [r for r in meter_readings if r['is_production']]\nstandby_readings = [r for r in meter_readings if not r['is_production']]\n\nbaseline_production = calculate_average(production_readings)\nbaseline_standby = calculate_average(standby_readings)\n\n# 考虑季节因素\nseason_factor = get_season_factor(current_month)\nadjusted_baseline = baseline_production * season_factor\n```\n\n### 3. 异常检测\n```python\nanomalies = []\n\n# 检测非生产时段异常\nfor reading in standby_readings:\n    if reading['energy_kwh'] > baseline_standby * 1.5:\n        anomalies.append({\n            'timestamp': reading['timestamp'],\n            'type': 'high_standby_power',\n            'value': reading['energy_kwh'],\n            'expected': baseline_standby,\n            'severity': 'high'\n        })\n\n# 检测生产时段异常\nfor reading in production_readings:\n    if reading['energy_kwh'] > adjusted_baseline * 1.2:\n        anomalies.append({\n            'timestamp': reading['timestamp'],\n            'type': 'high_production_power',\n            'value': reading['energy_kwh'],\n            'expected': adjusted_baseline,\n            'severity': 'medium'\n        })\n```\n\n### 4. 节能潜力评估\n```python\n# 计算节能潜力\nsaving_potential = 0\nfor anomaly in anomalies:\n    if anomaly['type'] == 'high_standby_power':\n        # 计算可节省的能耗\n        excess = anomaly['value'] - anomaly['expected']\n        saving_potential += excess\n\n# 生成建议\nsuggestions = []\nif saving_potential > 100:  # kWh/天\n    suggestions.append(f\"优化待机功耗，预计每天可节省{saving_potential:.1f}kWh\")\n    suggestions.append(\"检查非生产时段未断电的设备\")\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| meter_readings | array | 是 | 能耗表读数 |\n| production_status | string | 是 | 生产状态：running/idle/maintenance |\n| time_range | string | 否 | 审计时段，如\"22:00-06:00\" |\n| baseline_config | object | 否 | 基线配置参数 |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| anomaly_score | number | 异常评分（0-100） |\n| saving_potential | string | 节能潜力描述 |\n| anomalies | array | 异常事件列表 |\n| energy_waste | number | 估计浪费电量（kWh） |\n| cost_impact | number | 浪费金额（元） |\n| suggestions | array | 节能建议 |\n\n## 依赖的Skill\n\n- `scada-data-connector` - SCADA数据获取\n- `production-schedule` - 生产计划查询\n\n## 参考文档\n\n- 《工厂能耗监测规范》\n- 《碳足迹核算方法》\n- 《能源管理体系标准》\n- 《节能诊断技术指南》",
       config: "{\"baseline_kwh\": 50}",
       script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    energy_consumption_audit_v1 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
       scriptLang: "python",
       references: ["《工厂能耗监测规范》", "《碳足迹核算方法》", "《能源管理体系标准》", "《节能诊断技术指南》"],
       assets: ["templates/inspection_report_template.xlsx", "templates/certificate_template.pdf", "config/specification_thresholds.json"]
+    }
+  },
+  {
+    skill_id: "carbon_emission_accounting_v1",
+    name: "碳排放自动核算",
+    version: "1.0.0",
+    domain: ["cost_management", "environmental_compliance"],
+    capability_tags: ["carbon", "emission", "accounting", "compliance"],
+    input_schema: {
+      energy_consumption: "object",
+      material_usage: "object",
+      production_output: "number",
+      time_period: "string"
+    },
+    output_schema: {
+      total_emission: "number",
+      emission_by_source: "object",
+      carbon_intensity: "number",
+      compliance_status: "string"
+    },
+    cost: 0.3,
+    latency: 500,
+    accuracy_score: 0.95,
+    dependencies: [],
+    description: "当需要核算碳排放量、生成碳排放报告、或评估碳强度指标时调用此 Skill。特别适用于：月度/年度碳排放核算、碳排放强度分析、合规性检查、ESG报告生成。",
+    category: "carbon-energy",
+    triggerConditions: {
+      description: "在核算周期结束时，当能耗和物料消耗数据汇总完成时触发",
+      examples: ["核算本月碳排放量", "生成季度碳排放报告", "计算单位产值碳强度"],
+      keywords: ["碳排放", "核算", "碳强度", "温室气体", "CO2", "ESG"]
+    },
+    gotchas: [
+      {
+        id: "emission_factor_version",
+        title: "排放因子版本更新",
+        description: "生态环境部会定期更新排放因子，使用过期的因子会导致核算结果不准确",
+        severity: "high",
+        solution: "定期更新排放因子库，明确标注使用的因子版本和发布日期"
+      },
+      {
+        id: "scope_boundary",
+        title: "核算范围界定不清",
+        description: "范围1/2/3的排放源容易混淆，特别是外购电力和热力",
+        severity: "critical",
+        solution: "在初始化时明确核算范围，建立排放源清单并分类标记"
+      },
+      {
+        id: "data_completeness",
+        title: "数据采集不完整",
+        description: "部分辅助工序或外协加工的排放数据可能缺失",
+        severity: "medium",
+        solution: "建立数据质量检查清单，对缺失数据采用保守估计并标注"
+      }
+    ],
+    dependsOn: [],
+    files: {
+      readme: "# 碳排放自动核算\n\n## 描述\n\n当需要核算碳排放量、生成碳排放报告、或评估碳强度指标时调用此 Skill。特别适用于：月度/年度碳排放核算、碳排放强度分析、合规性检查、ESG报告生成。\n\n## 使用场景\n\n- 月末/年末碳排放数据汇总和核算\n- 生成符合ISO 14064的碳排放报告\n- 计算单位产品、单位产值的碳强度\n- 评估是否达到碳达峰、碳中和阶段性目标\n- 为碳交易或碳税申报提供数据支持\n\n## 初始化\n\n首次使用时，询问用户：\n1. 核算范围（范围1/2/3分别包含哪些排放源）\n2. 排放因子版本（采用生态环境部最新发布版本）\n3. 报告格式（满足企业内部管理/碳交易/ESG披露）\n4. 碳强度计算基准（单位产品/单位产值/单位能耗）\n\n保存配置到 `config.json`。\n\n## Gotchas（常见坑点）\n\n1. **排放因子版本更新** - 生态环境部会定期更新排放因子，使用过期的因子会导致核算结果不准确，必须定期更新因子库\n2. **核算范围界定不清** - 范围1/2/3的排放源容易混淆，特别是外购电力和热力，必须在初始化时明确界定\n3. **数据采集不完整** - 部分辅助工序或外协加工的排放数据可能缺失，需要建立数据质量检查机制\n4. **单位换算错误** - 不同能源类型（天然气、电力、蒸汽）的单位不统一，需统一转换为标准煤或CO2当量\n5. **重复计算或遗漏** - 外购热力同时涉及范围2和范围3时，容易产生重复计算或遗漏\n\n## 核心工作流\n\n### 1. 数据采集\n\n```python\nfrom shared.data_loader import auto_load_data\n\n# 获取能耗数据\nenergy_data = auto_load_data('energy_consumption.csv')\n\n# 获取物料消耗数据\nmaterial_data = auto_load_data('material_usage.xlsx')\n\n# 获取产量数据\nproduction_data = auto_load_data('production_output.json')\n```\n\n### 2. 排放计算\n\n```python\n# 加载排放因子\nemission_factors = load_emission_factors(config['factor_version'])\n\n# 计算各排放源\nemissions = {}\n\n# 范围1：直接排放\nemissions['direct'] = calculate_direct_emissions(energy_data, emission_factors)\n\n# 范围2：间接排放（电力、热力）\nemissions['indirect'] = calculate_indirect_emissions(energy_data, emission_factors)\n\n# 范围3：其他间接排放\nemissions['other'] = calculate_other_emissions(material_data, emission_factors)\n\n# 汇总\ntotal_emission = sum(emissions.values())\n```\n\n### 3. 碳强度计算\n\n```python\n# 单位产品碳强度\ncarbon_intensity_per_product = total_emission / production_data['total_output']\n\n# 单位产值碳强度\ncarbon_intensity_per_value = total_emission / production_data['total_revenue']\n\n# 与行业基准对比\nindustry_benchmark = get_industry_benchmark('lithium_battery')\ncomparison_result = compare_with_benchmark(carbon_intensity_per_product, industry_benchmark)\n```\n\n### 4. 报告生成\n\n```python\nfrom shared.report_generator import ReportGenerator\n\ngenerator = ReportGenerator()\n\n# 生成碳排放报告\nreport = generator.generate_carbon_report(\n    period=config['period'],\n    total_emission=total_emission,\n    emissions_by_source=emissions,\n    carbon_intensity={\n        'per_product': carbon_intensity_per_product,\n        'per_value': carbon_intensity_per_value\n    }\n)\n\n# 保存报告\nreport_path = generator.save_report(report, filename='carbon_report')\n```\n\n## 输入规范\n\n| 参数名 | 类型 | 必填 | 说明 |\n|--------|------|------|------|\n| energy_consumption | object | 是 | 各类能源消耗量 |\n| material_usage | object | 是 | 主要物料消耗量 |\n| production_output | number | 是 | 产量（MWh或吨） |\n| time_period | string | 是 | 核算周期（如\"2024-Q1\"） |\n| scope | array | 否 | 核算范围：1/2/3 |\n\n## 输出规范\n\n| 参数名 | 类型 | 说明 |\n|--------|------|------|\n| total_emission | number | 总排放量（吨CO2当量） |\n| emission_by_source | object | 各排放源明细 |\n| carbon_intensity | number | 单位产品碳强度 |\n| compliance_status | string | 合规状态：compliant/non_compliant |\n| trend_analysis | string | 趋势分析 |\n| reduction_potential | number | 减排潜力估算 |\n\n## 依赖的Skill\n\n- `energy-data-connector` - 能耗数据获取\n- `material-data-connector` - 物料数据获取\n\n## 参考文档\n\n- 《ISO 14064-1:2018 温室气体核算与验证》\n- 《企业温室气体排放核算方法与报告指南》\n- 《锂电池行业碳足迹核算规范》\n- 《碳排放权交易管理办法（试行）》",
+      config: "{\"factor_version\": \"2023\", \"scope\": [1, 2], \"currency\": \"CNY\"}",
+      script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    '''\n    carbon_emission_accounting_v1 - 确定性执行脚本\n    核心原则：相同输入 + 相同状态 = 相同输出\n    '''\n\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        '''输入参数校验'''\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''\n        执行逻辑 - 必须是确定性的\n        不允许使用随机数、时间依赖等不确定因素\n        '''\n        # 1. 输入校验\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n\n        # 2. 业务逻辑执行（示例）\n        result = self._business_logic(event)\n\n        # 3. 构建确定性输出\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        '''业务逻辑实现'''\n        # 根据具体技能实现业务逻辑\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    '''技能入口函数'''\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
+      scriptLang: "python",
+      references: ["《ISO 14064-1:2018 温室气体核算与验证》", "《企业温室气体排放核算方法与报告指南》", "《锂电池行业碳足迹核算规范》", "《碳排放权交易管理办法（试行）》"],
+      assets: ["templates/carbon_report_template.xlsx", "config/emission_factors.json", "config/carbon_accounting_rules.json"]
+    }
+  },
+  {
+    skill_id: "carbon_footprint_tracker_v1",
+    name: "产品碳足迹追踪",
+    version: "1.0.0",
+    domain: ["cost_management", "environmental_compliance"],
+    capability_tags: ["carbon", "footprint", "lifecycle", "tracking"],
+    input_schema: {
+      product_id: "string",
+      batch_info: "object",
+      supply_chain_data: "object"
+    },
+    output_schema: {
+      carbon_footprint: "number",
+      footprint_breakdown: "object",
+      certification_status: "string"
+    },
+    cost: 0.5,
+    latency: 800,
+    accuracy_score: 0.92,
+    dependencies: [],
+    description: "当需要计算产品碳足迹、生成碳标签、或进行供应链碳排放追踪时调用此 Skill。特别适用于：产品碳足迹认证、碳标签生成、供应链碳排放追溯、绿色产品申报。",
+    category: "carbon-energy",
+    triggerConditions: {
+      description: "在产品完成全部工序后，当需要生成碳足迹报告或碳标签时触发",
+      examples: ["计算这款电芯的碳足迹", "生成产品碳标签", "追溯供应链碳排放"],
+      keywords: ["碳足迹", "生命周期", "LCA", "碳标签", "供应链", "追溯"]
+    },
+    gotchas: [
+      {
+        id: "system_boundary",
+        title: "系统边界界定",
+        description: " cradle-to-gate 与 cradle-to-grave 的边界选择影响结果可比性",
+        severity: "high",
+        solution: "在配置中明确采用的标准（ISO 14067/PEF/OEF），并保持前后一致性"
+      },
+      {
+        id: "allocation_method",
+        title: "多产品分配方法",
+        description: "联合生产过程的碳排放分配方法选择（物理/经济/能量）会影响结果",
+        severity: "medium",
+        solution: "优先采用物理分配法，并在报告中明确说明所采用的分配方法"
+      }
+    ],
+    dependsOn: [],
+    files: {
+      readme: "# 产品碳足迹追踪\n\n## 描述\n\n当需要计算产品碳足迹、生成碳标签、或进行供应链碳排放追踪时调用此 Skill。特别适用于：产品碳足迹认证、碳标签生成、供应链碳排放追溯、绿色产品申报。\n\n## 使用场景\n\n- 为电芯产品计算从原材料到出厂的碳足迹\n- 生成符合欧盟PEF或ISO 14067的碳足迹报告\n- 追溯上游供应商的碳排放数据\n- 申请绿色产品认证或碳标签\n\n## 初始化\n\n首次使用时，询问用户：\n1. 采用的核算标准（ISO 14067/欧盟PEF/GB/T 24040）\n2. 系统边界（cradle-to-gate/cradle-to-grave）\n3. 分配方法（物理/经济/能量）\n4. 数据库来源（Ecoinvent/GaBi/CLCD）\n\n保存配置到 `config.json`。",
+      config: "{\"standard\": \"ISO_14067\", \"boundary\": \"cradle_to_gate\"}",
+      script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n        result = self._business_logic(event)\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
+      scriptLang: "python",
+      references: ["《ISO 14067:2018 产品碳足迹量化与沟通》", "《GB/T 24040-2008 环境管理 生命周期评价》", "《欧盟产品环境足迹（PEF）指南》"],
+      assets: ["templates/carbon_footprint_report.xlsx", "config/lca_database.json"]
+    }
+  },
+  {
+    skill_id: "energy_saving_optimizer_v1",
+    name: "节能减排优化建议",
+    version: "1.0.0",
+    domain: ["cost_management"],
+    capability_tags: ["energy_saving", "optimization", "recommendation"],
+    input_schema: {
+      current_consumption: "object",
+      equipment_list: "array",
+      production_plan: "object"
+    },
+    output_schema: {
+      saving_potential: "number",
+      recommendations: "array",
+      investment_roi: "object"
+    },
+    cost: 0.4,
+    latency: 600,
+    accuracy_score: 0.90,
+    dependencies: [],
+    description: "当需要识别节能机会、制定减排方案、或评估节能改造投资回报时调用此 Skill。特别适用于：节能诊断、减排方案制定、节能改造项目评估、能效对标分析。",
+    category: "carbon-energy",
+    triggerConditions: {
+      description: "在能源审计或节能诊断时，当能耗数据和设备清单就绪时触发",
+      examples: ["分析节能潜力", "制定减排方案", "评估节能改造ROI"],
+      keywords: ["节能", "减排", "优化", "改造", "能效", "降本"]
+    },
+    gotchas: [
+      {
+        id: "baseline_determination",
+        title: "节能基线确定困难",
+        description: "节能量的计算依赖于基线选择，不同基线会导致节能量差异",
+        severity: "medium",
+        solution: "采用IPCC或国家认可的基线确定方法，并在报告中明确说明"
+      },
+      {
+        id: "rebound_effect",
+        title: "反弹效应",
+        description: "节能改造后用户可能增加用能，导致实际节能量低于预期",
+        severity: "low",
+        solution: "在预测节能量时考虑反弹效应系数（通常0.8-0.9）"
+      }
+    ],
+    dependsOn: [],
+    files: {
+      readme: "# 节能减排优化建议\n\n## 描述\n\n当需要识别节能机会、制定减排方案、或评估节能改造投资回报时调用此 Skill。特别适用于：节能诊断、减排方案制定、节能改造项目评估、能效对标分析。\n\n## 使用场景\n\n- 对全厂或特定产线进行节能诊断\n- 评估LED照明、变频改造、余热回收等项目的可行性\n- 制定年度节能减排目标和行动计划\n- 申请绿色工厂或能效领跑者认证\n\n## 初始化\n\n首次使用时，询问用户：\n1. 目标节能率（%）\n2. 投资回收期要求（年）\n3. 优先考虑的节能领域（照明/电机/ HVAC/工艺）\n4. 是否有政府节能补贴可申请\n\n保存配置到 `config.json`。",
+      config: "{\"target_saving_rate\": 0.1, \"payback_period_years\": 3}",
+      script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n        result = self._business_logic(event)\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
+      scriptLang: "python",
+      references: ["《节能诊断技术通则》", "《重点行业能效标杆指南》", "《合同能源管理技术通则》"],
+      assets: ["templates/energy_saving_proposal.docx", "config/energy_saving_measures.json"]
+    }
+  },
+  {
+    skill_id: "carbon_quota_manager_v1",
+    name: "碳配额管理",
+    version: "1.0.0",
+    domain: ["cost_management", "environmental_compliance"],
+    capability_tags: ["carbon", "quota", "trading", "compliance"],
+    input_schema: {
+      allocated_quota: "number",
+      actual_emission: "number",
+      market_price: "number"
+    },
+    output_schema: {
+      quota_balance: "number",
+      trading_suggestion: "string",
+      compliance_risk: "string"
+    },
+    cost: 0.3,
+    latency: 300,
+    accuracy_score: 0.95,
+    dependencies: [],
+    description: "当需要管理碳排放配额、制定碳交易策略、或评估履约风险时调用此 Skill。特别适用于：碳配额缺口分析、碳交易策略制定、CCER项目规划、碳市场投资分析。",
+    category: "carbon-energy",
+    triggerConditions: {
+      description: "在碳市场交易日或履约期前，当配额和排放数据更新时触发",
+      examples: ["分析碳配额缺口", "制定碳交易策略", "评估履约风险"],
+      keywords: ["碳配额", "碳交易", "CCER", "履约", "碳市场", "缺口"]
+    },
+    gotchas: [
+      {
+        id: "price_volatility",
+        title: "碳价波动风险",
+        description: "碳市场价格波动大，过早或过晚交易都可能造成损失",
+        severity: "high",
+        solution: "建立碳价监测机制，采用分批交易策略降低风险"
+      },
+      {
+        id: "cccer_quality",
+        title: "CCER项目质量参差",
+        description: "不同CCER项目的额外性和持久性存在差异，影响其价值",
+        severity: "medium",
+        solution: "优先选择黄金标准或VCS认证的CCER项目"
+      }
+    ],
+    dependsOn: [],
+    files: {
+      readme: "# 碳配额管理\n\n## 描述\n\n当需要管理碳排放配额、制定碳交易策略、或评估履约风险时调用此 Skill。特别适用于：碳配额缺口分析、碳交易策略制定、CCER项目规划、碳市场投资分析。\n\n## 使用场景\n\n- 分析年度碳配额缺口或盈余\n- 制定碳交易时机和数量策略\n- 评估CCER项目开发的可行性\n- 预测未来碳价走势和成本影响\n\n## 初始化\n\n首次使用时，询问用户：\n1. 年度配额分配量\n2. 预计年度排放量\n3. 碳交易预算\n4. 风险承受能力（保守/稳健/激进）\n\n保存配置到 `config.json`。",
+      config: "{\"risk_preference\": \"moderate\", \"trading_budget\": 1000000}",
+      script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n        result = self._business_logic(event)\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
+      scriptLang: "python",
+      references: ["《碳排放权交易管理办法（试行）》", "《全国碳排放权交易市场建设方案》", "《CCER项目开发指南》"],
+      assets: ["templates/carbon_trading_strategy.xlsx", "config/carbon_market_data.json"]
+    }
+  },
+  {
+    skill_id: "clean_energy_advisor_v1",
+    name: "清洁能源替代建议",
+    version: "1.0.0",
+    domain: ["cost_management"],
+    capability_tags: ["clean_energy", "renewable", "optimization", "recommendation"],
+    input_schema: {
+      current_energy_mix: "object",
+      facility_info: "object",
+      location_data: "object"
+    },
+    output_schema: {
+      alternatives: "array",
+      cost_comparison: "object",
+      carbon_reduction: "number"
+    },
+    cost: 0.4,
+    latency: 700,
+    accuracy_score: 0.88,
+    dependencies: [],
+    description: "当需要评估清洁能源替代方案、规划分布式光伏、或制定绿电采购策略时调用此 Skill。特别适用于：屋顶光伏可行性评估、绿电采购方案制定、储能系统配置、能源结构优化。",
+    category: "carbon-energy",
+    triggerConditions: {
+      description: "在能源规划或绿色转型项目评估时，当设施信息和能源数据就绪时触发",
+      examples: ["评估屋顶光伏可行性", "制定绿电采购方案", "优化能源结构"],
+      keywords: ["清洁能源", "光伏", "绿电", "储能", "可再生能源", "能源转型"]
+    },
+    gotchas: [
+      {
+        id: "grid_connection",
+        title: "并网接入限制",
+        description: "部分地区电网接入容量有限，大规模光伏可能面临并网难题",
+        severity: "high",
+        solution: "提前与当地电网公司沟通，了解接入容量和流程要求"
+      },
+      {
+        id: "intermittency",
+        title: "间歇性电源稳定性",
+        description: "光伏和风电的间歇性可能影响生产稳定性",
+        severity: "medium",
+        solution: "配置储能系统或保留部分传统电源作为备用"
+      }
+    ],
+    dependsOn: [],
+    files: {
+      readme: "# 清洁能源替代建议\n\n## 描述\n\n当需要评估清洁能源替代方案、规划分布式光伏、或制定绿电采购策略时调用此 Skill。特别适用于：屋顶光伏可行性评估、绿电采购方案制定、储能系统配置、能源结构优化。\n\n## 使用场景\n\n- 评估厂区屋顶光伏安装的可行性和收益\n- 制定绿电采购策略（直购电/绿证/PPA）\n- 规划光储一体化系统\n- 申请绿色电力证书或可再生能源补贴\n\n## 初始化\n\n首次使用时，询问用户：\n1. 厂区位置和可用屋顶面积\n2. 当地光照资源和电价\n3. 投资预算和回收期要求\n4. 是否已有绿电采购需求或承诺\n\n保存配置到 `config.json`。",
+      config: "{\"payback_years\": 5, \"min_irr\": 0.08}",
+      script: "import json\nimport time\nfrom typing import Dict, Any, Optional\n\nclass SkillExecutor:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.start_time = time.time()\n\n    def validate_input(self, event: Dict[str, Any]) -> tuple[bool, Optional[str]]:\n        if not isinstance(event, dict):\n            return False, \"INPUT_MUST_BE_OBJECT\"\n        return True, None\n\n    def execute(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        is_valid, error = self.validate_input(event)\n        if not is_valid:\n            return {\"error\": error, \"status\": \"FAILED\"}\n        result = self._business_logic(event)\n        return {\n            \"status\": \"SUCCESS\",\n            \"result\": result,\n            \"execution_time_ms\": int((time.time() - self.start_time) * 1000),\n            \"timestamp\": int(time.time())\n        }\n\n    def _business_logic(self, event: Dict[str, Any]) -> Dict[str, Any]:\n        return event\n\ndef handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:\n    config = context.get('config', {}) if context else {}\n    executor = SkillExecutor(config)\n    return executor.execute(event)",
+      scriptLang: "python",
+      references: ["《分布式光伏发电系统工程技术规范》", "《绿色电力交易试点工作方案》", "《可再生能源发展基金管理办法》"],
+      assets: ["templates/solar_feasibility_report.docx", "config/renewable_energy_data.json"]
     }
   },
   {
@@ -344,7 +1010,37 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 800,
     accuracy_score: 0.93,
     dependencies: [],
-    description: "基于工艺参数、原材料规格、设备状态和环境数据，预测电芯质量等级和缺陷概率，提前识别质量风险。",
+    description: "当需要预测电芯质量、提前识别质量风险、或优化工艺参数时调用此 Skill。特别适用于：化成前质量预检、缺陷风险识别、工艺参数优化建议、质量趋势分析。",
+    category: "validation",
+    triggerConditions: {
+      description: "在前段工序完成后，化成工序开始前，当工艺参数和原材料数据就绪时触发",
+      examples: ["预测这批电芯的质量", "识别潜在缺陷风险", "优化涂布参数"],
+      keywords: ["质量", "预测", "缺陷", "风险", "电芯", "工艺"]
+    },
+    gotchas: [
+      {
+        id: "feature_correlation",
+        title: "特征相关性",
+        description: "工艺参数之间可能存在高度相关性，影响模型解释性",
+        severity: "medium",
+        solution: "使用特征选择算法去除冗余特征，提供特征重要性排序"
+      },
+      {
+        id: "class_imbalance",
+        title: "类别不平衡",
+        description: "合格品远多于不良品，模型可能偏向于预测合格",
+        severity: "high",
+        solution: "采用过采样/欠采样技术，或使用代价敏感学习"
+      },
+      {
+        id: "concept_drift",
+        title: "概念漂移",
+        description: "工艺改进或材料变更可能导致模型性能下降",
+        severity: "high",
+        solution: "建立模型监控机制，当性能下降超过阈值时触发重训练"
+      }
+    ],
+    dependsOn: [],
     files: {
       readme: "# Quality Prediction Model\n\n## 概述\n电芯质量预测模型，用于在化成分容前预测电芯质量等级。\n\n## 输入特征\n- **工艺参数**: 涂布重量、辊压厚度、卷绕张力等\n- **原材料规格**: 正极材料批次、电解液配方等\n- **设备状态**: 关键设备的健康度和稳定性\n- **环境数据**: 温湿度、洁净度等\n\n## 输出\n- 质量评分 (0-100)\n- 缺陷概率\n- 主要风险因素\n- 改进建议",
       config: "{\"model_type\": \"xgboost\", \"threshold\": 0.85}",
@@ -376,7 +1072,37 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 1500,
     accuracy_score: 0.92,
     dependencies: [],
-    description: "基于历史订单、市场趋势和季节性因素，预测未来3-12个月的电芯需求（按产品型号、客户细分）。",
+    description: "当需要预测未来需求、制定销售计划、或评估产能缺口时调用此 Skill。特别适用于：年度/季度销售预测、新产品需求评估、储能项目需求预测、S&OP决策支持。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在制定销售计划或S&OP会议前，当历史订单数据和市场信息更新时触发",
+      examples: ["预测下季度电芯需求", "评估储能市场需求", "制定销售计划"],
+      keywords: ["预测", "需求", "销售", "市场", "趋势", "S&OP"]
+    },
+    gotchas: [
+      {
+        id: "large_project_volatility",
+        title: "大项目波动性",
+        description: "储能大项目的签订时间不确定，会导致需求预测大幅波动",
+        severity: "high",
+        solution: "将大项目单独建模，基础需求+项目概率加权"
+      },
+      {
+        id: "new_product_cold_start",
+        title: "新产品冷启动",
+        description: "新产品缺乏历史数据，传统时序模型无法应用",
+        severity: "medium",
+        solution: "使用相似产品迁移学习，或结合市场调研数据"
+      },
+      {
+        id: "external_factors",
+        title: "外部因素影响",
+        description: "政策变化（如补贴退坡）可能突然改变需求趋势",
+        severity: "high",
+        solution: "监控政策动态，在模型中加入政策影响因子"
+      }
+    ],
+    dependsOn: [],
     files: {
       readme: "# Demand Forecast for Lithium Battery\n\n## 概述\n针对锂电行业特点构建的需求预测模型，考虑储能/动力不同市场的周期性波动。\n\n## 算法特性\n- **时序分解**: 分离趋势、季节、周期和随机成分\n- **客户细分**: 区分储能大项目（波动大）和动力电池（相对稳）\n- **外部变量**: 纳入锂价指数、新能源车销量等宏观指标\n\n## 输出\n提供点预测和置信区间，支持S&OP决策。",
       config: "{\"horizon_weeks\": 52, \"confidence_level\": 0.95, \"models\": [\"prophet\", \"lstm\"]}",
@@ -407,7 +1133,30 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 800,
     accuracy_score: 0.94,
     dependencies: [],
-    description: "评估各工序（涂布、卷绕、化成等）的理论产能和可用产能，识别瓶颈工序。",
+    description: "当需要评估产能、识别瓶颈、或制定扩产计划时调用此 Skill。特别适用于：月度产能评估、瓶颈工序识别、扩产投资决策、设备利用率分析。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在制定生产计划或投资决策前，当设备状态和工单数据就绪时触发",
+      examples: ["评估下月可用产能", "识别瓶颈工序", "评估扩产需求"],
+      keywords: ["产能", "评估", "瓶颈", "设备", "利用率", "OEE"]
+    },
+    gotchas: [
+      {
+        id: "oee_calculation",
+        title: "OEE计算口径不一致",
+        description: "不同部门对OEE的计算方法可能不同（是否包含换型时间等）",
+        severity: "medium",
+        solution: "统一OEE计算标准，在配置中明确各项时间定义"
+      },
+      {
+        id: "product_mix_impact",
+        title: "产品组合影响",
+        description: "不同产品的节拍时间差异大，简单相加会失真",
+        severity: "high",
+        solution: "使用加权平均节拍，或按产品类型分别计算产能"
+      }
+    ],
+    dependsOn: [],
     files: {
       readme: "# Capacity Evaluation\n\n## 概述\n锂电制造产能评估器，针对多工序串联特性计算整体产出能力。\n\n## 评估维度\n1. **理论产能**: 设备铭牌参数计算\n2. **可用产能**: 扣除计划停机、保养\n3. **有效产能**: 考虑良品率和换型时间\n4. **瓶颈识别**: 找出限制整体产出的关键工序（通常是化成）\n\n## 应用场景\n- 接单评审：评估新订单交付可行性\n- 产能规划：支持扩产投资决策",
       config: "{\"oee_target\": 0.85, \"quality_rate\": 0.98}",
@@ -438,7 +1187,37 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 3000,
     accuracy_score: 0.91,
     dependencies: ["demand_forecast_v3", "capacity_evaluation_v2"],
-    description: "综合考虑需求、产能、物料齐套性，生成优化的主生产计划(MPS)和详细排程(APS)。",
+    description: "当需要生成生产排程、优化资源分配、或处理多约束排程问题时调用此 Skill。特别适用于：主生产计划(MPS)制定、详细排程(APS)、多约束优化、资源冲突解决。",
+    category: "workflow",
+    triggerConditions: {
+      description: "在制定生产计划时，当需求计划、产能约束、物料可用性数据就绪时触发",
+      examples: ["生成下周排程", "优化资源分配", "解决排程冲突"],
+      keywords: ["排程", "计划", "MPS", "APS", "优化", "约束"]
+    },
+    gotchas: [
+      {
+        id: "constraint_complexity",
+        title: "约束条件过多",
+        description: "实际排程约束可能多达数十个，求解时间指数级增长",
+        severity: "high",
+        solution: "采用启发式算法，或设置求解时间上限返回次优解"
+      },
+      {
+        id: "real_time_changes",
+        title: "实时变化",
+        description: "设备故障、紧急插单等会频繁改变约束条件",
+        severity: "high",
+        solution: "支持增量式重排程，只调整受影响的部分而非整体重新计算"
+      },
+      {
+        id: "optimization_goal_conflict",
+        title: "优化目标冲突",
+        description: "交期达成率、设备利用率、换型次数等目标可能相互矛盾",
+        severity: "medium",
+        solution: "提供多目标优化选项，允许用户设置目标优先级"
+      }
+    ],
+    dependsOn: ["demand_forecast_v3", "capacity_evaluation_v2"],
     files: {
       readme: "# Smart Scheduling Engine\n\n## 概述\n锂电行业专用高级排程系统，解决前后工序产能不匹配、换型时间长等痛点。\n\n## 核心算法\n- **约束传播**: 处理物料齐套、设备互斥等硬约束\n- **启发式规则**: 最小化换型时间、均衡化生产\n- **优化目标**: 最大化交付率、最小化WIP库存\n\n## 特殊处理\n- **化成段排程**: 考虑化成柜充放电程序时长差异\n- **静置等待**: 自动计算高温静置时间窗口\n- **紧急插单**: 支持快速评估插单对整体计划的影响",
       config: "{\"solver\": \"ortools\", \"time_bucket\": \"hour\", \"lookahead_days\": 30}",
@@ -469,7 +1248,30 @@ export const MOCK_SKILLS: Skill[] = [
     latency: 1200,
     accuracy_score: 0.89,
     dependencies: ["demand_forecast_v3"],
-    description: "优化原材料（正极、负极、电解液）、在制品（WIP）和成品库存水平，平衡服务水平和资金占用。",
+    description: "当需要优化库存水平、识别呆滞物料、或制定采购计划时调用此 Skill。特别适用于：月度库存盘点、呆滞物料预警、安全水位调整、采购计划优化。",
+    category: "data-analysis",
+    triggerConditions: {
+      description: "在库存管理周期中，当库存数据更新或需求预测变化时触发",
+      examples: ["分析库存周转率", "识别呆滞物料", "优化安全库存"],
+      keywords: ["库存", "周转", "呆滞", "采购", "优化", "安全库存"]
+    },
+    gotchas: [
+      {
+        id: "demand_volatility",
+        title: "需求波动性",
+        description: "客户需求波动大时，固定的安全库存策略可能失效",
+        severity: "high",
+        solution: "采用动态安全库存，根据需求预测误差调整安全水位"
+      },
+      {
+        id: "shelf_life",
+        title: "物料保质期",
+        description: "电解液等物料有保质期限制，不能简单按库存天数判断呆滞",
+        severity: "critical",
+        solution: "在呆滞判断中考虑物料保质期，优先使用临期物料"
+      }
+    ],
+    dependsOn: ["demand_forecast_v3"],
     files: {
       readme: "# Inventory Optimization\n\n## 概述\n锂电行业全链路库存优化，重点管理高价值正极材料（LFP/NCM）。\n\n## 优化策略\n1. **原材料**: 基于价格趋势和MOQ优化采购批量\n2. **WIP**: 控制极片、电芯在制品数量，减少资金占用\n3. **成品**: 按客户优先级配置安全库存\n\n## 核心算法\n- **(R,Q)策略**: 连续盘点补货\n- **动态安全库存**: 根据需求波动性自适应调整\n\n## 业务价值\n在确保98%订单满足率的前提下，降低库存资金占用15-20%。",
       config: "{\"service_level\": 0.98, \"holding_cost_rate\": 0.15}",

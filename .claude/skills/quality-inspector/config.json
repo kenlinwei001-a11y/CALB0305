@@ -1,0 +1,33 @@
+{
+  "version": "1.3.0",
+  "initialized": true,
+  "defaults": {
+    "purity_threshold": 99.5,
+    "inspection_standard": "国标",
+    "report_format": "PDF",
+    "auto_send_email": false
+  },
+  "email_config": {
+    "recipients": [],
+    "smtp_server": "",
+    "smtp_port": 587
+  },
+  "supported_materials": [
+    "Li2CO3",
+    "LiOH",
+    "NCM811",
+    "NCM622",
+    "LFP",
+    "Graphite",
+    "SiC"
+  ],
+  "thresholds": {
+    "Li2CO3": 99.5,
+    "LiOH": 99.0,
+    "NCM811": 99.8,
+    "NCM622": 99.7,
+    "LFP": 99.6,
+    "Graphite": 99.5,
+    "SiC": 99.0
+  }
+}

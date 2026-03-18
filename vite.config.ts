@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
+        port: 3008,
         host: '0.0.0.0',
         allowedHosts: ['calb0305.local', 'localhost', '127.0.0.1'],
         hmr: {
