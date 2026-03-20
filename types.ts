@@ -1515,3 +1515,655 @@ export interface ObjectBrowserState {
   };
   searchQuery: string;
 }
+
+// ==================== Workflow Studio (工作流编排系统) ====================
+
+/**
+ * Workflow Node 类型定义（工业级100+节点标准）
+ * 分类: 数据/语义/推理/决策/仿真/执行/控制
+ */
+export type WorkflowNodeCategory =
+  | 'data'        // 数据节点
+  | 'semantic'    // 语义节点
+  | 'reasoning'   // 推理节点
+  | 'decision'    // 决策节点
+  | 'simulation'  // 仿真节点
+  | 'execution'   // 执行节点
+  | 'control';    // 控制节点
+
+export type WorkflowNodeType =
+  // 数据类 (15个)
+  | 'DataFetch' | 'StreamJoin' | 'FeatureEngineering' | 'DataFilter' | 'DataTransform'
+  | 'DataAggregate' | 'DataValidate' | 'DataEnrich' | 'DataPartition' | 'DataSync'
+  | 'TimeSeriesProcess' | 'AnomalyClean' | 'MissingValueHandle' | 'OutlierDetect' | 'DataExport'
+  // 语义类 (10个)
+  | 'OntologyMapping' | 'MetricCompute' | 'SemanticValidation' | 'EntityRecognition'
+  | 'RelationExtract' | 'ConceptAlign' | 'TaxonomyBuild' | 'SemanticSearch' | 'KnowledgeFusion' | 'SemanticReasoning'
+  // 推理类 (20个)
+  | 'AnomalyDetection' | 'RootCauseAnalysis' | 'CausalInference' | 'GraphTraversal'
+  | 'SimilarCaseRetrieval' | 'PatternRecognition' | 'TrendForecast' | 'CorrelationAnalysis'
+  | 'ClusterAnalysis' | 'Classification' | 'Regression' | 'TimeSeriesForecast'
+  | 'HypothesisGeneration' | 'EvidenceEvaluation' | 'ConfidenceScoring' | 'UncertaintyQuantification'
+  | 'MultiModalFusion' | 'ContextUnderstanding' | 'IntentRecognition' | 'SituationAssessment'
+  // 决策类 (20个)
+  | 'RuleDecision' | 'Optimization' | 'MultiObjectiveDecision' | 'RiskEvaluation'
+  | 'CostBenefitAnalysis' | 'WhatIfAnalysis' | 'SensitivityAnalysis' | 'DecisionTree'
+  | 'ReinforcementLearning' | 'GeneticAlgorithm' | 'BayesianOptimization' | 'ConstraintSatisfaction'
+  | 'ScheduleOptimize' | 'ResourceAllocate' | 'PriorityRanking' | 'ConflictResolution'
+  | 'TradeOffAnalysis' | 'ScenarioPlanning' | 'StrategyRecommend' | 'PolicyEnforce'
+  // 仿真类 (15个)
+  | 'DiscreteEventSimulation' | 'PhysicsSimulation' | 'MonteCarlo' | 'AgentBasedSimulation'
+  | 'SystemDynamics' | 'DigitalTwin' | 'ParameterSweep' | 'ScenarioComparison'
+  | 'SensitivitySimulation' | 'StressTest' | 'ForecastSimulation' | 'CapacityPlanning'
+  | 'BottleneckAnalysis' | 'FlowOptimization' | 'VirtualExperiment'
+  // 执行类 (10个)
+  | 'ActionDispatch' | 'ParameterAdjust' | 'ScheduleUpdate' | 'OrderCreate'
+  | 'AlertSend' | 'ReportGenerate' | 'TaskAssign' | 'WorkflowTrigger'
+  | 'SystemIntegration' | 'DataWriteBack'
+  // 控制类 (10个)
+  | 'If' | 'Switch' | 'Loop' | 'Parallel' | 'Retry'
+  | 'Timeout' | 'Delay' | 'Merge' | 'Split' | 'SubWorkflow';
+
+/**
+ * Workflow 节点定义
+ */
+export interface WorkflowNode {
+  id: string;
+  type: WorkflowNodeType;
+  category: WorkflowNodeCategory;
+  name: string;
+  description: string;
+  // 配置参数
+  config: Record<string, any>;
+  // 输入输出定义
+  input: WorkflowPort[];
+  output: WorkflowPort[];
+  // 执行配置
+  execution: {
+    timeout: number;        // 超时时间(秒)
+    retry: number;          // 重试次数
+    retryInterval: number;  // 重试间隔(秒)
+    parallel: boolean;      // 是否并行执行
+  };
+  // 运行时状态
+  runtime?: {
+    status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+    startTime?: string;
+    endTime?: string;
+    duration?: number;
+    error?: string;
+    output?: any;
+  };
+}
+
+export interface WorkflowPort {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'any';
+  description: string;
+  required: boolean;
+  defaultValue?: any;
+}
+
+/**
+ * Workflow 边定义
+ */
+export interface WorkflowEdge {
+  id: string;
+  source: string;      // 源节点ID
+  target: string;      // 目标节点ID
+  condition?: string;  // 条件表达式
+  type: 'default' | 'true' | 'false' | 'error' | 'custom';
+}
+
+/**
+ * Workflow 定义
+ */
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  category: 'data_pipeline' | 'analysis' | 'decision' | 'simulation' | 'execution' | 'control';
+  version: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  // 输入输出
+  inputSchema: Record<string, WorkflowPort>;
+  outputSchema: Record<string, WorkflowPort>;
+  // 元数据
+  metadata: {
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+    tags: string[];
+    isTemplate: boolean;
+    isPublic: boolean;
+  };
+  // 执行统计
+  stats?: {
+    totalRuns: number;
+    successRuns: number;
+    failedRuns: number;
+    avgDuration: number;
+    lastRunAt?: string;
+  };
+}
+
+/**
+ * Workflow 执行实例
+ */
+export interface WorkflowInstance {
+  id: string;
+  workflowId: string;
+  status: 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+  input: Record<string, any>;
+  output?: Record<string, any>;
+  context: WorkflowContext;
+  nodeStates: Map<string, WorkflowNode['runtime']>;
+  startTime: string;
+  endTime?: string;
+  triggeredBy: string;  // user/agent/system
+}
+
+export interface WorkflowContext {
+  variables: Record<string, any>;
+  objectRefs: string[];      // 关联的业务对象ID
+  metricRefs: string[];      // 关联的指标ID
+  eventRefs: string[];       // 关联的事件ID
+  agentRefs: string[];       // 执行的Agent ID
+  skillRefs: string[];       // 使用的Skill ID
+}
+
+// ==================== Simulation Lab (推演实验室) ====================
+
+/**
+ * Simulation 场景定义
+ */
+export interface SimulationScenario {
+  id: string;
+  name: string;
+  description: string;
+  baseParams: SimulationParameter[];
+  // 变量配置
+  variables: SimulationVariable[];
+  // 输出指标
+  outputMetrics: string[];
+  // 评估目标
+  objectives: SimulationObjective[];
+}
+
+export interface SimulationParameter {
+  name: string;
+  value: any;
+  type: 'string' | 'number' | 'boolean' | 'enum';
+  range?: { min: number; max: number; step: number };
+  options?: string[];  // for enum
+}
+
+export interface SimulationVariable {
+  name: string;
+  baseValue: number;
+  variation: 'absolute' | 'percentage';
+  range: { min: number; max: number; step: number };
+  description: string;
+}
+
+export interface SimulationObjective {
+  metric: string;
+  target: 'maximize' | 'minimize' | 'target';
+  targetValue?: number;
+  weight: number;  // 多目标优化权重
+}
+
+/**
+ * Simulation 运行实例
+ */
+export interface SimulationRun {
+  id: string;
+  scenarioId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  params: Record<string, any>;
+  results: SimulationResult;
+  startTime: string;
+  endTime?: string;
+}
+
+export interface SimulationResult {
+  metrics: Record<string, number>;
+  confidence: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  details: {
+    timestamp: string;
+    intermediateResults: Record<string, any>;
+    visualizations?: string[];  // 图表URL
+  };
+}
+
+/**
+ * What-if 分析
+ */
+export interface WhatIfAnalysis {
+  id: string;
+  name: string;
+  baseScenario: string;
+  variations: WhatIfVariation[];
+  results: WhatIfResult[];
+  comparisonMatrix: ComparisonItem[];
+}
+
+export interface WhatIfVariation {
+  id: string;
+  name: string;
+  paramChanges: Record<string, any>;
+  description: string;
+}
+
+export interface WhatIfResult {
+  variationId: string;
+  metrics: Record<string, number>;
+  impact: Record<string, number>;  // 相对于基准的变化
+}
+
+export interface ComparisonItem {
+  metric: string;
+  baseline: number;
+  variations: {
+    variationId: string;
+    value: number;
+    change: number;
+    changePercent: number;
+  }[];
+}
+
+// ==================== Agent Runtime (运行时编排) ====================
+
+/**
+ * Agent Runtime 定义
+ */
+export interface AgentRuntime {
+  id: string;
+  name: string;
+  description: string;
+  // 运行时配置
+  config: {
+    maxAgents: number;
+    timeout: number;
+    logLevel: 'debug' | 'info' | 'warn' | 'error';
+    enableTracing: boolean;
+  };
+  // 执行的Agent实例
+  agents: AgentRuntimeInstance[];
+  // 执行状态
+  status: 'idle' | 'running' | 'paused' | 'completed' | 'failed';
+  // 编排模式
+  orchestration: {
+    mode: 'sequential' | 'parallel' | 'hierarchical' | 'adaptive';
+    workflowId?: string;  // 关联的Workflow
+  };
+}
+
+/**
+ * Agent Runtime 实例
+ */
+export interface AgentRuntimeInstance {
+  id: string;
+  agentId: string;
+  role: AgentType;
+  status: 'pending' | 'running' | 'waiting' | 'completed' | 'failed';
+  // 输入输出上下文
+  inputContext: Record<string, any>;
+  outputContext?: Record<string, any>;
+  // 工具调用记录
+  toolCalls: AgentToolCall[];
+  // 执行统计
+  stats: {
+    startTime: string;
+    endTime?: string;
+    tokenInput: number;
+    tokenOutput: number;
+    toolCallCount: number;
+  };
+}
+
+export interface AgentToolCall {
+  id: string;
+  toolId: string;
+  input: Record<string, any>;
+  output?: Record<string, any>;
+  status: 'pending' | 'success' | 'failed';
+  timestamp: string;
+  duration: number;
+}
+
+/**
+ * Agent 间通信
+ */
+export interface AgentMessage {
+  id: string;
+  from: string;      // Agent instance ID
+  to: string;        // Agent instance ID or 'broadcast'
+  type: 'request' | 'response' | 'notify' | 'delegate';
+  content: Record<string, any>;
+  timestamp: string;
+  correlationId?: string;  // 用于关联请求和响应
+}
+
+/**
+ * Agent Prompt 模板
+ */
+export interface AgentPromptTemplate {
+  id: string;
+  name: string;
+  role: string;
+  template: string;
+  variables: string[];
+  constraints: {
+    outputFormat: 'json' | 'text' | 'markdown';
+    reasoningSteps: boolean;
+    toolCalling: boolean;
+    maxTokens: number;
+  };
+}
+
+// ==================== Explainability (可解释性系统) ====================
+
+/**
+ * 决策解释
+ */
+export interface DecisionExplanation {
+  id: string;
+  decisionId: string;
+  // 解释内容
+  explanation: {
+    summary: string;           // 一句话总结
+    detailedReasoning: string; // 详细推理过程
+    keyFactors: ExplanationFactor[];  // 关键因素
+    confidenceBreakdown: ConfidenceItem[];  // 置信度分解
+  };
+  // 证据链
+  evidence: ExplanationEvidence[];
+  // 可追溯性
+  traceability: {
+    dataSources: string[];
+    modelVersions: string[];
+    reasoningChain: string;
+    timestamp: string;
+  };
+}
+
+export interface ExplanationFactor {
+  name: string;
+  description: string;
+  importance: number;  // 0-1 重要性分数
+  direction: 'positive' | 'negative' | 'neutral';
+  value: any;
+}
+
+export interface ConfidenceItem {
+  component: string;
+  confidence: number;
+  weight: number;
+  description: string;
+}
+
+export interface ExplanationEvidence {
+  type: 'data' | 'model' | 'rule' | 'expert' | 'historical';
+  source: string;
+  content: string;
+  relevance: number;  // 0-1 相关度
+  timestamp: string;
+}
+
+/**
+ * 反事实解释
+ */
+export interface CounterfactualExplanation {
+  id: string;
+  originalDecision: string;
+  counterfactuals: CounterfactualScenario[];
+}
+
+export interface CounterfactualScenario {
+  id: string;
+  description: string;
+  changes: Record<string, any>;  // 改变的变量
+  predictedOutcome: string;
+  confidence: number;
+  plausibility: number;  // 可行性分数
+}
+
+/**
+ * 归因分析
+ */
+export interface AttributionAnalysis {
+  id: string;
+  target: string;  // 分析目标
+  method: 'shap' | 'lime' | 'integrated_gradients' | 'attention';
+  features: AttributionFeature[];
+}
+
+export interface AttributionFeature {
+  name: string;
+  value: number;
+  contribution: number;  // 贡献值
+  contributionPercent: number;
+  direction: 'positive' | 'negative';
+}
+
+// ==================== Skill Market (技能市场) ====================
+
+/**
+ * 市场Skill定义（扩展基础Skill）
+ */
+export interface MarketSkill extends Skill {
+  // 市场属性
+  marketInfo: {
+    publisher: string;
+    publisherRole: string;
+    publishDate: string;
+    version: string;
+    changelog: string[];
+  };
+  // 评分和评价
+  rating: {
+    average: number;
+    count: number;
+    distribution: number[];  // [1星, 2星, 3星, 4星, 5星] 数量
+  };
+  reviews: SkillReview[];
+  // 使用统计
+  usage: {
+    totalDownloads: number;
+    monthlyActive: number;
+    avgRating: number;
+    successRate: number;
+  };
+  // 定价
+  pricing: {
+    type: 'free' | 'paid' | 'subscription';
+    price?: number;
+    currency?: string;
+    billingCycle?: 'monthly' | 'yearly' | 'per_use';
+  };
+  // 依赖
+  dependencies: {
+    skills: string[];
+    tools: string[];
+    dataSources: string[];
+  };
+  // 标签和分类
+  tags: string[];
+  categories: string[];
+}
+
+export interface SkillReview {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  title: string;
+  content: string;
+  timestamp: string;
+  helpful: number;  // 有用数
+  verified: boolean;  // 是否验证过使用
+}
+
+/**
+ * Skill 订阅
+ */
+export interface SkillSubscription {
+  id: string;
+  userId: string;
+  skillId: string;
+  status: 'active' | 'expired' | 'cancelled';
+  startDate: string;
+  endDate?: string;
+  usageQuota: {
+    total: number;
+    used: number;
+    resetDate: string;
+  };
+}
+
+/**
+ * Skill 推荐
+ */
+export interface SkillRecommendation {
+  skillId: string;
+  reason: string;
+  score: number;
+  basedOn: {
+    userHistory: boolean;
+    similarUsers: boolean;
+    trending: boolean;
+    contextual: boolean;
+  };
+}
+
+// ==================== 数据库DDL映射类型 ====================
+
+/**
+ * 数据库表映射 - Object Layer
+ */
+export interface DBObjectEntity {
+  id: string;
+  type: string;
+  name: string;
+  state: string;
+  lifecycleStage: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DBObjectAttribute {
+  id: number;
+  objectId: string;
+  attrKey: string;
+  attrValue: string;
+  valueType: string;
+  updatedAt: string;
+}
+
+export interface DBObjectRelation {
+  id: number;
+  sourceId: string;
+  targetId: string;
+  relationType: string;
+  weight: number;
+  createdAt: string;
+}
+
+export interface DBObjectEvent {
+  id: number;
+  objectId: string;
+  eventType: string;
+  eventPayload: Record<string, any>;
+  eventTime: string;
+}
+
+/**
+ * 数据库表映射 - Semantic Layer
+ */
+export interface DBMetricDefinition {
+  id: string;
+  name: string;
+  formula: string;
+  description: string;
+  validCondition: string;
+  invalidCondition: string;
+}
+
+export interface DBOntologyEntity {
+  id: string;
+  name: string;
+  category: string;
+  schema: Record<string, any>;
+}
+
+/**
+ * 数据库表映射 - Tool Layer
+ */
+export interface DBToolRegistry {
+  id: string;
+  name: string;
+  type: string;
+  inputSchema: Record<string, any>;
+  outputSchema: Record<string, any>;
+  endpoint: string;
+}
+
+export interface DBToolExecutionLog {
+  id: number;
+  toolId: string;
+  input: Record<string, any>;
+  output: Record<string, any>;
+  status: string;
+  executedAt: string;
+}
+
+// ==================== 视图状态类型 ====================
+
+/**
+ * Workflow Studio 视图状态
+ */
+export interface WorkflowStudioState {
+  selectedWorkflow?: string;
+  viewMode: 'design' | 'debug' | 'monitor';
+  canvas: {
+    zoom: number;
+    pan: { x: number; y: number };
+    selectedNodes: string[];
+  };
+  palette: {
+    category: WorkflowNodeCategory | 'all';
+    searchQuery: string;
+  };
+}
+
+/**
+ * Simulation Lab 视图状态
+ */
+export interface SimulationLabState {
+  selectedScenario?: string;
+  viewMode: 'setup' | 'run' | 'compare' | 'analyze';
+  runs: string[];  // 选中的运行ID
+  comparison: {
+    baseline?: string;
+    variations: string[];
+    metrics: string[];
+  };
+}
+
+/**
+ * Skill Market 视图状态
+ */
+export interface SkillMarketState {
+  viewMode: 'browse' | 'detail' | 'manage';
+  filters: {
+    category?: string;
+    pricing?: 'free' | 'paid' | 'all';
+    rating?: number;
+    tags: string[];
+  };
+  sortBy: 'relevance' | 'rating' | 'downloads' | 'newest';
+  searchQuery: string;
+}

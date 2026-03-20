@@ -7359,3 +7359,259 @@ export const getAgentById = (id) =>
 
 export const getObjectsByType = (type) =>
   MOCK_BUSINESS_OBJECTS.filter(obj => obj.type === type);
+
+// ==================== Workflow Studio Mock Data ====================
+
+export const MOCK_WORKFLOWS = [
+  {
+    id: 'wf-001',
+    name: '设备异常处理流程',
+    description: '自动检测设备异常、分析根因、生成维修工单',
+    category: 'execution',
+    version: '1.0.0',
+    nodes: [
+      {
+        id: 'node-1',
+        type: 'AnomalyDetection',
+        category: 'reasoning',
+        name: '异常检测',
+        description: '检测设备指标异常',
+        config: { model: 'IsolationForest', threshold: 0.95 },
+        input: [{ name: 'metrics', type: 'array', description: '指标数据', required: true }],
+        output: [{ name: 'anomalies', type: 'array', description: '异常列表', required: true }],
+        execution: { timeout: 30, retry: 2, retryInterval: 5, parallel: false }
+      },
+      {
+        id: 'node-2',
+        type: 'RootCauseAnalysis',
+        category: 'reasoning',
+        name: '根因分析',
+        description: '分析异常根因',
+        config: { depth: 3, method: 'bayesian' },
+        input: [{ name: 'anomalies', type: 'array', description: '异常列表', required: true }],
+        output: [{ name: 'rootCauses', type: 'array', description: '根因列表', required: true }],
+        execution: { timeout: 60, retry: 1, retryInterval: 10, parallel: false }
+      },
+      {
+        id: 'node-3',
+        type: 'If',
+        category: 'control',
+        name: '条件判断',
+        description: '判断是否高优先级',
+        config: { condition: 'rootCauses[0].severity == "high"' },
+        input: [{ name: 'rootCauses', type: 'array', description: '根因列表', required: true }],
+        output: [{ name: 'result', type: 'boolean', description: '判断结果', required: true }],
+        execution: { timeout: 5, retry: 0, retryInterval: 0, parallel: false }
+      },
+      {
+        id: 'node-4',
+        type: 'ActionDispatch',
+        category: 'execution',
+        name: '创建紧急工单',
+        description: '创建高优先级维修工单',
+        config: { target: 'MES', action: 'create_workorder' },
+        input: [{ name: 'rootCauses', type: 'array', description: '根因列表', required: true }],
+        output: [{ name: 'workorderId', type: 'string', description: '工单ID', required: true }],
+        execution: { timeout: 10, retry: 3, retryInterval: 5, parallel: false }
+      },
+      {
+        id: 'node-5',
+        type: 'AlertSend',
+        category: 'execution',
+        name: '发送告警',
+        description: '发送普通告警通知',
+        config: { channel: 'email', level: 'warning' },
+        input: [{ name: 'rootCauses', type: 'array', description: '根因列表', required: true }],
+        output: [{ name: 'sent', type: 'boolean', description: '是否发送成功', required: true }],
+        execution: { timeout: 10, retry: 2, retryInterval: 5, parallel: false }
+      }
+    ],
+    edges: [
+      { id: 'edge-1', source: 'node-1', target: 'node-2', type: 'default' },
+      { id: 'edge-2', source: 'node-2', target: 'node-3', type: 'default' },
+      { id: 'edge-3', source: 'node-3', target: 'node-4', type: 'true' },
+      { id: 'edge-4', source: 'node-3', target: 'node-5', type: 'false' }
+    ],
+    inputSchema: {
+      equipmentId: { name: 'equipmentId', type: 'string', description: '设备ID', required: true }
+    },
+    outputSchema: {
+      result: { name: 'result', type: 'string', description: '处理结果', required: true }
+    },
+    metadata: {
+      createdBy: 'system',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-03-01T00:00:00Z',
+      tags: ['设备', '异常', '自动处理'],
+      isTemplate: true,
+      isPublic: true
+    },
+    stats: {
+      totalRuns: 156,
+      successRuns: 152,
+      failedRuns: 4,
+      avgDuration: 45,
+      lastRunAt: '2024-03-20T10:30:00Z'
+    }
+  }
+];
+
+// Workflow Node 模板库
+export const WORKFLOW_NODE_TEMPLATES = [
+  { type: 'DataFetch', category: 'data', name: '数据获取', description: '从数据源获取数据' },
+  { type: 'AnomalyDetection', category: 'reasoning', name: '异常检测', description: '检测数据异常' },
+  { type: 'RootCauseAnalysis', category: 'reasoning', name: '根因分析', description: '分析根本原因' },
+  { type: 'RuleDecision', category: 'decision', name: '规则决策', description: '基于规则决策' },
+  { type: 'Optimization', category: 'decision', name: '优化求解', description: '数学优化求解' },
+  { type: 'MonteCarlo', category: 'simulation', name: '蒙特卡洛模拟', description: '随机模拟分析' },
+  { type: 'WhatIfAnalysis', category: 'simulation', name: 'What-if分析', description: '假设情景分析' },
+  { type: 'ActionDispatch', category: 'execution', name: '动作下发', description: '下发执行动作' },
+  { type: 'ParameterAdjust', category: 'execution', name: '参数调整', description: '调整设备参数' },
+  { type: 'If', category: 'control', name: '条件分支', description: '条件判断分支' },
+  { type: 'Parallel', category: 'control', name: '并行', description: '并行执行' }
+];
+
+// ==================== Simulation Lab Mock Data ====================
+
+export const MOCK_SIMULATION_SCENARIOS = [
+  {
+    id: 'sim-001',
+    name: '产能规划推演',
+    description: '评估不同产能配置对交付和成本的影响',
+    baseParams: [
+      { name: 'currentCapacity', value: 10000, type: 'number', range: { min: 5000, max: 20000, step: 1000 } },
+      { name: 'demandGrowth', value: 0.15, type: 'number', range: { min: 0, max: 0.5, step: 0.05 } }
+    ],
+    variables: [
+      { name: 'capacityExpansion', baseValue: 0, variation: 'absolute', range: { min: 0, max: 5000, step: 500 }, description: '产能扩张量' }
+    ],
+    outputMetrics: ['deliveryRate', 'unitCost', 'roi'],
+    objectives: [
+      { metric: 'deliveryRate', target: 'maximize', weight: 0.4 },
+      { metric: 'roi', target: 'maximize', weight: 0.35 },
+      { metric: 'unitCost', target: 'minimize', weight: 0.25 }
+    ]
+  }
+];
+
+export const MOCK_SIMULATION_RUNS = [
+  {
+    id: 'run-001',
+    scenarioId: 'sim-001',
+    status: 'completed',
+    params: { capacityExpansion: 2000, automationLevel: 0.7 },
+    results: {
+      metrics: { deliveryRate: 0.94, unitCost: 85, roi: 0.23 },
+      confidence: 0.87,
+      riskLevel: 'medium'
+    },
+    startTime: '2024-03-20T10:00:00Z',
+    endTime: '2024-03-20T10:02:30Z'
+  }
+];
+
+// ==================== Agent Runtime Mock Data ====================
+
+export const MOCK_AGENT_RUNTIMES = [
+  {
+    id: 'runtime-001',
+    name: '产线异常处理Runtime',
+    description: '协调多Agent处理产线异常',
+    config: {
+      maxAgents: 5,
+      timeout: 300,
+      logLevel: 'info',
+      enableTracing: true
+    },
+    agents: [
+      {
+        id: 'instance-001',
+        agentId: 'agent-analyst',
+        role: 'analyst',
+        status: 'completed',
+        inputContext: { anomaly: 'temperature_high' },
+        outputContext: { analysis: 'cooling_system_issue' },
+        toolCalls: [
+          { id: 'tc-001', toolId: 'get_equipment_status', input: { id: 'EQ-001' }, output: { temp: 92 }, status: 'success', timestamp: '2024-03-20T10:00:00Z', duration: 500 }
+        ],
+        stats: {
+          startTime: '2024-03-20T10:00:00Z',
+          endTime: '2024-03-20T10:00:30Z',
+          tokenInput: 1200,
+          tokenOutput: 800,
+          toolCallCount: 2
+        }
+      }
+    ],
+    status: 'completed',
+    orchestration: {
+      mode: 'sequential',
+      workflowId: 'wf-001'
+    }
+  }
+];
+
+// ==================== Skill Market Mock Data ====================
+
+export const MOCK_MARKET_SKILLS = [
+  {
+    skill_id: "market-oee-optimizer",
+    name: "OEE优化专家",
+    description: "专业级OEE分析和优化建议，适合连续生产环境",
+    category: "data-analysis",
+    marketInfo: {
+      publisher: "工业智能实验室",
+      publisherRole: "官方",
+      publishDate: "2024-01-15T00:00:00Z",
+      version: "2.0.0",
+      changelog: ["v2.0: 新增预测性维护", "v1.5: 优化算法"]
+    },
+    rating: {
+      average: 4.8,
+      count: 156,
+      distribution: [2, 5, 12, 45, 92]
+    },
+    reviews: [
+      {
+        id: "rev-001",
+        userId: "user-001",
+        userName: "张工程师",
+        rating: 5,
+        title: "非常实用的Skill",
+        content: "帮助我们产线OEE提升了8%，推荐！",
+        timestamp: "2024-02-20T10:00:00Z",
+        helpful: 23,
+        verified: true
+      }
+    ],
+    usage: {
+      totalDownloads: 1256,
+      monthlyActive: 342,
+      avgRating: 4.8,
+      successRate: 0.94
+    },
+    pricing: {
+      type: "free"
+    },
+    dependencies: {
+      skills: [],
+      tools: ["calc_oee", "trend_analysis"],
+      dataSources: ["MES", "SCADA"]
+    },
+    tags: ["OEE", "效率", "优化", "生产"],
+    categories: ["生产效率", "数据分析"]
+  }
+];
+
+// 导出辅助函数
+export const getWorkflowById = (id) =>
+  MOCK_WORKFLOWS.find(w => w.id === id);
+
+export const getSimulationScenarioById = (id) =>
+  MOCK_SIMULATION_SCENARIOS.find(s => s.id === id);
+
+export const getAgentRuntimeById = (id) =>
+  MOCK_AGENT_RUNTIMES.find(r => r.id === id);
+
+export const getMarketSkillById = (id) =>
+  MOCK_MARKET_SKILLS.find(s => s.skill_id === id);

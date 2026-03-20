@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Network, Zap, Settings, Box, Atom, Layers, Database,
   Command, Bell, Search, ChevronDown, Sparkles, Cpu, ChevronLeft, X, ArrowRight,
-  GitBranch, Brain, Target
+  GitBranch, Brain, Target, Workflow, Beaker, ShoppingCart
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SkillsRegistry from './components/SkillsRegistry';
@@ -18,25 +18,31 @@ import DataSourceManager from './components/DataSourceManager';
 import DecisionRepository from './components/DecisionRepository';
 import DecisionSpace from './components/DecisionSpace';
 import BusinessObjectBrowser from './components/BusinessObjectBrowser';
+import WorkflowStudio from './components/WorkflowStudio';
+import SimulationLab from './components/SimulationLab';
+import SkillMarket from './components/SkillMarket';
 
 // 导航项配置 - 基于用户使用逻辑分层排序
-// 顺序: 总览 → 日常工作 → 能力构建 → 资产管理
+// 顺序: 总览 → 核心业务(Agent OS) → 能力构建 → 资产管理
 const navItems = [
-  // 第一层: 总览入口 (每天首次打开)
+  // 第一层: 总览入口
   { path: '/', icon: LayoutDashboard, label: '仪表盘' },
 
-  // 第二层: 核心工作区 (日常主要工作)
+  // 第二层: 智能体中台核心 (Agent Data OS)
   { path: '/decision-space', icon: Brain, label: '决策空间' },
   { path: '/objects', icon: Target, label: '业务对象' },
-  { path: '/ontology', icon: Network, label: '场景推演' },
+  { path: '/workflows', icon: Workflow, label: '工作流' },
+  { path: '/simulation', icon: Beaker, label: '推演' },
 
-  // 第三层: 语义与能力 (业务定义和技能管理)
+  // 第三层: 能力中心 (语义与技能)
+  { path: '/ontology', icon: Network, label: '场景推演' },
   { path: '/business-semantic', icon: Layers, label: '业务语义' },
   { path: '/atoms', icon: Atom, label: '业务释义' },
   { path: '/skills', icon: Zap, label: '技能中心' },
   { path: '/mcp-tools', icon: Cpu, label: 'MCP工具' },
 
-  // 第四层: 资产与数据 (知识沉淀和系统配置)
+  // 第四层: 资产与数据
+  { path: '/skill-market', icon: ShoppingCart, label: '技能市场' },
   { path: '/decision-repository', icon: GitBranch, label: '决策资产' },
   { path: '/data-sources', icon: Database, label: '数据源' },
 ];
@@ -546,6 +552,9 @@ const AppContent: React.FC = () => {
           <Route path="/decision-repository" element={<><TopBar title="决策资产库" /><div className="flex-1 overflow-auto p-6"><DecisionRepository /></div></>} />
           <Route path="/decision-space" element={<DecisionSpace />} />
           <Route path="/objects" element={<><TopBar title="业务对象模型" /><div className="flex-1 overflow-auto"><BusinessObjectBrowser /></div></>} />
+          <Route path="/workflows" element={<><TopBar title="工作流编排" /><div className="flex-1 overflow-auto"><WorkflowStudio /></div></>} />
+          <Route path="/simulation" element={<><TopBar title="推演实验室" /><div className="flex-1 overflow-auto"><SimulationLab /></div></>} />
+          <Route path="/skill-market" element={<><TopBar title="技能市场" /><div className="flex-1 overflow-auto p-6"><SkillMarket /></div></>} />
           <Route path="/settings" element={<><TopBar title="设置" /><div className="flex-1 overflow-auto p-6"><div className="bg-white rounded-2xl p-6 shadow-sm">设置页面</div></div></>} />
           <Route path="*" element={<div className="flex-1 flex items-center justify-center"><h1 className="text-2xl text-gray-400">404 - Page Not Found</h1></div>} />
         </Routes>
