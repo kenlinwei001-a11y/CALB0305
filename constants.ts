@@ -6741,3 +6741,621 @@ MOCK_SKILLS.forEach((skill, index) => {
     };
   }
 });
+
+// ==================== 智能体中台 (Agent Data OS) Mock Data ====================
+
+// 业务对象库 - 面向Agent的可理解对象
+export const MOCK_BUSINESS_OBJECTS = [
+  {
+    id: 'EQ-001',
+    name: '激光焊接机 A01',
+    type: 'equipment',
+    description: '极耳焊接工序核心设备，用于电芯正负极极耳与盖板的焊接',
+    state: {
+      code: 'running',
+      name: '运行中',
+      description: '设备正常运行，无异常告警',
+      severity: 'normal',
+      updatedAt: '2024-03-20T10:30:00Z',
+      updatedBy: 'system'
+    },
+    stateHistory: [
+      { from: 'standby', to: 'running', timestamp: '2024-03-20T08:00:00Z', triggeredBy: 'scheduler', reason: '生产计划启动' }
+    ],
+    attributes: {
+      temperature: {
+        name: '设备温度',
+        value: 85,
+        dataType: 'number',
+        unit: '°C',
+        quality: { freshness: 98, accuracy: 99, completeness: 100 },
+        constraints: { min: 0, max: 120, required: true },
+        semanticRef: 'temperature',
+        lastUpdated: '2024-03-20T10:30:00Z'
+      },
+      load: {
+        name: '设备负载率',
+        value: 0.78,
+        dataType: 'number',
+        unit: '%',
+        quality: { freshness: 95, accuracy: 98, completeness: 100 },
+        constraints: { min: 0, max: 1, required: true },
+        semanticRef: 'load_rate',
+        lastUpdated: '2024-03-20T10:30:00Z'
+      },
+      oee: {
+        name: '设备综合效率',
+        value: 0.82,
+        dataType: 'number',
+        unit: '%',
+        quality: { freshness: 90, accuracy: 95, completeness: 100 },
+        constraints: { min: 0, max: 1, required: true },
+        semanticRef: 'oee',
+        lastUpdated: '2024-03-20T09:00:00Z'
+      }
+    },
+    lifecycle: {
+      stages: [
+        { id: 'installed', name: '已安装', description: '设备安装调试完成', order: 1, allowedActions: ['start', 'maintain'] },
+        { id: 'running', name: '运行中', description: '设备正常生产', order: 2, allowedActions: ['stop', 'pause', 'maintain'] },
+        { id: 'maintenance', name: '维护中', description: '计划性或故障维护', order: 3, allowedActions: ['complete', 'repair'] },
+        { id: 'retired', name: '已报废', description: '设备生命周期结束', order: 4, allowedActions: [] }
+      ],
+      transitions: [
+        { from: 'installed', to: 'running', condition: 'production_scheduled', autoTransition: true },
+        { from: 'running', to: 'maintenance', condition: 'maintenance_due OR fault_detected', autoTransition: false },
+        { from: 'maintenance', to: 'running', condition: 'maintenance_complete', autoTransition: true }
+      ]
+    },
+    currentLifecycleStage: 'running',
+    relations: [
+      { id: 'rel-001', type: 'belongs_to', targetObjectId: 'LINE-A', targetObjectType: 'line', direction: 'outgoing', strength: 1.0 },
+      { id: 'rel-002', type: 'produces', targetObjectId: 'CELL-18650', targetObjectType: 'product', direction: 'outgoing', strength: 0.9 },
+      { id: 'rel-003', type: 'consumes', targetObjectId: 'MAT-TAB-001', targetObjectType: 'material', direction: 'outgoing', strength: 0.8 }
+    ],
+    capabilities: [
+      {
+        id: 'cap-001',
+        name: '焊接参数调整',
+        description: '调整激光功率、焊接速度等参数',
+        skillId: 'laser_welding_optimize',
+        inputSchema: { power: 'number', speed: 'number' },
+        outputSchema: { result: 'string', quality_score: 'number' },
+        preconditions: ['设备状态为运行中', '无当前告警'],
+        postconditions: ['参数已更新', '质量预测已刷新']
+      }
+    ],
+    rules: [
+      {
+        id: 'rule-001',
+        name: '温度异常告警',
+        description: '当设备温度超过90°C时触发告警',
+        trigger: { type: 'condition', condition: 'attributes.temperature.value > 90' },
+        actions: [
+          { type: 'alert', target: 'maintenance_team', parameters: { level: 'warning' } },
+          { type: 'create_task', target: 'task_system', parameters: { type: 'inspection' } }
+        ],
+        priority: 80,
+        enabled: true
+      }
+    ],
+    metadata: {
+      createdAt: '2023-01-15T08:00:00Z',
+      updatedAt: '2024-03-20T10:30:00Z',
+      createdBy: 'system',
+      version: '1.0.0',
+      domain: 'production',
+      tags: ['关键设备', '焊接', '激光']
+    }
+  },
+  {
+    id: 'ORDER-20240320-001',
+    name: '客户订单 #20240320-001',
+    type: 'order',
+    description: '宁德时代 10000支 18650 圆柱电芯订单',
+    state: {
+      code: 'in_production',
+      name: '生产中',
+      description: '订单已进入生产排程，正在极片车间生产',
+      severity: 'normal',
+      updatedAt: '2024-03-20T09:00:00Z',
+      updatedBy: 'scheduler'
+    },
+    stateHistory: [
+      { from: 'created', to: 'confirmed', timestamp: '2024-03-18T14:30:00Z', triggeredBy: 'sales', reason: '客户确认订单' },
+      { from: 'confirmed', to: 'scheduled', timestamp: '2024-03-19T10:00:00Z', triggeredBy: 'scheduler', reason: '完成生产排程' },
+      { from: 'scheduled', to: 'in_production', timestamp: '2024-03-20T08:00:00Z', triggeredBy: 'system', reason: '生产计划启动' }
+    ],
+    attributes: {
+      quantity: {
+        name: '订单数量',
+        value: 10000,
+        dataType: 'number',
+        unit: '支',
+        quality: { freshness: 100, accuracy: 100, completeness: 100 },
+        lastUpdated: '2024-03-18T14:30:00Z'
+      },
+      delivery_date: {
+        name: '交付日期',
+        value: '2024-04-15',
+        dataType: 'string',
+        quality: { freshness: 100, accuracy: 100, completeness: 100 },
+        lastUpdated: '2024-03-18T14:30:00Z'
+      },
+      priority: {
+        name: '优先级',
+        value: 'high',
+        dataType: 'string',
+        quality: { freshness: 100, accuracy: 100, completeness: 100 },
+        lastUpdated: '2024-03-18T14:30:00Z'
+      }
+    },
+    lifecycle: {
+      stages: [
+        { id: 'created', name: '已创建', description: '订单已录入系统', order: 1, allowedActions: ['confirm', 'cancel'] },
+        { id: 'confirmed', name: '已确认', description: '客户已确认订单', order: 2, allowedActions: ['schedule'] },
+        { id: 'scheduled', name: '已排程', description: '生产计划已生成', order: 3, allowedActions: ['start_production'] },
+        { id: 'in_production', name: '生产中', description: '订单正在生产', order: 4, allowedActions: ['track'] },
+        { id: 'completed', name: '已完成', description: '生产已完成', order: 5, allowedActions: ['deliver'] },
+        { id: 'delivered', name: '已交付', description: '订单已交付客户', order: 6, allowedActions: [] }
+      ],
+      transitions: []
+    },
+    currentLifecycleStage: 'in_production',
+    relations: [
+      { id: 'rel-101', type: 'references', targetObjectId: 'CUST-CATL', targetObjectType: 'customer', direction: 'outgoing', strength: 1.0 },
+      { id: 'rel-102', type: 'produces', targetObjectId: 'CELL-18650', targetObjectType: 'product', direction: 'outgoing', strength: 1.0 }
+    ],
+    capabilities: [],
+    rules: [
+      {
+        id: 'rule-101',
+        name: '交期预警',
+        description: '交付日期前3天未完成生产则触发预警',
+        trigger: { type: 'schedule', condition: 'DAYS_UNTIL(delivery_date) <= 3 AND status != completed' },
+        actions: [{ type: 'alert', target: 'production_manager', parameters: { level: 'high' } }],
+        priority: 90,
+        enabled: true
+      }
+    ],
+    metadata: {
+      createdAt: '2024-03-18T14:30:00Z',
+      updatedAt: '2024-03-20T09:00:00Z',
+      createdBy: 'sales_user',
+      version: '1.0.0',
+      domain: 'sales',
+      tags: ['大客户', '高优先级']
+    }
+  }
+];
+
+// 工业级指标语义标准
+export const MOCK_INDUSTRIAL_METRICS = [
+  {
+    id: 'metric-oee',
+    name: '设备综合效率',
+    code: 'OEE',
+    category: 'efficiency',
+    definition: '设备综合效率反映设备实际生产能力相对于理论产能的比例',
+    formula: 'availability × performance × quality',
+    unit: '%',
+    applicableScenarios: ['产线效率评估', '设备性能监控', '生产计划优化'],
+    trustConditions: [
+      { type: 'frequency', threshold: 60, description: '数据采样频率 ≥ 1分钟' },
+      { type: 'completeness', threshold: 95, description: '数据完整度 ≥ 95%' }
+    ],
+    failureConditions: [
+      { condition: 'downtime_not_recorded', description: '停机未记录将导致OEE虚高', fallbackValue: null },
+      { condition: 'quality_data_missing', description: '质量数据缺失时无法计算质量率', fallbackValue: 1.0 }
+    ],
+    relatedObjects: ['equipment', 'line'],
+    computation: {
+      method: 'formula',
+      config: {
+        availability: 'operating_time / planned_time',
+        performance: 'actual_output / theoretical_output',
+        quality: 'good_units / total_units'
+      },
+      refreshInterval: 300
+    },
+    thresholds: { critical: 0.5, warning: 0.65, target: 0.85, excellent: 0.9 }
+  },
+  {
+    id: 'metric-fpy',
+    name: '一次通过率',
+    code: 'FPY',
+    category: 'quality',
+    definition: '生产过程中首次检测合格的产品比例',
+    formula: 'first_pass_units / total_units',
+    unit: '%',
+    applicableScenarios: ['质量控制', '工艺优化', '供应商评估'],
+    trustConditions: [
+      { type: 'accuracy', threshold: 99, description: '检测数据准确率 ≥ 99%' }
+    ],
+    failureConditions: [
+      { condition: 'rework_not_tracked', description: '返工未追踪将导致FPY虚高', fallbackValue: null }
+    ],
+    relatedObjects: ['product', 'process'],
+    computation: { method: 'formula', config: {}, refreshInterval: 3600 },
+    thresholds: { critical: 0.85, warning: 0.92, target: 0.97, excellent: 0.99 }
+  },
+  {
+    id: 'metric-rul',
+    name: '剩余使用寿命',
+    code: 'RUL',
+    category: 'availability',
+    definition: '设备关键部件预计还可正常运行的时间',
+    formula: 'ML_PREDICTION',
+    unit: '天',
+    applicableScenarios: ['预测性维护', '备件计划', '设备投资决策'],
+    trustConditions: [
+      { type: 'freshness', threshold: 24, description: '传感器数据新鲜度 ≤ 24小时' }
+    ],
+    failureConditions: [
+      { condition: 'insufficient_history', description: '历史数据不足时预测不准确', fallbackValue: null }
+    ],
+    relatedObjects: ['equipment'],
+    computation: { method: 'ml_model', config: { model: 'lstm', features: ['vibration', 'temperature', 'current'] }, refreshInterval: 86400 },
+    thresholds: { critical: 7, warning: 30, target: 90, excellent: 180 }
+  }
+];
+
+// 推理链示例 - 异常根因分析
+export const MOCK_REASONING_CHAINS = [
+  {
+    id: 'chain-001',
+    name: '焊接良率下降分析',
+    description: '产线A焊接良率下降5%，系统自动推理根因',
+    status: 'completed',
+    nodes: [
+      {
+        id: 'node-1',
+        type: 'anomaly',
+        name: '异常检测',
+        description: '检测到焊接良率异常下降',
+        status: 'completed',
+        inputs: { metric: 'welding_yield', current_value: 0.88, threshold: 0.93, normal_value: 0.94 },
+        outputs: { anomaly_detected: true, severity: 'medium', deviation: -0.06 },
+        evidence: [{ type: 'data', source: 'MES系统', content: '焊接良率: 88%', confidence: 0.99, timestamp: '2024-03-20T10:00:00Z' }],
+        confidence: 0.95,
+        startedAt: '2024-03-20T10:00:00Z',
+        completedAt: '2024-03-20T10:00:05Z',
+        executedBy: 'anomaly-detector-agent'
+      },
+      {
+        id: 'node-2',
+        type: 'object',
+        name: '关联对象分析',
+        description: '识别相关设备和工艺参数',
+        status: 'completed',
+        inputs: { anomaly_node: 'node-1' },
+        outputs: { involved_objects: ['EQ-001', 'MAT-TAB-001'], related_metrics: ['temperature', 'power', 'speed'] },
+        evidence: [{ type: 'rule', source: '知识图谱', content: '焊接良率与设备EQ-001强相关', confidence: 0.9, timestamp: '2024-03-20T10:00:10Z' }],
+        confidence: 0.9,
+        startedAt: '2024-03-20T10:00:05Z',
+        completedAt: '2024-03-20T10:00:15Z',
+        executedBy: 'analyst-agent'
+      },
+      {
+        id: 'node-3',
+        type: 'metric',
+        name: '关键指标分析',
+        description: '分析设备关键参数变化',
+        status: 'completed',
+        inputs: { equipment_id: 'EQ-001', time_range: '1h' },
+        outputs: { temperature_trend: 'rising', current_deviation: 0.08, power_variance: 0.03 },
+        evidence: [{ type: 'data', source: 'SCADA', content: '设备温度: 85°C→92°C(1h)', confidence: 0.98, timestamp: '2024-03-20T10:00:20Z' }],
+        confidence: 0.88,
+        startedAt: '2024-03-20T10:00:15Z',
+        completedAt: '2024-03-20T10:00:30Z',
+        executedBy: 'analyst-agent'
+      },
+      {
+        id: 'node-4',
+        type: 'causal',
+        name: '因果推理',
+        description: '分析温度上升对焊接质量的影响',
+        status: 'completed',
+        inputs: { cause: 'temperature_rising', effect: 'welding_yield_drop' },
+        outputs: { causal_strength: 0.82, root_cause: 'laser_cooling_system_degradation' },
+        evidence: [
+          { type: 'model', source: '物理仿真模型', content: '温度每升高1°C，焊接强度下降0.5%', confidence: 0.85, timestamp: '2024-03-20T10:00:35Z' },
+          { type: 'history', source: '历史案例库', content: '类似故障3次，均与冷却系统相关', confidence: 0.9, timestamp: '2024-03-20T10:00:40Z' }
+        ],
+        confidence: 0.82,
+        startedAt: '2024-03-20T10:00:30Z',
+        completedAt: '2024-03-20T10:00:50Z',
+        executedBy: 'reasoner-agent'
+      },
+      {
+        id: 'node-5',
+        type: 'decision',
+        name: '决策建议',
+        description: '生成维修和生产调整建议',
+        status: 'completed',
+        inputs: { root_cause: 'laser_cooling_system_degradation' },
+        outputs: { recommendations: ['立即清洁冷却系统', '降低功率10%临时生产', '预约维护窗口'] },
+        evidence: [{ type: 'expert', source: '维护专家知识库', content: '冷却系统清洁可降低温度5-8°C', confidence: 0.88, timestamp: '2024-03-20T10:01:00Z' }],
+        confidence: 0.85,
+        startedAt: '2024-03-20T10:00:50Z',
+        completedAt: '2024-03-20T10:01:00Z',
+        executedBy: 'planner-agent'
+      }
+    ],
+    edges: [
+      { id: 'edge-1', source: 'node-1', target: 'node-2', type: 'indicates', strength: 0.9, description: '异常指示相关对象' },
+      { id: 'edge-2', source: 'node-2', target: 'node-3', type: 'leads_to', strength: 0.85, description: '对象指向关键指标' },
+      { id: 'edge-3', source: 'node-3', target: 'node-4', type: 'causes', strength: 0.82, description: '指标异常导致质量下降' },
+      { id: 'edge-4', source: 'node-4', target: 'node-5', type: 'suggests', strength: 0.8, description: '根因指向决策建议' }
+    ],
+    context: {
+      triggerEvent: 'metric_threshold_exceeded',
+      involvedObjects: ['EQ-001'],
+      relevantMetrics: ['welding_yield', 'temperature'],
+      timeRange: { start: '2024-03-20T09:00:00Z', end: '2024-03-20T10:00:00Z' }
+    },
+    result: {
+      conclusion: '激光焊接机A01冷却系统性能下降导致温度升高，进而影响焊接良率',
+      recommendations: [
+        {
+          id: 'rec-1',
+          title: '清洁冷却系统',
+          description: '立即安排维护人员清洁激光器冷却系统，预计可降低温度5-8°C',
+          priority: 'high',
+          expectedOutcome: '焊接良率恢复至93%以上',
+          supportingEvidence: ['历史类似故障处理记录', '冷却系统性能模型']
+        },
+        {
+          id: 'rec-2',
+          title: '临时降低功率',
+          description: '在维护完成前，降低激光功率10%以保证质量',
+          priority: 'medium',
+          expectedOutcome: '维持88%良率，避免进一步下降',
+          supportingEvidence: ['功率-温度-质量关系模型']
+        }
+      ],
+      confidence: 0.82,
+      riskLevel: 'medium',
+      actions: [
+        {
+          id: 'act-1',
+          name: '创建维护工单',
+          description: '为EQ-001创建冷却系统维护工单',
+          targetObject: 'EQ-001',
+          skillId: 'create_maintenance_ticket',
+          parameters: { priority: 'high', type: 'preventive' },
+          estimatedImpact: [{ metric: 'welding_yield', currentValue: 0.88, predictedValue: 0.94, confidence: 0.85 }],
+          approvalRequired: false,
+          riskAssessment: '低风险，标准维护操作'
+        }
+      ]
+    },
+    createdAt: '2024-03-20T10:00:00Z',
+    completedAt: '2024-03-20T10:01:00Z',
+    executedBy: 'multi-agent-system'
+  }
+];
+
+// Agent系统定义
+export const MOCK_AGENTS = [
+  {
+    id: 'agent-planner',
+    name: '规划师 Agent',
+    type: 'planner',
+    description: '负责拆解复杂任务，制定执行计划',
+    capabilities: ['task_decomposition', 'workflow_design', 'resource_allocation'],
+    status: 'idle',
+    taskHistory: [],
+    memory: {
+      shortTerm: { currentContext: {}, conversationHistory: [], workingObjects: [] },
+      longTerm: { decisionHistory: [], learnedPatterns: [], caseLibrary: [] }
+    },
+    metrics: { totalTasks: 156, successRate: 0.94, averageLatency: 1200, averageConfidence: 0.88, tokenConsumed: 450000, lastActiveAt: '2024-03-20T09:30:00Z' },
+    config: { maxConcurrentTasks: 3, timeout: 60, retryAttempts: 2, logLevel: 'info', enableLearning: true }
+  },
+  {
+    id: 'agent-analyst',
+    name: '分析师 Agent',
+    type: 'analyst',
+    description: '负责数据分析、模式识别、异常检测',
+    capabilities: ['data_analysis', 'anomaly_detection', 'trend_forecast', 'correlation_analysis'],
+    status: 'reasoning',
+    currentTask: {
+      id: 'task-001',
+      type: 'anomaly_analysis',
+      description: '分析产线A焊接良率异常',
+      status: 'running',
+      startedAt: '2024-03-20T10:00:00Z',
+      input: { target: 'EQ-001', metric: 'welding_yield' }
+    },
+    taskHistory: [],
+    memory: {
+      shortTerm: { currentContext: { analysisTarget: 'EQ-001' }, conversationHistory: [], workingObjects: ['EQ-001'] },
+      longTerm: { decisionHistory: [], learnedPatterns: [], caseLibrary: [] }
+    },
+    metrics: { totalTasks: 423, successRate: 0.96, averageLatency: 800, averageConfidence: 0.91, tokenConsumed: 890000, lastActiveAt: '2024-03-20T10:00:00Z' },
+    config: { maxConcurrentTasks: 5, timeout: 120, retryAttempts: 3, logLevel: 'info', enableLearning: true }
+  },
+  {
+    id: 'agent-reasoner',
+    name: '推理师 Agent',
+    type: 'reasoner',
+    description: '负责因果推理、根因分析、影响评估',
+    capabilities: ['causal_inference', 'root_cause_analysis', 'impact_prediction', 'what_if_analysis'],
+    status: 'idle',
+    taskHistory: [],
+    memory: {
+      shortTerm: { currentContext: {}, conversationHistory: [], workingObjects: [] },
+      longTerm: { decisionHistory: [], learnedPatterns: [], caseLibrary: [] }
+    },
+    metrics: { totalTasks: 89, successRate: 0.89, averageLatency: 2500, averageConfidence: 0.82, tokenConsumed: 320000, lastActiveAt: '2024-03-20T08:45:00Z' },
+    config: { maxConcurrentTasks: 2, timeout: 180, retryAttempts: 2, logLevel: 'debug', enableLearning: true }
+  },
+  {
+    id: 'agent-executor',
+    name: '执行师 Agent',
+    type: 'executor',
+    description: '负责调用工具、执行动作、操作设备',
+    capabilities: ['tool_invocation', 'device_control', 'workflow_execution', 'integration_adapter'],
+    status: 'idle',
+    taskHistory: [],
+    memory: {
+      shortTerm: { currentContext: {}, conversationHistory: [], workingObjects: [] },
+      longTerm: { decisionHistory: [], learnedPatterns: [], caseLibrary: [] }
+    },
+    metrics: { totalTasks: 678, successRate: 0.98, averageLatency: 500, averageConfidence: 0.95, tokenConsumed: 120000, lastActiveAt: '2024-03-20T09:55:00Z' },
+    config: { maxConcurrentTasks: 10, timeout: 30, retryAttempts: 3, logLevel: 'warn', enableLearning: false }
+  },
+  {
+    id: 'agent-auditor',
+    name: '审计师 Agent',
+    type: 'auditor',
+    description: '负责风险控制、合规检查、决策审核',
+    capabilities: ['risk_assessment', 'compliance_check', 'decision_audit', 'policy_enforcement'],
+    status: 'idle',
+    taskHistory: [],
+    memory: {
+      shortTerm: { currentContext: {}, conversationHistory: [], workingObjects: [] },
+      longTerm: { decisionHistory: [], learnedPatterns: [], caseLibrary: [] }
+    },
+    metrics: { totalTasks: 234, successRate: 0.99, averageLatency: 1500, averageConfidence: 0.93, tokenConsumed: 280000, lastActiveAt: '2024-03-20T09:15:00Z' },
+    config: { maxConcurrentTasks: 2, timeout: 90, retryAttempts: 1, logLevel: 'info', enableLearning: true }
+  }
+];
+
+// 业务事件流
+export const MOCK_BUSINESS_EVENTS = [
+  {
+    id: 'evt-001',
+    type: 'metric_threshold',
+    source: 'EQ-001',
+    timestamp: '2024-03-20T10:00:00Z',
+    payload: {
+      objectId: 'EQ-001',
+      objectType: 'equipment',
+      metricId: 'welding_yield',
+      metricValue: 0.88,
+      threshold: 0.93,
+      severity: 'warning',
+      message: '焊接良率低于阈值93%，当前88%'
+    },
+    status: 'processed',
+    handlers: [
+      { id: 'handler-1', type: 'agent', targetId: 'agent-analyst', status: 'completed', result: { reasoningChainId: 'chain-001' } }
+    ],
+    propagationPath: [
+      { timestamp: '2024-03-20T10:00:00Z', from: 'EQ-001', to: 'event-bus', action: 'published' },
+      { timestamp: '2024-03-20T10:00:01Z', from: 'event-bus', to: 'agent-analyst', action: 'dispatched' },
+      { timestamp: '2024-03-20T10:01:05Z', from: 'agent-analyst', to: 'decision-space', action: 'notified' }
+    ]
+  }
+];
+
+// 决策空间示例
+export const MOCK_DECISION_SPACES = [
+  {
+    id: 'ds-001',
+    name: '产线A异常决策空间',
+    description: '处理产线A焊接良率异常的决策支持环境',
+    currentFocus: {
+      type: 'anomaly',
+      targetId: 'chain-001',
+      title: '焊接良率异常下降',
+      description: '产线A激光焊接机焊接良率从94%下降至88%，需要立即分析和处理'
+    },
+    reasoningChain: MOCK_REASONING_CHAINS[0],
+    recommendations: [
+      {
+        id: 'rec-1',
+        title: '清洁冷却系统',
+        description: '立即安排维护人员清洁激光器冷却系统',
+        priority: 'high',
+        expectedOutcome: '焊接良率恢复至93%以上',
+        supportingEvidence: ['历史案例库-类似故障3次', '冷却系统性能模型']
+      },
+      {
+        id: 'rec-2',
+        title: '临时降低功率',
+        description: '在维护完成前，降低激光功率10%',
+        priority: 'medium',
+        expectedOutcome: '维持当前88%良率',
+        supportingEvidence: ['功率-质量关系模型']
+      }
+    ],
+    riskAssessment: {
+      overallRisk: 'medium',
+      factors: [
+        { category: '生产风险', description: '良率下降导致产出减少', impact: 0.6, probability: 1.0, riskScore: 0.6 },
+        { category: '质量风险', description: '不合格品流出风险', impact: 0.8, probability: 0.3, riskScore: 0.24 },
+        { category: '交付风险', description: '订单交付可能延期', impact: 0.7, probability: 0.4, riskScore: 0.28 }
+      ],
+      mitigationSuggestions: ['立即执行维护', '加强质检频次', '评估交期影响']
+    },
+    availableActions: [
+      {
+        id: 'act-1',
+        name: '创建维护工单',
+        description: '为EQ-001创建高优先级维护工单',
+        type: 'auto',
+        skillId: 'create_maintenance_ticket',
+        parameters: { equipment_id: 'EQ-001', priority: 'high' },
+        estimatedImpact: '恢复良率至94%',
+        riskLevel: 'low'
+      },
+      {
+        id: 'act-2',
+        name: '调整生产计划',
+        description: '临时调整产线A生产参数',
+        type: 'approval_required',
+        skillId: 'adjust_production_schedule',
+        parameters: { line_id: 'LINE-A', adjustment: 'reduce_speed_10' },
+        estimatedImpact: '减少不合格品产出',
+        riskLevel: 'medium'
+      }
+    ],
+    recentDecisions: [],
+    userInputs: []
+  }
+];
+
+// 治理策略
+export const MOCK_GOVERNANCE_POLICIES = [
+  {
+    id: 'policy-001',
+    name: '数据质量治理策略',
+    type: 'data_quality',
+    description: '确保进入系统的数据满足质量要求',
+    rules: [
+      { id: 'rule-dq-1', condition: 'data.freshness < 60', action: 'mark_stale', severity: 'warning', autoExecute: true },
+      { id: 'rule-dq-2', condition: 'data.completeness < 90', action: 'alert_data_owner', severity: 'error', autoExecute: true }
+    ],
+    enabled: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-03-01T00:00:00Z'
+  },
+  {
+    id: 'policy-002',
+    name: 'Agent执行审计策略',
+    type: 'audit',
+    description: '对关键Agent执行进行审计记录',
+    rules: [
+      { id: 'rule-audit-1', condition: 'agent.type == "executor" AND action.riskLevel == "high"', action: 'require_approval', severity: 'info', autoExecute: true }
+    ],
+    enabled: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-03-01T00:00:00Z'
+  }
+];
+
+// 导出辅助函数
+export const getBusinessObjectById = (id) =>
+  MOCK_BUSINESS_OBJECTS.find(obj => obj.id === id);
+
+export const getMetricById = (id) =>
+  MOCK_INDUSTRIAL_METRICS.find(m => m.id === id);
+
+export const getAgentById = (id) =>
+  MOCK_AGENTS.find(a => a.id === id);
+
+export const getObjectsByType = (type) =>
+  MOCK_BUSINESS_OBJECTS.filter(obj => obj.type === type);

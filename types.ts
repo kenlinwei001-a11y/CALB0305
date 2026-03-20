@@ -853,3 +853,665 @@ export interface DecisionLearningRecord {
     evolvedRules: string[];
   };
 }
+
+// ==================== 智能体中台 (Agent Data OS) 核心模型 ====================
+
+/**
+ * 业务对象模型 - 面向Agent的可理解对象
+ * 替代传统"表"的概念，成为Agent可理解的操作实体
+ */
+export interface BusinessObject {
+  id: string;
+  name: string;
+  type: BusinessObjectType;
+  description: string;
+  // 对象状态
+  state: ObjectState;
+  stateHistory: StateTransition[];
+  // 对象属性（结构化数据）
+  attributes: Record<string, BusinessObjectAttribute>;
+  // 生命周期定义
+  lifecycle: LifecycleDefinition;
+  currentLifecycleStage: string;
+  // 对象关系
+  relations: ObjectRelation[];
+  // 对象能力（可被Agent调用的能力）
+  capabilities: ObjectCapability[];
+  // 对象规则（触发条件+动作）
+  rules: ObjectRule[];
+  // 元数据
+  metadata: {
+    createdAt: string;
+    updatedAt: string;
+    createdBy: string;
+    version: string;
+    domain: string;
+    tags: string[];
+  };
+}
+
+export type BusinessObjectType =
+  | 'equipment'      // 设备
+  | 'material'       // 物料
+  | 'order'          // 订单
+  | 'product'        // 产品
+  | 'process'        // 工艺
+  | 'quality_event'  // 质量事件
+  | 'worker'         // 人员
+  | 'line'           // 产线
+  | 'customer'       // 客户
+  | 'supplier';      // 供应商
+
+export interface ObjectState {
+  code: string;
+  name: string;
+  description: string;
+  severity: 'normal' | 'warning' | 'error' | 'critical';
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface StateTransition {
+  from: string;
+  to: string;
+  timestamp: string;
+  triggeredBy: string;
+  reason: string;
+}
+
+export interface BusinessObjectAttribute {
+  name: string;
+  value: any;
+  dataType: 'string' | 'number' | 'boolean' | 'datetime' | 'object' | 'array';
+  unit?: string;
+  // 数据质量
+  quality: {
+    freshness: number; // 0-100 新鲜度
+    accuracy: number;  // 0-100 准确度
+    completeness: number; // 0-100 完整度
+  };
+  // 语义定义
+  semanticRef?: string; // 关联的原子业务语义ID
+  // 约束
+  constraints?: {
+    min?: number;
+    max?: number;
+    enum?: string[];
+    required?: boolean;
+  };
+  lastUpdated: string;
+}
+
+export interface LifecycleDefinition {
+  stages: LifecycleStage[];
+  transitions: LifecycleTransition[];
+}
+
+export interface LifecycleStage {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  allowedActions: string[];
+}
+
+export interface LifecycleTransition {
+  from: string;
+  to: string;
+  condition: string;
+  autoTransition: boolean;
+}
+
+export interface ObjectRelation {
+  id: string;
+  type: ObjectRelationType;
+  targetObjectId: string;
+  targetObjectType: BusinessObjectType;
+  direction: 'outgoing' | 'incoming' | 'bidirectional';
+  properties?: Record<string, any>;
+  strength: number; // 0-1 关系强度
+}
+
+export type ObjectRelationType =
+  | 'belongs_to'     // 属于
+  | 'contains'       // 包含
+  | 'produces'       // 生产
+  | 'consumes'       // 消耗
+  | 'depends_on'     // 依赖
+  | 'triggers'       // 触发
+  | 'influences'     // 影响
+  | 'references';    // 引用
+
+export interface ObjectCapability {
+  id: string;
+  name: string;
+  description: string;
+  // 关联的Skill
+  skillId?: string;
+  // 输入输出定义
+  inputSchema: Record<string, string>;
+  outputSchema: Record<string, string>;
+  // 执行约束
+  preconditions: string[];
+  postconditions: string[];
+}
+
+export interface ObjectRule {
+  id: string;
+  name: string;
+  description: string;
+  trigger: {
+    type: 'event' | 'condition' | 'schedule';
+    condition: string;
+  };
+  actions: RuleAction[];
+  priority: number;
+  enabled: boolean;
+}
+
+export interface RuleAction {
+  type: 'alert' | 'update_state' | 'invoke_skill' | 'create_task' | 'notify';
+  target: string;
+  parameters: Record<string, any>;
+}
+
+/**
+ * 工业级指标语义标准
+ */
+export interface IndustrialMetric {
+  id: string;
+  name: string;
+  code: string;
+  category: MetricCategory;
+  definition: string;
+  formula?: string;
+  unit?: string;
+  // 适用场景
+  applicableScenarios: string[];
+  // 可信条件（数据质量要求）
+  trustConditions: TrustCondition[];
+  // 失效条件
+  failureConditions: FailureCondition[];
+  // 关联对象
+  relatedObjects: string[]; // BusinessObjectType[]
+  // 计算配置
+  computation: {
+    method: 'direct' | 'formula' | 'aggregation' | 'ml_model';
+    config: Record<string, any>;
+    refreshInterval: number; // 秒
+  };
+  // 阈值配置
+  thresholds: {
+    critical?: number;
+    warning?: number;
+    target?: number;
+    excellent?: number;
+  };
+}
+
+export type MetricCategory =
+  | 'efficiency'     // 效率类
+  | 'quality'        // 质量类
+  | 'availability'   // 可用性
+  | 'performance'    // 性能类
+  | 'cost'           // 成本类
+  | 'safety'         // 安全类
+  | 'sustainability' // 可持续类
+  | 'custom';        // 自定义
+
+export interface TrustCondition {
+  type: 'frequency' | 'completeness' | 'accuracy' | 'freshness';
+  threshold: number;
+  description: string;
+}
+
+export interface FailureCondition {
+  condition: string;
+  description: string;
+  fallbackValue?: any;
+}
+
+/**
+ * 推理链系统 (Reasoning Graph)
+ */
+export interface ReasoningChain {
+  id: string;
+  name: string;
+  description: string;
+  status: 'active' | 'completed' | 'failed' | 'pending';
+  // 推理节点
+  nodes: ReasoningNode[];
+  // 推理边（因果关系）
+  edges: ReasoningEdge[];
+  // 执行上下文
+  context: ReasoningContext;
+  // 执行结果
+  result?: ReasoningResult;
+  // 元数据
+  createdAt: string;
+  completedAt?: string;
+  executedBy: string; // Agent ID
+}
+
+export type ReasoningNodeType =
+  | 'anomaly'        // 异常检测
+  | 'object'         // 对象关联
+  | 'metric'         // 指标分析
+  | 'causal'         // 因果推理
+  | 'decision'       // 决策建议
+  | 'action'         // 执行动作
+  | 'evidence'       // 证据节点
+  | 'hypothesis';    // 假设节点
+
+export interface ReasoningNode {
+  id: string;
+  type: ReasoningNodeType;
+  name: string;
+  description: string;
+  // 节点状态
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  // 输入数据
+  inputs: Record<string, any>;
+  // 输出结果
+  outputs: Record<string, any>;
+  // 证据和置信度
+  evidence: ReasoningEvidence[];
+  confidence: number; // 0-1
+  // 执行时间
+  startedAt?: string;
+  completedAt?: string;
+  // 执行的Agent
+  executedBy?: string;
+  // 使用的Skill
+  skillId?: string;
+}
+
+export interface ReasoningEvidence {
+  type: 'data' | 'rule' | 'model' | 'history' | 'expert';
+  source: string;
+  content: string;
+  confidence: number;
+  timestamp: string;
+}
+
+export interface ReasoningEdge {
+  id: string;
+  source: string; // from node id
+  target: string; // to node id
+  type: 'causes' | 'influences' | 'indicates' | 'suggests' | 'leads_to';
+  strength: number; // 0-1
+  description: string;
+}
+
+export interface ReasoningContext {
+  triggerEvent: string;
+  involvedObjects: string[]; // BusinessObject IDs
+  relevantMetrics: string[]; // IndustrialMetric IDs
+  userQuery?: string;
+  timeRange: {
+    start: string;
+    end: string;
+  };
+}
+
+export interface ReasoningResult {
+  conclusion: string;
+  recommendations: Recommendation[];
+  confidence: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  actions: ProposedAction[];
+}
+
+export interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  expectedOutcome: string;
+  supportingEvidence: string[];
+}
+
+export interface ProposedAction {
+  id: string;
+  name: string;
+  description: string;
+  targetObject: string;
+  skillId: string;
+  parameters: Record<string, any>;
+  estimatedImpact: {
+    metric: string;
+    currentValue: number;
+    predictedValue: number;
+    confidence: number;
+  }[];
+  approvalRequired: boolean;
+  riskAssessment: string;
+}
+
+/**
+ * Agent系统定义
+ */
+export interface Agent {
+  id: string;
+  name: string;
+  type: AgentType;
+  description: string;
+  // Agent能力
+  capabilities: string[]; // Skill IDs
+  // 执行状态
+  status: AgentStatus;
+  currentTask?: AgentTask;
+  taskHistory: AgentTask[];
+  // 记忆系统
+  memory: AgentMemory;
+  // 性能指标
+  metrics: AgentMetrics;
+  // 配置
+  config: AgentConfig;
+}
+
+export type AgentType =
+  | 'planner'        // 任务规划
+  | 'analyst'        // 数据分析
+  | 'reasoner'       // 因果推理
+  | 'executor'       // 执行器
+  | 'auditor'        // 审计/风控
+  | 'coordinator'    // 协调器
+  | 'learner';       // 学习器
+
+export type AgentStatus =
+  | 'idle'
+  | 'perceiving'
+  | 'understanding'
+  | 'reasoning'
+  | 'deciding'
+  | 'executing'
+  | 'learning'
+  | 'error';
+
+export interface AgentTask {
+  id: string;
+  type: string;
+  description: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  startedAt: string;
+  completedAt?: string;
+  input: Record<string, any>;
+  output?: Record<string, any>;
+  reasoningChain?: ReasoningChain;
+}
+
+export interface AgentMemory {
+  // 短期记忆 - 当前任务上下文
+  shortTerm: {
+    currentContext: Record<string, any>;
+    conversationHistory: MemoryEntry[];
+    workingObjects: string[]; // BusinessObject IDs
+  };
+  // 长期记忆 - 历史决策和经验
+  longTerm: {
+    decisionHistory: DecisionMemory[];
+    learnedPatterns: LearnedPattern[];
+    caseLibrary: string[]; // DecisionCase IDs
+  };
+}
+
+export interface MemoryEntry {
+  timestamp: string;
+  role: 'user' | 'agent' | 'system';
+  content: string;
+  type: 'query' | 'response' | 'action' | 'observation';
+}
+
+export interface DecisionMemory {
+  decisionId: string;
+  timestamp: string;
+  context: string;
+  decision: string;
+  outcome: string;
+  feedback: 'positive' | 'negative' | 'neutral';
+}
+
+export interface LearnedPattern {
+  id: string;
+  pattern: string;
+  confidence: number;
+  occurrence: number;
+  examples: string[];
+}
+
+export interface AgentMetrics {
+  totalTasks: number;
+  successRate: number;
+  averageLatency: number; // ms
+  averageConfidence: number;
+  tokenConsumed: number;
+  lastActiveAt: string;
+}
+
+export interface AgentConfig {
+  maxConcurrentTasks: number;
+  timeout: number; // 秒
+  retryAttempts: number;
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  enableLearning: boolean;
+}
+
+/**
+ * 事件定义（Data + Event Mesh）
+ */
+export interface BusinessEvent {
+  id: string;
+  type: EventType;
+  source: string; // 产生事件的系统/对象
+  timestamp: string;
+  payload: EventPayload;
+  // 事件处理
+  status: 'pending' | 'processing' | 'processed' | 'failed';
+  handlers: EventHandler[];
+  // 传播路径
+  propagationPath: EventPropagation[];
+}
+
+export type EventType =
+  | 'object_state_change'  // 对象状态变更
+  | 'metric_threshold'     // 指标阈值告警
+  | 'anomaly_detected'     // 异常检测
+  | 'rule_triggered'       // 规则触发
+  | 'task_completed'       // 任务完成
+  | 'agent_action'         // Agent动作
+  | 'external_integration' // 外部系统集成
+  | 'user_interaction';    // 用户交互
+
+export interface EventPayload {
+  objectId?: string;
+  objectType?: BusinessObjectType;
+  attributeName?: string;
+  oldValue?: any;
+  newValue?: any;
+  metricId?: string;
+  metricValue?: number;
+  threshold?: number;
+  severity?: 'info' | 'warning' | 'error' | 'critical';
+  message: string;
+  metadata?: Record<string, any>;
+}
+
+export interface EventHandler {
+  id: string;
+  type: 'agent' | 'skill' | 'rule' | 'workflow';
+  targetId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  result?: any;
+}
+
+export interface EventPropagation {
+  timestamp: string;
+  from: string;
+  to: string;
+  action: string;
+}
+
+/**
+ * 决策空间 (Decision Space)
+ */
+export interface DecisionSpace {
+  id: string;
+  name: string;
+  description: string;
+  // 当前焦点
+  currentFocus: {
+    type: 'anomaly' | 'opportunity' | 'task' | 'query';
+    targetId: string;
+    title: string;
+    description: string;
+  };
+  // 推理链展示
+  reasoningChain: ReasoningChain;
+  // 推荐决策
+  recommendations: Recommendation[];
+  // 风险评估
+  riskAssessment: RiskAssessment;
+  // 可用动作
+  availableActions: DecisionAction[];
+  // 历史决策
+  recentDecisions: DecisionSummary[];
+  // 用户交互
+  userInputs: UserInteraction[];
+}
+
+export interface RiskAssessment {
+  overallRisk: 'low' | 'medium' | 'high' | 'critical';
+  factors: RiskFactor[];
+  mitigationSuggestions: string[];
+}
+
+export interface RiskFactor {
+  category: string;
+  description: string;
+  impact: number; // 0-1
+  probability: number; // 0-1
+  riskScore: number; // impact * probability
+}
+
+export interface DecisionAction {
+  id: string;
+  name: string;
+  description: string;
+  type: 'manual' | 'auto' | 'approval_required';
+  skillId?: string;
+  parameters: Record<string, any>;
+  estimatedImpact: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  executedBy?: string;
+  executedAt?: string;
+  status?: 'pending' | 'executing' | 'completed' | 'failed';
+}
+
+export interface DecisionSummary {
+  id: string;
+  title: string;
+  decision: string;
+  timestamp: string;
+  outcome: 'success' | 'partial' | 'failure';
+  confidence: number;
+}
+
+export interface UserInteraction {
+  id: string;
+  type: 'query' | 'feedback' | 'override' | 'approval' | 'rejection';
+  content: string;
+  timestamp: string;
+  userId: string;
+  response?: string;
+}
+
+/**
+ * 治理与审计
+ */
+export interface GovernancePolicy {
+  id: string;
+  name: string;
+  type: 'data_quality' | 'access_control' | 'audit' | 'compliance';
+  description: string;
+  rules: GovernanceRule[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GovernanceRule {
+  id: string;
+  condition: string;
+  action: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  autoExecute: boolean;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  actor: {
+    type: 'user' | 'agent' | 'system';
+    id: string;
+    name: string;
+  };
+  action: string;
+  target: {
+    type: string;
+    id: string;
+    name: string;
+  };
+  context: Record<string, any>;
+  result: 'success' | 'failure';
+  details?: string;
+}
+
+// ==================== 智能体中台 视图模型 ====================
+
+/**
+ * 决策空间视图状态
+ */
+export interface DecisionSpaceViewState {
+  layout: 'default' | 'focus' | 'comparison';
+  selectedReasoningNode?: string;
+  expandedSections: {
+    reasoning: boolean;
+    recommendations: boolean;
+    actions: boolean;
+    risks: boolean;
+  };
+  filters: {
+    riskLevel?: ('low' | 'medium' | 'high' | 'critical')[];
+    agentTypes?: AgentType[];
+    timeRange?: { start: string; end: string };
+  };
+}
+
+/**
+ * Agent监控视图状态
+ */
+export interface AgentMonitorViewState {
+  selectedAgent?: string;
+  viewMode: 'grid' | 'list' | 'flow';
+  activeFilters: {
+    status?: AgentStatus[];
+    type?: AgentType[];
+  };
+  realtimeUpdate: boolean;
+}
+
+/**
+ * 业务对象浏览器状态
+ */
+export interface ObjectBrowserState {
+  selectedType?: BusinessObjectType;
+  selectedObject?: string;
+  viewMode: 'card' | 'graph' | 'list';
+  filters: {
+    state?: string[];
+    type?: BusinessObjectType[];
+    tags?: string[];
+  };
+  searchQuery: string;
+}

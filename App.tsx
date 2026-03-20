@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Network, Zap, Settings, Box, Atom, Layers, Database,
   Command, Bell, Search, ChevronDown, Sparkles, Cpu, ChevronLeft, X, ArrowRight,
-  GitBranch
+  GitBranch, Brain, Target
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SkillsRegistry from './components/SkillsRegistry';
@@ -16,10 +16,13 @@ import BusinessSemanticCreator from './components/BusinessSemanticCreator';
 import MCPTools from './components/MCPTools';
 import DataSourceManager from './components/DataSourceManager';
 import DecisionRepository from './components/DecisionRepository';
+import DecisionSpace from './components/DecisionSpace';
+import BusinessObjectBrowser from './components/BusinessObjectBrowser';
 
-// 导航项配置
+// 导航项配置 - 智能体中台层级结构
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: '仪表盘' },
+  { path: '/decision-space', icon: Brain, label: '决策空间' },
+  { path: '/objects', icon: Target, label: '业务对象' },
   { path: '/skills', icon: Zap, label: '技能中心' },
   { path: '/mcp-tools', icon: Cpu, label: 'MCP工具' },
   { path: '/atoms', icon: Atom, label: '业务释义' },
@@ -27,6 +30,7 @@ const navItems = [
   { path: '/business-semantic', icon: Layers, label: '业务语义' },
   { path: '/data-sources', icon: Database, label: '数据源' },
   { path: '/decision-repository', icon: GitBranch, label: '决策资产' },
+  { path: '/', icon: LayoutDashboard, label: '仪表盘' },
 ];
 
 // 左侧图标导航
@@ -532,6 +536,8 @@ const AppContent: React.FC = () => {
           <Route path="/mcp-tools/ontology/:ontologyToolId" element={<><TopBar title="MCP工具" /><div className="flex-1 overflow-auto p-6"><MCPTools /></div></>} />
           <Route path="/data-sources" element={<><TopBar title="数据源管理" /><div className="flex-1 overflow-auto p-6"><DataSourceManager /></div></>} />
           <Route path="/decision-repository" element={<><TopBar title="决策资产库" /><div className="flex-1 overflow-auto p-6"><DecisionRepository /></div></>} />
+          <Route path="/decision-space" element={<DecisionSpace />} />
+          <Route path="/objects" element={<><TopBar title="业务对象模型" /><div className="flex-1 overflow-auto"><BusinessObjectBrowser /></div></>} />
           <Route path="/settings" element={<><TopBar title="设置" /><div className="flex-1 overflow-auto p-6"><div className="bg-white rounded-2xl p-6 shadow-sm">设置页面</div></div></>} />
           <Route path="*" element={<div className="flex-1 flex items-center justify-center"><h1 className="text-2xl text-gray-400">404 - Page Not Found</h1></div>} />
         </Routes>
